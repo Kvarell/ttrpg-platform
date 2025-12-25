@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
 
-// Коли хтось стукає на /register -> викликаємо функцію register з контролера
+// Коли приходить запит на /register -> викликаємо контролер register
 router.post('/register', authController.register);
 
-// Коли хтось стукає на /login -> викликаємо функцію login
+// Коли приходить запит на /login -> викликаємо контролер login
 router.post('/login', authController.login);
 
 module.exports = router;

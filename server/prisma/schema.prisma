@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- КОРИСТУВАЧІ ТА ПРОФІЛЬ [cite: 2486] ---
+// --- КОРИСТУВАЧІ ТА ПРОФІЛЬ---
 
 model User {
   id           Int       @id @default(autoincrement())
@@ -19,12 +19,12 @@ model User {
   createdAt    DateTime  @default(now())
 
   // Зв'язки
-  wallet       Wallet?   // Один гаманець на юзера [cite: 2487]
+  wallet       Wallet?   // Один гаманець на юзера
   stats        UserStats? // Статистика
   
   // Участь у кампаніях та сесіях
   campaignsOwned Campaign[] @relation("OwnerCampaigns") // Кампанії, де він власник
-  sessionsJoined SessionParticipant[] // Сесії, де він гравець/майстер [cite: 2497]
+  sessionsJoined SessionParticipant[] // Сесії, де він гравець/майстер
   
   // Комунікація
   messages     ChatMessage[] // Повідомлення в чатах
@@ -47,7 +47,7 @@ model UserStats {
   user           User @relation(fields: [userId], references: [id])
 }
 
-// --- КАМПАНІЇ ТА СЕСІЇ [cite: 2489-2490] ---
+// --- КАМПАНІЇ ТА СЕСІЇ ---
 
 model Campaign {
   id          Int       @id @default(autoincrement())
@@ -64,7 +64,7 @@ model Session {
   title       String
   description String?
   date        DateTime
-  status      SessionStatus @default(PLANNED) // Active, Planned, Finished [cite: 2427]
+  status      SessionStatus @default(PLANNED) // Active, Planned, Finished
   price       Float     @default(0.0) // Ціна за гру
   maxPlayers  Int       @default(4)
   
@@ -72,10 +72,10 @@ model Session {
   campaign    Campaign? @relation(fields: [campaignId], references: [id])
   
   participants SessionParticipant[]
-  messages     ChatMessage[] // Чат сесії [cite: 2499]
+  messages     ChatMessage[] // Чат сесії 
 }
 
-// Таблиця зв'язку: Хто є хто в сесії [cite: 2497]
+// Таблиця зв'язку: Хто є хто в сесії 
 model SessionParticipant {
   id        Int      @id @default(autoincrement())
   userId    Int

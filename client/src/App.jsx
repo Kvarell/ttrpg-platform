@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/LoginPage";
 import Register from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
-
+//npm run dev for start the server
 function App() {
   return (
     <BrowserRouter>
