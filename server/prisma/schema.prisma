@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- КОРИСТУВАЧІ ТА ПРОФІЛЬ [cite: 2486] ---
+
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  username     String
+  password     String    // Зберігаємо хеш пароля
+  avatarUrl    String?
+  bio          String?
+  createdAt    DateTime  @default(now())
+
+  // Зв'язки
+  wallet       Wallet?   // Один гаманець на юзера [cite: 2487]
+  stats        UserStats? // Статистика
+  
+  // Участь у кампаніях та сесіях
+  campaignsOwned Campaign[] @relation("OwnerCampaigns") // Кампанії, де він власник
+  sessionsJoined SessionParticipant[] // Сесії, де він гравець/майстер [cite: 2497]
+  
+  // Комунікація
+  messages     ChatMessage[] // Повідомлення в чатах
+}
+
+model Wallet {
+  id      Int     @id @default(autoincrement())
+  balance Float   @default(0.0)
+  userId  Int     @unique
+  user    User    @relation(fields: [userId], references: [id])
+  
+  transactions Transaction[] // Історія оплат
+}
+
+model UserStats {
+  id             Int @id @default(autoincrement())
+  hoursPlayed    Int @default(0)
+  sessionsPlayed Int @default(0)
+  userId         Int @unique
+  user           User @relation(fields: [userId], references: [id])
+}
+
+// --- КАМПАНІЇ ТА СЕСІЇ [cite: 2489-2490] ---
+
+model Campaign {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  ownerId     Int
+  owner       User      @relation("OwnerCampaigns", fields: [ownerId], references: [id])
+  
+  sessions    Session[] // Кампанія має багато сесій
+}
+
+model Session {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  date        DateTime
+  status      SessionStatus @default(PLANNED) // Active, Planned, Finished [cite: 2427]
+  price       Float     @default(0.0) // Ціна за гру
+  maxPlayers  Int       @default(4)
+  
+  campaignId  Int?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id])
+  
+  participants SessionParticipant[]
+  messages     ChatMessage[] // Чат сесії [cite: 2499]
+}
+
+// Таблиця зв'язку: Хто є хто в сесії [cite: 2497]
+model SessionParticipant {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  sessionId Int
+  role      GameRole @default(PLAYER) // Player, Master, Owner
+
+  user      User    @relation(fields: [userId], references: [id])
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  @@unique([userId, sessionId]) // Юзер не може бути двічі в одній грі
+}
+
+// --- КОМУНІКАЦІЯ ТА ФІНАНСИ ---
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  text      String
+  createdAt DateTime @default(now())
+  
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  
+  sessionId Int
+  session   Session  @relation(fields: [sessionId], references: [id])
+}
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  amount    Float
+  type      String   // "DEPOSIT" або "PAYMENT"
+  date      DateTime @default(now())
+  
+  walletId  Int
+  wallet    Wallet   @relation(fields: [walletId], references: [id])
+}
+
+// --- ENUMS (Списки варіантів) ---
+
+enum GameRole {
+  PLAYER
+  MASTER
+  OWNER
+}
+
+enum SessionStatus {
+  PLANNED
+  ACTIVE
+  FINISHED
+  CANCELED
+}
