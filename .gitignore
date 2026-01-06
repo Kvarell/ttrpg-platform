@@ -90,3 +90,9 @@ coverage/
 out/
 .nuxt/
 
+.env.*.local
+
+postgres_data/
+mysql_data/
+db_data/
+
