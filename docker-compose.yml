@@ -1,0 +1,54 @@
+services:
+  # 1. Сервіс Бази Даних
+  db:
+    image: postgres:15
+    container_name: ttrpg_db_container
+    restart: always
+    environment:
+      POSTGRES_USER: myuser      
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: ttrpg_db       # Назва бази
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+  # 2. Сервіс Бекенду
+  server:
+    build: ./server
+    container_name: ttrpg_server
+    ports:
+      - "5000:5000" # Зліва порт на ПК, справа - в контейнері
+    environment:
+      # УВАГА: хост тут 'db', а не 'localhost', бо ми всередині мережі Docker
+      DATABASE_URL: "postgresql://myuser:mypassword@db:5432/ttrpg_db?schema=public"
+      PORT: 5000
+    depends_on:
+      - db
+    volumes:
+      # Це "дзеркало": зміни в коді на комп'ютері миттєво з'являться в контейнері
+      - ./server:/app
+      - /app/node_modules
+
+  # 3. Сервіс Фронтенду
+  client:
+    build: ./client
+    container_name: ttrpg_client
+    ports:
+      - "5173:5173"
+    environment:
+      # Якщо треба вказати адресу бекенду для Vite
+      VITE_API_URL: "http://localhost:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+
+# Сховище для бази даних, щоб дані не зникали після перезавантаження
+volumes:
+  db_data:
