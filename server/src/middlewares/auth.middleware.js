@@ -23,7 +23,12 @@ const authenticateToken = (req, res, next) => {
   // Верифікуємо токен
   jwt.verify(token, jwtSecret, (err, user) => {
     if (err) {
-      return res.status(403).json({ error: 'Токен невалідний або застарів' });
+      // Розрізняємо прострочений токен (401) від невалідного (403)
+      // Це допомагає frontend розуміти, коли потрібно оновити токен
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ error: 'Токен прострочено', code: 'TOKEN_EXPIRED' });
+      }
+      return res.status(403).json({ error: 'Токен невалідний', code: 'TOKEN_INVALID' });
     }
 
     // Додаємо дані користувача до об'єкта запиту

@@ -5,7 +5,7 @@ import Register from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import api from "./services/api";
-//npm run dev for start the server
+
 function App() {
   // Ініціалізуємо CSRF токен при завантаженні додатку
   useEffect(() => {

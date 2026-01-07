@@ -1,14 +1,5 @@
 import axios from 'axios';
 
-// Створюємо екземпляр axios з базовою конфігурацією
-// Явно встановлюємо порт 5000 (сервер працює на цьому порту)
-// Перевіряємо, чи URL з .env не містить порт 3000 (якщо так - ігноруємо його)
-
-//const envURL = import.meta.env.VITE_API_URL;
-//const baseURL = (envURL && !envURL.includes(':3000')) 
-//  ? envURL 
-//  : 'http://localhost:5000';
-  
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const api = axios.create({
@@ -19,10 +10,6 @@ const api = axios.create({
   withCredentials: true, // Включаємо відправку cookies (для httpOnly cookies)
 });
 
-// Логуємо baseURL для діагностики (тільки в development)
-if (import.meta.env.DEV) {
-  console.log('🔗 API Base URL:', api.defaults.baseURL);
-}
 
 // Функція для отримання CSRF токена з cookie
 const getCSRFToken = () => {
@@ -53,28 +40,85 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor для обробки помилок автентифікації
+// Змінна для відстеження процесу оновлення токена (щоб уникнути нескінченних циклів)
+let isRefreshing = false;
+let failedQueue = [];
+
+// Функція для обробки черги невдалих запитів після оновлення токена
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  
+  failedQueue = [];
+};
+
+// Interceptor для обробки помилок автентифікації та автоматичного оновлення токенів
 api.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
-    // Якщо отримали 401 (Unauthorized) або 403 (Forbidden)
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      // Очищаємо дані користувача з localStorage (токен тепер в cookie)
-      localStorage.removeItem('user');
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Якщо отримали 401 (Unauthorized) або 403 (Forbidden) і це не запит на refresh
+    if ((error.response?.status === 401 || error.response?.status === 403) && 
+        !originalRequest._retry && 
+        !originalRequest.url?.includes('/auth/refresh') &&
+        !originalRequest.url?.includes('/auth/logout')) {
       
-      // Перенаправляємо на сторінку логіну
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      // Якщо вже виконується оновлення токена - додаємо запит до черги
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(() => {
+            // Після оновлення токена повторюємо оригінальний запит
+            return api(originalRequest);
+          })
+          .catch(err => {
+            return Promise.reject(err);
+          });
+      }
+
+      // Позначаємо, що почали оновлення токена
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        // Намагаємося оновити токен через refresh endpoint
+        await api.post('/api/auth/refresh');
+        
+        // Якщо оновлення успішне - обробляємо чергу та повторюємо оригінальний запит
+        processQueue(null, null);
+        isRefreshing = false;
+        
+        // Повторюємо оригінальний запит з новим токеном
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Якщо refresh не вдався - очищаємо все та перенаправляємо на login
+        processQueue(refreshError, null);
+        isRefreshing = false;
+        
+        localStorage.removeItem('user');
+        
+        // Перенаправляємо на сторінку логіну
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        
+        return Promise.reject(refreshError);
       }
     }
     
+    // Для інших помилок просто прокидаємо їх далі
     return Promise.reject(error);
   }
 );
 
 export default api;
-
-
 

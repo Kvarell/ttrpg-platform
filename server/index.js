@@ -9,10 +9,30 @@ const authRoutes = require('./src/routes/auth.routes');
 const { authenticateToken } = require('./src/middlewares/auth.middleware');
 const { errorHandler } = require('./src/middlewares/error.middleware');
 const { port, frontendUrl, nodeEnv } = require('./src/config/config');
-//npx nodemon index.js for start the server
 
 const app = express();
 const prisma = new PrismaClient();
+
+// Виконуємо міграції Prisma при старті сервера
+async function runMigrations() {
+  try {
+    const { execSync } = require('child_process');
+    console.log('🔄 Виконуємо міграції Prisma...');
+    execSync('npx prisma migrate deploy', { stdio: 'inherit', cwd: __dirname });
+    console.log('✅ Міграції виконано успішно');
+  } catch (error) {
+    console.warn('⚠️ Помилка виконання міграцій:', error.message);
+    // Не зупиняємо сервер, якщо міграції не виконалися
+  }
+}
+
+// Виконуємо міграції при старті (в Docker або якщо встановлено змінну оточення)
+// В development можна вимкнути через RUN_MIGRATIONS=false
+if (process.env.RUN_MIGRATIONS !== 'false') {
+  runMigrations().catch(err => {
+    console.error('❌ Критична помилка при виконанні міграцій:', err);
+  });
+}
 
 // Налаштування CORS для роботи з cookies
 app.use(cors({
@@ -38,17 +58,12 @@ app.use(cookieParser()); // Парсер для cookies
 // Важливо для роботи за proxy/load balancer
 app.set('trust proxy', 1);
 
-// Тестовий маршрут (публічний)
-
 app.get('/', (req, res) => {
   res.send('Сервер працює! Готовий до НРІ.');
 });
 
-// Маршрути для аутентифікації (публічні)
 app.use('/api/auth', authRoutes);
 
-// ЗАХИЩЕНІ МАРШРУТИ - вимагають автентифікації
-// Маршрут для отримання всіх користувачів (тепер захищений)
 app.get('/api/users', authenticateToken, async (req, res) => {
   try {
     const users = await prisma.user.findMany({
@@ -57,7 +72,6 @@ app.get('/api/users', authenticateToken, async (req, res) => {
         username: true,
         email: true,
         createdAt: true,
-        // Не повертаємо пароль
       }
     });
     res.json(users);
@@ -66,7 +80,6 @@ app.get('/api/users', authenticateToken, async (req, res) => {
   }
 });
 
-// Маршрут для отримання профілю поточного користувача
 app.get('/api/profile', authenticateToken, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
@@ -94,9 +107,8 @@ app.get('/api/profile', authenticateToken, async (req, res) => {
   }
 });
 
+app.use(errorHandler);
+
 app.listen(port, () => {
   console.log(`✅ Сервер запущено на порту ${port}`);
 });
-
-// Підключаємо централізований обробник помилок (має бути останнім middleware)
-app.use(errorHandler);

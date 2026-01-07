@@ -15,14 +15,6 @@ function LoginForm({ onSuccess }) {
         onSuccess(res);
       }
     } catch (error) {
-      // Логуємо помилку для діагностики
-      console.error('Помилка входу:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
-        config: error.config,
-      });
-
       const resp = error.response?.data;
       
       // Якщо це CSRF помилка (403) - спробуємо отримати новий токен та повторити
@@ -36,7 +28,6 @@ function LoginForm({ onSuccess }) {
           }
           return;
         } catch (retryError) {
-          console.error('Помилка повторного запиту:', retryError);
           setServerError('Помилка безпеки. Будь ласка, оновіть сторінку.');
           return;
         }

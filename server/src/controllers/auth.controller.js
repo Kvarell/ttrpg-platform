@@ -23,16 +23,49 @@ class AuthController {
       
       // Викликаємо сервіс
       const data = await authService.loginUser(email, password);
-      
-      // Встановлюємо токен в httpOnly cookie замість повернення в JSON
-      res.cookie('token', data.token, {
-        httpOnly: true, // Недоступний для JavaScript (захист від XSS)
-        secure: process.env.NODE_ENV === 'production', // Тільки HTTPS в production
-        sameSite: 'strict', // Захист від CSRF
-        maxAge: 24 * 60 * 60 * 1000, // 24 години (відповідає expiresIn токена)
+
+      // Встановлюємо access token та refresh token в httpOnly cookies
+      res.cookie('token', data.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 15 * 60 * 1000, // 15 хвилин
       });
 
-      // Повертаємо тільки дані користувача (без токена)
+      res.cookie('refreshToken', data.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 днів
+      });
+
+      res.json({ user: data.user });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Обробка оновлення токенів
+  async refresh(req, res, next) {
+    try {
+      const { refreshToken } = req.cookies || {};
+      const data = await authService.refreshTokens(refreshToken);
+
+      // Встановлюємо нові cookies
+      res.cookie('token', data.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 15 * 60 * 1000,
+      });
+
+      res.cookie('refreshToken', data.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+
       res.json({ user: data.user });
     } catch (error) {
       next(error);
@@ -42,8 +75,18 @@ class AuthController {
   // Обробка виходу
   async logout(req, res, next) {
     try {
-      // Очищаємо токен cookie
+      // Спробуємо відкликати refresh token в БД, якщо присутній
+      const { refreshToken } = req.cookies || {};
+      await authService.revokeRefreshToken(refreshToken);
+
+      // Очищаємо cookies
       res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+      });
+
+      res.clearCookie('refreshToken', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',

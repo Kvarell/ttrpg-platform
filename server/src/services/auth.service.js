@@ -1,12 +1,25 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { jwtSecret } = require('../config/config');
 
 // Lazy prisma initialization to avoid errors on module require (if prisma client not generated yet)
 let prisma = null;
 function getPrisma() {
-  if (!prisma) prisma = new PrismaClient();
+  if (!prisma) {
+    try {
+      prisma = new PrismaClient();
+    } catch (error) {
+      console.error('Помилка ініціалізації Prisma Client:', error);
+      throw new Error('Не вдалося ініціалізувати Prisma Client. Переконайтеся, що Prisma Client згенеровано (npx prisma generate)');
+    }
+  }
+  
+  if (!prisma) {
+    throw new Error('Prisma Client не ініціалізовано');
+  }
+  
   return prisma;
 }
 
@@ -72,8 +85,28 @@ class AuthService {
       throw err;
     }
 
-    // 3. Генеруємо токен
-    const token = jwt.sign({ id: user.id, username: user.username }, jwtSecret, { expiresIn: '24h' });
+    // 3. Генеруємо access та refresh токени
+    const accessToken = jwt.sign({ id: user.id, username: user.username }, jwtSecret, { expiresIn: '15m' });
+
+    // Refresh token as a random string (stored in DB for revocation/rotation)
+    const refreshToken = crypto.randomBytes(64).toString('hex');
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 днів
+
+    // Зберігаємо refresh токен у БД
+    if (!prismaClient || !prismaClient.refreshToken) {
+      console.error('Prisma Client або модель refreshToken недоступні');
+      const err = new Error('Помилка підключення до бази даних');
+      err.status = 500;
+      throw err;
+    }
+    
+    await prismaClient.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt,
+      }
+    });
 
     // Return safe user object
     const safeUser = {
@@ -83,7 +116,84 @@ class AuthService {
       createdAt: user.createdAt,
     };
 
-    return { token, user: safeUser };
+    return { accessToken, refreshToken, user: safeUser };
+  }
+
+  // Обмін refresh токена на нові токени (ротація)
+  async refreshTokens(oldRefreshToken) {
+    const prismaClient = getPrisma();
+    
+    if (!prismaClient || !prismaClient.refreshToken) {
+      console.error('Prisma Client або модель refreshToken недоступні');
+      const err = new Error('Помилка підключення до бази даних');
+      err.status = 500;
+      throw err;
+    }
+
+    // Перевіряємо наявність refresh token
+    if (!oldRefreshToken) {
+      const err = new Error('Refresh token не надано');
+      err.status = 401;
+      throw err;
+    }
+
+    const stored = await prismaClient.refreshToken.findUnique({ where: { token: oldRefreshToken } });
+    if (!stored || stored.revoked) {
+      const err = new Error('Невалідний refresh token');
+      err.status = 401;
+      throw err;
+    }
+
+    if (new Date() > stored.expiresAt) {
+      const err = new Error('Refresh token прострочено');
+      err.status = 401;
+      throw err;
+    }
+
+    // Завантажуємо користувача
+    const user = await prismaClient.user.findUnique({ where: { id: stored.userId } });
+    if (!user) {
+      const err = new Error('Користувача не знайдено');
+      err.status = 401;
+      throw err;
+    }
+
+    // Відкликаємо старий refresh token
+    await prismaClient.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } });
+
+    // Створюємо нові токени
+    const accessToken = jwt.sign({ id: user.id, username: user.username }, jwtSecret, { expiresIn: '15m' });
+    const newRefreshToken = crypto.randomBytes(64).toString('hex');
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 днів
+
+    await prismaClient.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt } });
+
+    const safeUser = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      createdAt: user.createdAt,
+    };
+
+    return { accessToken, refreshToken: newRefreshToken, user: safeUser };
+  }
+
+  // Відкликати (revoke) refresh token
+  async revokeRefreshToken(refreshToken) {
+    const prismaClient = getPrisma();
+    if (!refreshToken) return;
+    if (!prismaClient || !prismaClient.refreshToken) {
+      // Якщо Prisma недоступний, просто ігноруємо (не критична помилка для logout)
+      return;
+    }
+    try {
+      const stored = await prismaClient.refreshToken.findUnique({ where: { token: refreshToken } });
+      if (stored && !stored.revoked) {
+        await prismaClient.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } });
+      }
+    } catch (e) {
+      // ignore errors here; caller will still clear cookies
+    }
   }
 }
 
