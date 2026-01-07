@@ -1,6 +1,5 @@
 // Завантажуємо конфігурацію (перевіряє змінні оточення)
 require('./src/config/config');
-
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -8,7 +7,7 @@ const { PrismaClient } = require('@prisma/client');
 const authRoutes = require('./src/routes/auth.routes');
 const { authenticateToken } = require('./src/middlewares/auth.middleware');
 const { errorHandler } = require('./src/middlewares/error.middleware');
-const { port, frontendUrl, nodeEnv } = require('./src/config/config');
+const { port, frontendUrl, nodeEnv, corsAllowedOrigins } = require('./src/config/config');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -37,18 +36,22 @@ if (process.env.RUN_MIGRATIONS !== 'false') {
 // Налаштування CORS для роботи з cookies
 app.use(cors({
   origin: function (origin, callback) {
-    // Дозволяємо запити без origin (наприклад, Postman) та з дозволеного frontend URL
-    if (!origin || origin === frontendUrl || origin.includes('localhost')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Не дозволено CORS'));
+    // Дозволяємо запити без origin (наприклад, Postman or curl) та з whitelist
+    if (!origin) return callback(null, true);
+    // allow localhost during development
+    if (origin.includes('localhost')) return callback(null, true);
+    if (Array.isArray(corsAllowedOrigins) && corsAllowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
+    console.warn('Blocked CORS origin:', origin);
+    return callback(new Error('Не дозволено CORS'));
   },
   credentials: true, // Дозволяємо відправку cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-XSRF-Token'],
   exposedHeaders: ['X-CSRF-Token'],
 }));
+
 
 app.use(express.json({ limit: '10mb' })); // Щоб сервер розумів JSON з підтримкою UTF-8
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Для форм
@@ -108,6 +111,7 @@ app.get('/api/profile', authenticateToken, async (req, res) => {
 });
 
 app.use(errorHandler);
+
 
 app.listen(port, () => {
   console.log(`✅ Сервер запущено на порту ${port}`);
