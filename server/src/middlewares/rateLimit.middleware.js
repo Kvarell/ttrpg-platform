@@ -14,12 +14,15 @@ const loginLimiter = rateLimit({
   statusCode: 429, // HTTP статус для rate limit
   standardHeaders: true, // Повертає інформацію про rate limit в заголовках `RateLimit-*`
   legacyHeaders: false, // Вимкнути заголовки `X-RateLimit-*`
-  // Використовуємо IP адресу для ідентифікації
+  
+  // Використовуємо IP адресу та email для ідентифікації
+  // express-rate-limit автоматично обробляє IPv6 через req.ip (якщо встановлено trust proxy)
   keyGenerator: (req) => {
-    // Враховуємо IP адресу, а також email для більш точного відстеження
-    const ip = req.ip || req.connection.remoteAddress;
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
     const email = req.body?.email || 'unknown';
-    return `${ip}-${email}`;
+    // Нормалізуємо IPv6 адреси (якщо вони в дужках, прибираємо)
+    const normalizedIp = ip.replace(/^\[|\]$/g, '');
+    return `${normalizedIp}-${email}`;
   },
   // Пропускаємо успішні запити (не рахуємо їх як спробу)
   skipSuccessfulRequests: true,
@@ -39,10 +42,14 @@ const registerLimiter = rateLimit({
   statusCode: 429, // HTTP статус для rate limit
   standardHeaders: true,
   legacyHeaders: false,
+
+  // Використовуємо IP адресу та email для ідентифікації
   keyGenerator: (req) => {
-    const ip = req.ip || req.connection.remoteAddress;
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
     const email = req.body?.email || 'unknown';
-    return `${ip}-${email}`;
+    // Нормалізуємо IPv6 адреси (якщо вони в дужках, прибираємо)
+    const normalizedIp = ip.replace(/^\[|\]$/g, '');
+    return `${normalizedIp}-${email}`;
   },
   skipSuccessfulRequests: true,
 });

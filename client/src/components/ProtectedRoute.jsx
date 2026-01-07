@@ -14,11 +14,7 @@ function ProtectedRoute({ children }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Перевіряємо валідність токена через API (токен автоматично відправляється в cookie)
-        // Також отримуємо дані користувача для збереження в localStorage
         const response = await api.get("/api/profile");
-        
-        // Зберігаємо дані користувача в localStorage (якщо ще не збережені)
         if (response.data) {
           const userData = localStorage.getItem("user");
           if (!userData || JSON.parse(userData).id !== response.data.id) {
@@ -29,7 +25,6 @@ function ProtectedRoute({ children }) {
         setIsAuthenticated(true);
         setIsLoading(false);
       } catch (apiError) {
-        // Якщо токен невалідний або відсутній - очищаємо localStorage
         localStorage.removeItem("user");
         setIsAuthenticated(false);
         setIsLoading(false);
@@ -39,7 +34,6 @@ function ProtectedRoute({ children }) {
     checkAuth();
   }, []);
 
-  // Показуємо індикатор завантаження під час перевірки
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#164A41] flex items-center justify-center">

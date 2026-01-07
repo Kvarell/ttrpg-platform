@@ -28,6 +28,7 @@ model User {
   
   // Комунікація
   messages     ChatMessage[] // Повідомлення в чатах
+  refreshTokens RefreshToken[]
 }
 
 model Wallet {
@@ -125,4 +126,14 @@ enum SessionStatus {
   ACTIVE
   FINISHED
   CANCELED
+}
+
+model RefreshToken {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  revoked    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
 }

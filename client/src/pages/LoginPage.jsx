@@ -31,8 +31,6 @@ function LoginPage() {
           
           <LoginForm
             onSuccess={(res) => {
-              // Токен тепер зберігається в httpOnly cookie автоматично
-              // Зберігаємо тільки дані користувача в localStorage
               const userData = res.data.user;
               if (userData) {
                 localStorage.setItem("user", JSON.stringify(userData));

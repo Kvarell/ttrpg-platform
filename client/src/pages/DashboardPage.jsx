@@ -16,7 +16,6 @@ function DashboardPage() {
         setUser(parsedUser);
       }
     } catch (error) {
-      // Якщо помилка парсингу - очищаємо та перенаправляємо
       localStorage.removeItem("user");
       navigate("/login");
     }
@@ -24,19 +23,15 @@ function DashboardPage() {
 
   const handleLogout = async () => {
     try {
-      // Викликаємо API для виходу (очищає httpOnly cookie на сервері)
       await api.post("/api/auth/logout");
     } catch (error) {
       // Навіть якщо помилка, продовжуємо вихід
-      console.error("Помилка при виході:", error);
     } finally {
-      // Очищаємо дані користувача з localStorage
       localStorage.removeItem("user");
       navigate("/login");
     }
   };
 
-  // Показуємо індикатор завантаження, поки завантажуються дані користувача
   if (!user) {
     return (
       <div className="min-h-screen bg-[#164A41] flex items-center justify-center">
