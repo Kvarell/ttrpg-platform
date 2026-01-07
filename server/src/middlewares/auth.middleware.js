@@ -1,22 +1,27 @@
 const jwt = require('jsonwebtoken');
-const SECRET_KEY = process.env.JWT_SECRET || "super_secret_key";
+const { jwtSecret } = require('../config/config');
 
 /**
  * Middleware для верифікації JWT токена
- * Перевіряє наявність та валідність токена в заголовку Authorization
+ * Перевіряє наявність та валідність токена з httpOnly cookie або заголовка Authorization (для зворотної сумісності)
  */
 const authenticateToken = (req, res, next) => {
-  // Отримуємо токен з заголовка Authorization
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Формат: "Bearer <token>"
+  // Спочатку пробуємо отримати токен з httpOnly cookie
+  let token = req.cookies?.token;
 
-  // Якщо токена немає
+  // Якщо токена немає в cookie, пробуємо з заголовка Authorization (для зворотної сумісності)
+  if (!token) {
+    const authHeader = req.headers['authorization'];
+    token = authHeader && authHeader.split(' ')[1]; // Формат: "Bearer <token>"
+  }
+
+  // Якщо токена немає взагалі
   if (!token) {
     return res.status(401).json({ error: 'Токен доступу не надано' });
   }
 
   // Верифікуємо токен
-  jwt.verify(token, SECRET_KEY, (err, user) => {
+  jwt.verify(token, jwtSecret, (err, user) => {
     if (err) {
       return res.status(403).json({ error: 'Токен невалідний або застарів' });
     }
