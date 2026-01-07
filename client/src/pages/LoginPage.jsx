@@ -1,28 +1,23 @@
-import { useForm } from "react-hook-form";
-import { useNavigate, Link } from "react-router-dom";
-import api from "../services/api";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import Snowfall from 'react-snowfall';
+import LoginForm from "../components/forms/LoginForm";
+import api from "../services/api";
 
 function LoginPage() {
-  const { register, handleSubmit, formState: { errors } } = useForm();
   const navigate = useNavigate();
 
-  const onSubmit = async (data) => {
-    try {
-      const res = await api.post("/api/auth/login", data);
-      
-      // Зберігаємо токен та дані користувача
-      localStorage.setItem("token", res.data.token);
-      // Зберігаємо user об'єкт або створюємо з username якщо user не передано
-      const userData = res.data.user || { username: res.data.username };
-      localStorage.setItem("user", JSON.stringify(userData));
-      
-      // Переходимо на головну сторінку
-      navigate("/"); 
-    } catch (error) {
-      // Помилка входу - обробляється в interceptor
-    }
-  };
+  // Ініціалізуємо CSRF токен при завантаженні сторінки входу
+  useEffect(() => {
+    const initCSRF = async () => {
+      try {
+        await api.get("/api/auth/csrf-token");
+      } catch (error) {
+        console.error("Помилка ініціалізації CSRF токена:", error);
+      }
+    };
+    initCSRF();
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#164A41] px-4">
@@ -34,49 +29,17 @@ function LoginPage() {
             <p className="text-[#4D774E]">Раді бачити вас знову!</p>
           </div>
           
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {/* Поле Email */}
-            <div>
-              <input
-                {...register("email", { required: true })}
-                placeholder="Email"
-                type="email"
-                className="w-full px-4 py-3 border-2 border-[#9DC88D] rounded-lg focus:outline-none focus:border-[#4D774E] focus:ring-2 focus:ring-[#9DC88D] transition-colors"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-500">Введіть email</p>
-              )}
-            </div>
-            
-            {/* Поле Пароль */}
-            <div>
-              <input
-                {...register("password", { required: true })}
-                placeholder="Пароль"
-                type="password"
-                className="w-full px-4 py-3 border-2 border-[#9DC88D] rounded-lg focus:outline-none focus:border-[#4D774E] focus:ring-2 focus:ring-[#9DC88D] transition-colors"
-              />
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-500">Введіть пароль</p>
-              )}
-            </div>
-            
-            <button
-              type="submit"
-              className="w-full bg-[#F1B24A] hover:bg-[#4D774E] text-[#164A41] hover:text-[#FFFFFF] font-semibold py-3 px-6 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg"
-            >
-              Увійти
-            </button>
-          </form>
-          
-          <div className="mt-6 text-center">
-            <p className="text-[#164A41]">
-              Ще немає акаунту?{" "}
-              <Link to="/register" className="text-[#F1B24A] hover:text-[#4D774E] font-semibold transition-colors">
-                Зареєструватись
-              </Link>
-            </p>
-          </div>
+          <LoginForm
+            onSuccess={(res) => {
+              // Токен тепер зберігається в httpOnly cookie автоматично
+              // Зберігаємо тільки дані користувача в localStorage
+              const userData = res.data.user;
+              if (userData) {
+                localStorage.setItem("user", JSON.stringify(userData));
+              }
+              navigate("/");
+            }}
+          />
         </div>
       </div>
     </div>

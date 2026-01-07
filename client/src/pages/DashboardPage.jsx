@@ -1,38 +1,42 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Snowfall from 'react-snowfall';
+import api from "../services/api";
 
 function DashboardPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
-  // Перевіряємо, чи ми залогінені, при завантаженні сторінки
+  // Отримуємо дані користувача з localStorage (захист вже виконано в ProtectedRoute)
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
-
-    if (!token || !userData) {
-      navigate("/login"); // Якщо немає токена, кидаємо на логін
-      return;
-    }
-
     try {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
+      const userData = localStorage.getItem("user");
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+      }
     } catch (error) {
-      // Якщо помилка парсингу, очищаємо localStorage і перенаправляємо на логін
-      localStorage.removeItem("token");
+      // Якщо помилка парсингу - очищаємо та перенаправляємо
       localStorage.removeItem("user");
       navigate("/login");
     }
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      // Викликаємо API для виходу (очищає httpOnly cookie на сервері)
+      await api.post("/api/auth/logout");
+    } catch (error) {
+      // Навіть якщо помилка, продовжуємо вихід
+      console.error("Помилка при виході:", error);
+    } finally {
+      // Очищаємо дані користувача з localStorage
+      localStorage.removeItem("user");
+      navigate("/login");
+    }
   };
 
+  // Показуємо індикатор завантаження, поки завантажуються дані користувача
   if (!user) {
     return (
       <div className="min-h-screen bg-[#164A41] flex items-center justify-center">

@@ -1,24 +1,43 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { jwtSecret } = require('../config/config');
 
-const prisma = new PrismaClient();
-const SECRET_KEY = process.env.JWT_SECRET || "super_secret_key"; // Краще сховати в .env
+// Lazy prisma initialization to avoid errors on module require (if prisma client not generated yet)
+let prisma = null;
+function getPrisma() {
+  if (!prisma) prisma = new PrismaClient();
+  return prisma;
+}
 
 class AuthService {
   // Функція реєстрації
   async registerUser(username, email, password) {
+    const prismaClient = getPrisma();
+    
     // 1. Перевіряємо, чи є такий email
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      throw new Error("Користувач з таким email вже існує");
+    const existingUserByEmail = await prismaClient.user.findUnique({ where: { email } });
+    if (existingUserByEmail) {
+      const err = new Error("Користувач з таким email вже існує");
+      err.status = 400;
+      throw err;
     }
 
-    // 2. Хешуємо пароль
+    // 2. Перевіряємо, чи є такий username
+    const existingUserByUsername = await prismaClient.user.findFirst({ 
+      where: { username: username } 
+    });
+    if (existingUserByUsername) {
+      const err = new Error("Користувач з таким нікнеймом вже існує");
+      err.status = 400;
+      throw err;
+    }
+
+    // 3. Хешуємо пароль
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 3. Створюємо юзера і одразу гаманець для нього (згідно з ТЗ)
-    const newUser = await prisma.user.create({
+    // 4. Створюємо юзера і одразу гаманець для нього (згідно з ТЗ)
+    const newUser = await prismaClient.user.create({
       data: {
         username,
         email,
@@ -29,27 +48,42 @@ class AuthService {
       },
     });
 
-    return newUser;
+    // Don't return password to caller
+    const { password: _p, ...safeUser } = newUser;
+    return safeUser;
   }
 
   // Функція входу
   async loginUser(email, password) {
     // 1. Шукаємо юзера
-    const user = await prisma.user.findUnique({ where: { email } });
+    const prismaClient = getPrisma();
+    const user = await prismaClient.user.findUnique({ where: { email } });
     if (!user) {
-      throw new Error("Невірний логін або пароль");
+      const err = new Error("Невірний логін або пароль");
+      err.status = 400;
+      throw err;
     }
 
     // 2. Звіряємо пароль
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
-      throw new Error("Невірний логін або пароль");
+      const err = new Error("Невірний логін або пароль");
+      err.status = 400;
+      throw err;
     }
 
     // 3. Генеруємо токен
-    const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: '24h' });
-    
-    return { token, user };
+    const token = jwt.sign({ id: user.id, username: user.username }, jwtSecret, { expiresIn: '24h' });
+
+    // Return safe user object
+    const safeUser = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      createdAt: user.createdAt,
+    };
+
+    return { token, user: safeUser };
   }
 }
 

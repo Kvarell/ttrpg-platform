@@ -1,13 +1,38 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
 import Login from "./pages/LoginPage";
 import Register from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
+import ProtectedRoute from "./components/ProtectedRoute";
+import api from "./services/api";
 //npm run dev for start the server
 function App() {
+  // Ініціалізуємо CSRF токен при завантаженні додатку
+  useEffect(() => {
+    const initCSRF = async () => {
+      try {
+        await api.get("/api/auth/csrf-token");
+      } catch (error) {
+        console.error("Помилка ініціалізації CSRF токена:", error);
+      }
+    };
+    initCSRF();
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<DashboardPage />} />
+        {/* Захищені маршрути - потребують автентифікації */}
+        <Route 
+          path="/" 
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Публічні маршрути */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Routes>
