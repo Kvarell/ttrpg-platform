@@ -104,6 +104,36 @@ class AuthController {
       next(error);
     }
   }
+
+  // 🔐 Запит на ресет пароля (забув пароль)
+  async forgotPassword(req, res, next) {
+    try {
+      const { email } = req.body;
+
+      const result = await authService.requestPasswordReset(email);
+
+      // ВАЖЛИВО: Для реальної системи тут надсилатимемо листа на email з посиланням
+      // На цей момент просто повертаємо результат (для тестування)
+      // TODO: Інтегрувати sendEmail service (nodemailer, Resend, тощо)
+
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // 🔐 Скинути пароль (за токеном з посилання)
+  async resetPassword(req, res, next) {
+    try {
+      const { resetToken, newPassword } = req.body;
+
+      const result = await authService.resetPassword(resetToken, newPassword);
+
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new AuthController();

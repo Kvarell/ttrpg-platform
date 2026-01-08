@@ -51,9 +51,8 @@ function LoginForm({ onSuccess }) {
         return;
       }
 
-      // Для інших помилок показуємо загальне повідомлення з деталями
-      const errorMessage = resp?.error || error.message || 'Сталася помилка. Спробуйте пізніше.';
-      setServerError(errorMessage);
+      // Для інших помилок показуємо генеричне повідомлення
+      setServerError('Помилка сервера. Спробуйте пізніше.');
     }
   };
 
@@ -100,6 +99,11 @@ function LoginForm({ onSuccess }) {
       </button>
 
       <div className="mt-6 text-center">
+        <div className="mb-3">
+          <Link to="/forgot-password" className="text-[#F1B24A] hover:text-[#4D774E] font-semibold transition-colors text-sm">
+            Забули пароль?
+          </Link>
+        </div>
         <p className="text-[#164A41]">
           Ще немає акаунту?{" "}
           <Link to="/register" className="text-[#F1B24A] hover:text-[#4D774E] font-semibold transition-colors">

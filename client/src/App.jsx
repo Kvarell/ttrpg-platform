@@ -3,6 +3,8 @@ import { useEffect } from "react";
 import Login from "./pages/LoginPage";
 import Register from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import api from "./services/api";
 
@@ -35,6 +37,8 @@ function App() {
         {/* Публічні маршрути */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Routes>
     </BrowserRouter>
   );

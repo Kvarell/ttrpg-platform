@@ -47,7 +47,25 @@ const loginSchema = Joi.object({
   password: passwordRule.required(),
 });
 
+// 🔐 Валідація для забутого пароля
+const forgotPasswordSchema = Joi.object({
+  email: emailRule.required(),
+});
+
+// 🔐 Валідація для ресету пароля
+const resetPasswordSchema = Joi.object({
+  resetToken: Joi.string()
+    .required()
+    .messages({
+      'string.empty': 'Токен ресету обов\'язковий',
+      'any.required': 'Токен ресету обов\'язковий',
+    }),
+  newPassword: passwordRule.required(),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 };

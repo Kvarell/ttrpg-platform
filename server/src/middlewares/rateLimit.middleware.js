@@ -1,9 +1,16 @@
 const rateLimit = require('express-rate-limit');
 
 /**
- * Rate limiter для входу (login)
- * Захист від brute-force атак на конкретний акаунт з конкретного IP.
+ * Rate limiter.
  */
+const emailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 година
+  max: 2, // Максимум 2 спроби з однієї IP
+  message: { error: 'Забагато запитів. Спробуйте через годину.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
   max: 5, 
@@ -26,9 +33,9 @@ const loginLimiter = rateLimit({
 
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 година
-  max: 3, // максимум 3 спроби реєстрації з одного IP
+  max: 5, // максимум 3 спроби реєстрації з одного IP
   message: {
-    error: 'Занадто багато спроб реєстрації з вашої IP адреси. Спробуйте пізніше.',
+    error: 'Занадто багато спроб реєстрації. Спробуйте пізніше.',
   },
   statusCode: 429,
   standardHeaders: true,
@@ -40,4 +47,5 @@ const registerLimiter = rateLimit({
 module.exports = {
   loginLimiter,
   registerLimiter,
+  emailLimiter,
 };
