@@ -10,25 +10,29 @@ datasource db {
 // --- КОРИСТУВАЧІ ТА ПРОФІЛЬ---
 
 model User {
-  id           Int       @id @default(autoincrement())
-  email        String    @unique
-  username     String
-  password     String    // Зберігаємо хеш пароля
-  avatarUrl    String?
-  bio          String?
-  createdAt    DateTime  @default(now())
+  id                      Int       @id @default(autoincrement())
+  email                   String    @unique
+  username                String
+  password                String    // Зберігаємо хеш пароля
+  avatarUrl               String?
+  bio                     String?
+  createdAt               DateTime  @default(now())
+
+  // 🔐 Ресет пароля
+  passwordResetToken      String?   @unique
+  passwordResetExpiry     DateTime?
 
   // Зв'язки
-  wallet       Wallet?   // Один гаманець на юзера
-  stats        UserStats? // Статистика
+  wallet                  Wallet?   // Один гаманець на юзера
+  stats                   UserStats? // Статистика
   
   // Участь у кампаніях та сесіях
-  campaignsOwned Campaign[] @relation("OwnerCampaigns") // Кампанії, де він власник
-  sessionsJoined SessionParticipant[] // Сесії, де він гравець/майстер
+  campaignsOwned          Campaign[] @relation("OwnerCampaigns") // Кампанії, де він власник
+  sessionsJoined          SessionParticipant[] // Сесії, де він гравець/майстер
   
   // Комунікація
-  messages     ChatMessage[] // Повідомлення в чатах
-  refreshTokens RefreshToken[]
+  messages                ChatMessage[] // Повідомлення в чатах
+  refreshTokens           RefreshToken[]
 }
 
 model Wallet {
