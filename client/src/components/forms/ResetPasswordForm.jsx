@@ -61,7 +61,7 @@ export default function ResetPasswordForm() {
 
   if (tokenError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5] px-4">
+      <div className="min-h-screen flex items-center justify-center bg-[#164A41] px-4">
         <div className="w-full max-w-md bg-white border-2 border-red-300 rounded-2xl shadow-xl p-8 text-center">
           <div className="text-5xl mb-4">⚠️</div>
           <p className="text-[#164A41] mb-6 font-medium">{tokenError}</p>
@@ -77,7 +77,7 @@ export default function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#164A41] px-4">
       <div className="w-full max-w-md">
         <div className="bg-white border-2 border-[#9DC88D]/30 rounded-2xl shadow-xl p-8">
           

@@ -7,6 +7,8 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import api from "./services/api";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import VerifyEmailNoticePage from "./pages/VerifyEmailNoticePage";
 
 function App() {
   // Ініціалізуємо CSRF токен при завантаженні додатку
@@ -39,6 +41,8 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/verify-email-notice" element={<VerifyEmailNoticePage />} />
       </Routes>
     </BrowserRouter>
   );

@@ -32,7 +32,10 @@ model User {
   
   // Комунікація
   messages                ChatMessage[] // Повідомлення в чатах
+  emailVerified            Boolean   @default(false)
   refreshTokens           RefreshToken[]
+
+  emailVerificationTokens EmailVerificationToken[]
 }
 
 model Wallet {
@@ -91,6 +94,15 @@ model SessionParticipant {
   session   Session @relation(fields: [sessionId], references: [id])
 
   @@unique([userId, sessionId]) // Юзер не може бути двічі в одній грі
+}
+
+model EmailVerificationToken {
+  id          Int      @id @default(autoincrement())
+  token       String   @unique
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
 }
 
 // --- КОМУНІКАЦІЯ ТА ФІНАНСИ ---

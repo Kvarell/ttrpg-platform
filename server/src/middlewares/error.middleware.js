@@ -14,7 +14,8 @@ const errorHandler = (err, req, res, next) => {
   const status = err.status || 500;
 
   // 3. Для rate limit помилок (429) - додаємо заголовок Retry-After
-  if (status === 429 && err.retryAfter) {
+  if (status === 429
+     && err.retryAfter) {
     res.set('Retry-After', err.retryAfter.toString());
   }
 

@@ -25,7 +25,7 @@ function RegisterForm({ onSuccess }) {
   const onSubmit = async (data) => {
     try {
       await api.post("/api/auth/register", data);
-      if (onSuccess) onSuccess();
+      if (onSuccess) onSuccess(data.email);
     } catch (error) {
       setServerError(null);
       const resp = error.response?.data;
@@ -38,7 +38,7 @@ function RegisterForm({ onSuccess }) {
         try {
           await api.get("/api/auth/csrf-token");
           await api.post("/api/auth/register", data);
-          if (onSuccess) onSuccess();
+          if (onSuccess) onSuccess(data.email);
           return;
         } catch (retryError) {
           setServerError('Помилка безпеки. Оновіть сторінку.');

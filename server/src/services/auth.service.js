@@ -18,13 +18,6 @@ function getPrisma() {
       throw err;
     }
   }
-  
-  if (!prisma) {
-    const err = new Error('Помилка сервера. Спробуйте пізніше.');
-    err.status = 500;
-    throw err;
-  }
-  
   return prisma;
 }
 
@@ -145,8 +138,139 @@ function cleanupRateLimits() {
 }
 
 class AuthService {
+  constructor() {
+    // Запускаємо автоматичну очистку прострочених токенів
+    this.startCleanupJob();
+  }
+
+  startCleanupJob() {
+    // Запускаємо кожну годину (3600000 мс)
+    setInterval(async () => {
+      try {
+        const prismaClient = getPrisma();
+        const now = new Date();
+        
+        // Видаляємо прострочені токени верифікації
+        const { count: emailCount } = await prismaClient.emailVerificationToken.deleteMany({
+          where: { expiresAt: { lt: now } }
+        });
+        
+        // Видаляємо прострочені АБО відкликані refresh токени (які старіші за 7 днів відкликання)
+        // (Тут проста логіка - видаляємо всі прострочені)
+        const { count: refreshCount } = await prismaClient.refreshToken.deleteMany({
+          where: { expiresAt: { lt: now } }
+        });
+        
+        // Очищаємо rate limits для refresh токенів (з модуля rate limit)
+        // cleanupRateLimits(); // Якщо функція експортована
+
+        if (emailCount > 0 || refreshCount > 0) {
+          console.log(`[Cleanup] Видалено ${emailCount} email токенів та ${refreshCount} refresh токенів.`);
+        }
+      } catch (error) {
+        console.error('[Cleanup Error] Помилка очищення токенів:', error.message);
+      }
+    }, 60 * 60 * 1000); // 1 година
+  }
+
+  async verifyEmailToken(token) {
+    const prismaClient = getPrisma();
+    const now = new Date();
+    
+    // Шукаємо токен
+    const record = await prismaClient.emailVerificationToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+
+    if (!record) {
+      return { success: false, message: 'Токен не знайдено або вже використано.' };
+    }
+
+    if (record.expiresAt < now) {
+      // Видаляємо прострочений токен, щоб не засмічувати БД
+      await prismaClient.emailVerificationToken.delete({ where: { id: record.id } });
+      return { success: false, message: 'Термін дії посилання вичерпано. Запросіть нове.' };
+    }
+
+    // Виконуємо в транзакції: оновлюємо юзера і видаляємо токен
+    await prismaClient.$transaction([
+      prismaClient.user.update({
+        where: { id: record.userId },
+        data: { emailVerified: true }
+      }),
+      prismaClient.emailVerificationToken.deleteMany({ 
+        where: { userId: record.userId } // Видаляємо всі токени цього юзера
+      })
+    ]);
+
+    return { success: true };
+  }
+
+// 📩 Повторна відправка листа верифікації (ОНОВЛЕНО: Smart Logic)
+  async resendVerificationEmail(email) {
+    const prismaClient = getPrisma();
+
+    const user = await prismaClient.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, username: true, emailVerified: true }
+    });
+
+    // Якщо юзера немає - імітуємо успіх для безпеки
+    if (!user) {
+      return { message: "Якщо цей email зареєстрований, лист відправлено." };
+    }
+
+    if (user.emailVerified) {
+      return { message: "Цей email вже підтверджено. Можете увійти." };
+    }
+
+    // 🔥 ЛОГІКА ЗМІНЕНА ТУТ:
+    // 1. Шукаємо, чи є вже активний токен
+    const existingToken = await prismaClient.emailVerificationToken.findFirst({
+      where: { userId: user.id }
+    });
+
+    let tokenToUse;
+    const now = new Date();
+
+    // Якщо токен існує і він ще дійсний (має хоча б 1 хвилину життя)
+    if (existingToken && existingToken.expiresAt > new Date(now.getTime() + 60000)) {
+      // Використовуємо старий токен!
+      tokenToUse = existingToken.token;
+      console.log(`[AuthService] Знайдено активний токен, повторно відправляємо той самий: ${user.email}`);
+    } else {
+      // Якщо токена немає або він прострочений - видаляємо старе сміття
+      await prismaClient.emailVerificationToken.deleteMany({
+        where: { userId: user.id }
+      });
+
+      // Генеруємо новий
+      tokenToUse = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 хвилин
+
+      await prismaClient.emailVerificationToken.create({
+        data: {
+          token: tokenToUse,
+          userId: user.id,
+          expiresAt
+        }
+      });
+      console.log(`[AuthService] Згенеровано новий токен верифікації: ${user.email}`);
+    }
+
+    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${tokenToUse}`;
+    
+    const emailResult = await emailService.sendEmailVerificationEmail(user.email, verificationUrl, user.username);
+    
+    if (!emailResult.success) {
+      throw new Error("Не вдалося відправити лист. Спробуйте пізніше.");
+    }
+
+    return { message: "Лист з посиланням надіслано!" };
+  }
   // Функція реєстрації
-async registerUser(username, email, password) {
+  async registerUser(username, email, password) {
     const prismaClient = getPrisma();
         
     // 1. Перевіряємо Username
@@ -186,7 +310,7 @@ async registerUser(username, email, password) {
         email,
         password: hashedPassword,
         wallet: {
-          create: { balance: 0.0 } // Створюємо порожній гаманець
+          create: { balance: 0.0 }
         }
       },
       select: {
@@ -196,68 +320,86 @@ async registerUser(username, email, password) {
         createdAt: true
       }
     });
-
+    // Додаємо email verification
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 хвилин
+    await prismaClient.emailVerificationToken.create({
+      data: {
+        token,
+        userId: newUser.id,
+        expiresAt
+      }
+    });
+    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`;
+    await emailService.sendEmailVerificationEmail(newUser.email, verificationUrl, newUser.username);
     return newUser;
   }
 
   // Функція входу
   async loginUser(email, password) {
-    // 1. Шукаємо юзера (завантажуємо тільки потрібні поля)
     const prismaClient = getPrisma();
+    
+    // 1. Оптимізація: Вибираємо тільки ті поля, які нам потрібні для перевірки та відповіді
     const user = await prismaClient.user.findUnique({ 
       where: { email },
       select: {
         id: true,
+        email: true, // Обов'язково додаємо, бо повертаємо його в об'єкті user
         username: true,
-        password: true
+        password: true,
+        emailVerified: true
       }
     });
+    
+    // Якщо користувача не знайдено - помилка
     if (!user) {
       const err = new Error("Невірний логін або пароль");
       err.status = 400;
       throw err;
     }
 
-    // 2. Звіряємо пароль
+    // 2. Оптимізація: Перевіряємо статус email ПЕРЕД важкою операцією порівняння пароля
+    // Це економить ресурси CPU і дозволяє швидше повернути 403, щоб спрацював наш редірект на фронті
+    if (!user.emailVerified) {
+      const err = new Error("Пошта не підтверджена. Перевірте свою електронну скриньку.");
+      err.status = 403;
+      throw err;
+    }
+
+    // 3. Важка операція (bcrypt) виконується тільки якщо попередні перевірки пройшли
     const isValid = await bcrypt.compare(password, user.password);
+    
     if (!isValid) {
       const err = new Error("Невірний логін або пароль");
       err.status = 400;
       throw err;
     }
 
-    // 3. Генеруємо access та refresh токени
-    const accessToken = jwt.sign({ id: user.id, username: user.username }, jwtSecret, { expiresIn: '15m' });
-
-    // Refresh token as a random string (stored in DB for revocation/rotation)
+    // 4. Генерація токенів
+    const accessToken = jwt.sign(
+      { id: user.id, username: user.username }, 
+      jwtSecret, 
+      { expiresIn: '15m' }
+    );
+    
     const refreshToken = crypto.randomBytes(64).toString('hex');
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 днів
-
-    // Зберігаємо refresh токен у БД
-    if (!prismaClient || !prismaClient.refreshToken) {
-      console.error('Prisma Client або модель refreshToken недоступні');
-      const err = new Error('Помилка сервера. Спробуйте пізніше.');
-      err.status = 500;
-      throw err;
-    }
     
+    // Зберігаємо refresh token
     await prismaClient.refreshToken.create({
-      data: {
-        token: refreshToken,
-        userId: user.id,
-        expiresAt,
-      }
+      data: { token: refreshToken, userId: user.id, expiresAt }
     });
-
-    // Return safe user object
-    const safeUser = {
-      id: user.id,
-      username: user.username,
-      email: email,
-      createdAt: new Date(),
+    
+    // Повертаємо результат (пароль не повертаємо, він залишився в select, але не йде в return)
+    return { 
+      accessToken, 
+      refreshToken, 
+      user: { 
+        id: user.id, 
+        username: user.username, 
+        email: user.email 
+      } 
     };
-
-    return { accessToken, refreshToken, user: safeUser };
   }
 
   // Обмін refresh токена на нові токени (ротація) з mutex для запобігання race conditions

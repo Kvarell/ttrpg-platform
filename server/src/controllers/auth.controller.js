@@ -1,16 +1,44 @@
-const authService = require('../services/auth.service'); // Підключаємо сервіс
+const authService = require('../services/auth.service');
 
 class AuthController {
-  
+
+  // Верифікація email
+  async verifyEmail(req, res, next) {
+    try {
+      const { token } = req.query;
+      const result = await authService.verifyEmailToken(token);
+      if (result.success) {
+        res.status(200).json({ success: true, message: 'Email успішно підтверджено!' });
+      } else {
+        // Повертаємо 400 Bad Request, щоб клієнт знав, що токен не ок
+        res.status(400).json({ success: false, message: result.message });
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Повторна відправка листа верифікації (НОВЕ)
+  async resendVerification(req, res, next) {
+    try {
+      const { email } = req.body;
+      const result = await authService.resendVerificationEmail(email);
+      
+      // Навіть якщо email не знайдено, з міркувань безпеки часто повертають успіх,
+      // але для зручності юзера тут повертаємо реальний статус.
+      // Якщо хочеш максимальну безпеку - завжди повертай 200.
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // Обробка реєстрації
   async register(req, res, next) {
     try {
       const { username, email, password } = req.body;
-      
-      // Викликаємо сервіс
       await authService.registerUser(username, email, password);
-      
-      res.status(201).json({ message: "Користувача створено успішно!" });
+      res.status(201).json({ message: "Користувача створено успішно! Перевірте пошту." });
     } catch (error) {
       next(error);
     }
@@ -20,23 +48,20 @@ class AuthController {
   async login(req, res, next) {
     try {
       const { email, password } = req.body;
-      
-      // Викликаємо сервіс
       const data = await authService.loginUser(email, password);
 
-      // Встановлюємо access token та refresh token в httpOnly cookies
       res.cookie('token', data.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 15 * 60 * 1000, // 15 хвилин
+        maxAge: 15 * 60 * 1000,
       });
 
       res.cookie('refreshToken', data.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 днів
+        maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
       res.json({ user: data.user });
@@ -51,7 +76,6 @@ class AuthController {
       const { refreshToken } = req.cookies || {};
       const data = await authService.refreshTokens(refreshToken);
 
-      // Встановлюємо нові cookies
       res.cookie('token', data.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -75,29 +99,12 @@ class AuthController {
   // Обробка виходу
   async logout(req, res, next) {
     try {
-      // Спробуємо відкликати refresh token в БД, якщо присутній
       const { refreshToken } = req.cookies || {};
       await authService.revokeRefreshToken(refreshToken);
 
-      // Очищаємо cookies
-      res.clearCookie('token', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-      });
-
-      res.clearCookie('refreshToken', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-      });
-
-      // Очищаємо CSRF токен cookie
-      res.clearCookie('XSRF-TOKEN', {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-      });
+      res.clearCookie('token', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
+      res.clearCookie('refreshToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
+      res.clearCookie('XSRF-TOKEN', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
 
       res.json({ message: 'Вихід виконано успішно' });
     } catch (error) {
@@ -105,30 +112,22 @@ class AuthController {
     }
   }
 
-  // 🔐 Запит на ресет пароля (забув пароль)
+  // Запит на ресет пароля
   async forgotPassword(req, res, next) {
     try {
       const { email } = req.body;
-
       const result = await authService.requestPasswordReset(email);
-
-      // ВАЖЛИВО: Для реальної системи тут надсилатимемо листа на email з посиланням
-      // На цей момент просто повертаємо результат (для тестування)
-      // TODO: Інтегрувати sendEmail service (nodemailer, Resend, тощо)
-
       res.json(result);
     } catch (error) {
       next(error);
     }
   }
 
-  // 🔐 Скинути пароль (за токеном з посилання)
+  // Скинути пароль
   async resetPassword(req, res, next) {
     try {
       const { resetToken, newPassword } = req.body;
-
       const result = await authService.resetPassword(resetToken, newPassword);
-
       res.json(result);
     } catch (error) {
       next(error);
