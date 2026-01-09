@@ -2,34 +2,43 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const { validateBody } = require('../middlewares/validation.middleware');
+// Додаємо імпорт схеми forgotPasswordSchema (вона перевіряє просто email)
 const { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } = require('../validation/auth.validation');
-const { loginLimiter, registerLimiter, emailLimiter} = require('../middlewares/rateLimit.middleware');
+// Імпортуємо нові лімітери
+const { 
+  loginLimiter, 
+  registerLimiter, 
+  emailLimiter, 
+  resendVerificationLimiter, 
+  verifyEmailLimiter 
+} = require('../middlewares/rateLimit.middleware');
 const { setCSRFToken, verifyCSRFToken } = require('../middlewares/csrf.middleware');
-const { authenticateToken } = require('../middlewares/auth.middleware');
 
-// GET endpoint для отримання CSRF токена (для першого завантаження сторінки)
+// GET endpoint для отримання CSRF токена
 router.get('/csrf-token', setCSRFToken, (req, res) => {
   res.json({ message: 'CSRF токен встановлено' });
 });
 
-// Встановлюємо CSRF токен для всіх запитів (має бути ПЕРЕД verifyCSRFToken)
+// Встановлюємо CSRF токен для всіх запитів
 router.use(setCSRFToken);
 
-// Коли приходить запит на /register -> спочатку rate limiting, потім встановлення CSRF, потім перевірка CSRF, потім валідація, потім контролер
+// Реєстрація та Вхід
 router.post('/register', registerLimiter, verifyCSRFToken, validateBody(registerSchema), authController.register);
-
-// Коли приходить запит на /login -> спочатку rate limiting, потім встановлення CSRF, потім перевірка CSRF, потім валідація, потім контролер
 router.post('/login', loginLimiter, verifyCSRFToken, validateBody(loginSchema), authController.login);
 
-// 🔐 Запит на ресет пароля (забув пароль)
+// 🔐 Відновлення пароля
 router.post('/forgot-password', emailLimiter, validateBody(forgotPasswordSchema), authController.forgotPassword);
-// 🔐 Скинути пароль
 router.post('/reset-password', registerLimiter, verifyCSRFToken, validateBody(resetPasswordSchema), authController.resetPassword);
 
-// Оновлення токенів
-router.post('/refresh', verifyCSRFToken, authController.refresh);
+// 📩 Повторна відправка листа підтвердження (Новий роут)
+// Використовуємо forgotPasswordSchema, бо там валідація лише email поля
+router.post('/resend-verification', resendVerificationLimiter, validateBody(forgotPasswordSchema), authController.resendVerification);
 
-// Вихід - відкликаємо refresh token і очищаємо куки (CSRF потрібен)
+// 📩 Верифікація email (Додано лімітер)
+router.get('/verify-email', verifyEmailLimiter, authController.verifyEmail);
+
+// Токени та Вихід
+router.post('/refresh', verifyCSRFToken, authController.refresh);
 router.post('/logout', verifyCSRFToken, authController.logout);
 
 module.exports = router;

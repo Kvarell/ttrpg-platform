@@ -2,12 +2,7 @@ const nodemailer = require('nodemailer');
 
 /**
  * Email сервіс для відправлення листів (ресет пароля, верифікація, тощо)
- * 
- * Підтримує дві конфігурації:
- * 1. Gmail (development) - через gmail app password
- * 2. SMTP сервер (production) - загальний SMTP
  */
-
 class EmailService {
   constructor() {
     this.transporter = null;
@@ -21,13 +16,11 @@ class EmailService {
     const emailProvider = process.env.EMAIL_PROVIDER || 'smtp'; 
 
     try {
-      // 1. Обробка режиму 'disabled'
       if (emailProvider === 'disabled') {
         console.log('⚠️ Email Service: Режим відлагодження (відправка листів вимкнена)');
-        return; // Transporter залишається null, це нормально для цього режиму
+        return;
       }
 
-      // 2. Ініціалізація реальних провайдерів
       if (emailProvider === 'gmail') {
         this.transporter = nodemailer.createTransport({
           service: 'gmail',
@@ -52,7 +45,6 @@ class EmailService {
         console.warn('⚠️ Email Service: Невідомий провайдер email');
       }
 
-      // Тестування з'єднання
       if (this.transporter) {
         this.transporter.verify((error) => {
           if (error) console.error('⚠️ Email Service: Помилка з\'єднання:', error.message);
@@ -63,57 +55,12 @@ class EmailService {
       console.error('❌ Email Service: Помилка ініціалізації:', error.message);
     }
   }
-  /**
-   * Відправити листа для ресету пароля
-   * @param {string} email - Адреса електронної пошти користувача
-   * @param {string} resetUrl - URL посилання для скидання пароля
-   * @param {string} userName - Ім'я користувача (опціонально)
-   */
- async sendPasswordResetEmail(email, resetUrl, userName = 'Користувач') {
-    // === ВИПРАВЛЕННЯ ТУТ ===
-    // Спочатку перевіряємо, чи ми в режимі 'disabled'
-    if (process.env.EMAIL_PROVIDER === 'disabled') {
-        console.log('==========================================');
-        console.log('📧 MOCK EMAIL (Лист не відправлено, але згенеровано)');
-        console.log(`To: ${email}`);
-        console.log(`Subject: 🔐 Скидання пароля`);
-        console.log(`Link: ${resetUrl}`);
-        console.log('==========================================');
-        return { success: true, message: 'Email (Mock) успішно емульовано' };
-    }
-
-    // Тепер перевіряємо transporter для реальної відправки
-    if (!this.transporter) {
-      console.warn('⚠️ Email Service: Transporter не ініціалізований');
-      return {
-        success: false,
-        message: 'Email сервіс не налаштований'
-      };
-    }
-
-    try {
-      const mailOptions = {
-        from: `"TTRPG Platform" <${process.env.EMAIL_FROM || 'noreply@ttrpg.local'}>`,
-        to: email,
-        subject: '🔐 Скидання пароля - TTRPG Platform',
-        html: this.getPasswordResetEmailTemplate(resetUrl, userName),
-        text: this.getPasswordResetEmailText(resetUrl, userName)
-      };
-
-      const info = await this.transporter.sendMail(mailOptions);
-      console.log(`✅ Email надіслано: ${email} (Message ID: ${info.messageId})`);
-      
-      return { success: true, message: 'Email успішно надіслано', messageId: info.messageId };
-    } catch (error) {
-      console.error(`❌ Помилка надсилання email до ${email}:`, error.message);
-      return { success: false, message: 'Помилка при надсиланні email', error: error.message };
-    }
-  }
 
   /**
-   * HTML шаблон для листа ресету пароля
+   * Універсальний HTML шаблон (Wrapper)
+   * Використовується для ВСІХ листів, щоб зберігати єдиний стиль
    */
-  getPasswordResetEmailTemplate(resetUrl, userName) {
+  getHtmlTemplate(headerTitle, bodyContent) {
     return `
       <!DOCTYPE html>
       <html lang="uk">
@@ -121,114 +68,34 @@ class EmailService {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 20px;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-          }
-          .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px 20px;
-            text-align: center;
-          }
-          .header h1 {
-            margin: 0;
-            font-size: 28px;
-            font-weight: 600;
-          }
-          .content {
-            padding: 40px 20px;
-          }
-          .content h2 {
-            color: #333;
-            margin-top: 0;
-          }
-          .content p {
-            color: #666;
-            line-height: 1.6;
-            margin: 15px 0;
-          }
-          .button {
-            display: inline-block;
-            background-color: #667eea;
-            color: white!important;
-            padding: 12px 30px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 600;
-            margin: 20px 0;
-          }
-          .button:hover {
-            background-color: #5568d3;
-          }
-          .warning {
-            background-color: #fff3cd;
-            border: 1px solid #ffc107;
-            color: #856404;
-            padding: 15px;
-            border-radius: 6px;
-            margin: 20px 0;
-          }
-          .footer {
-            background-color: #f9f9f9;
-            padding: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #999;
-            border-top: 1px solid #eee;
-          }
-          .footer a {
-            color: #667eea;
-            text-decoration: none;
-          }
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px; }
+          .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; color: white; }
+          .header h1 { margin: 0; font-size: 28px; font-weight: bold; }
+          .header p { margin: 10px 0 0; font-size: 16px; opacity: 0.9; }
+          .content { padding: 40px 30px; color: #333333; line-height: 1.6; }
+          .content h2 { margin-top: 0; color: #333; }
+          .btn { display: inline-block; background-color: #5865F2; color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; margin: 20px 0; text-align: center; }
+          .btn:hover { background-color: #4752c4; }
+          .warning-box { background-color: #fff8c4; border: 1px solid #e0c855; color: #755f08; padding: 15px; border-radius: 6px; font-size: 14px; margin: 20px 0; }
+          .footer { background-color: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #999999; border-top: 1px solid #eeeeee; }
+          .security-list { margin-top: 20px; font-size: 14px; color: #555; padding-left: 20px; }
+          .security-list li { margin-bottom: 8px; }
+          .link-text { font-size: 12px; word-break: break-all; color: #888; margin-top: 5px; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             <h1>🔐 TTRPG Platform</h1>
-            <p>Скидання пароля</p>
+            <p>${headerTitle}</p>
           </div>
-          
           <div class="content">
-            <h2>Привіт, ${userName}! 👋</h2>
-            
-            <p>Ми отримали запит на скидання пароля для вашого акаунту. Якщо це не ви, просто ігноруйте цей лист.</p>
-            
-            <p>Щоб встановити новий пароль, нажміть на кнопку нижче:</p>
-            
-            <center>
-              <a href="${resetUrl}" class="button">Скинути пароль</a>
-            </center>
-            
-            
-            <div class="warning">
-              <strong>⚠️ Важливо:</strong> Це посилання дійсне тільки 1 годину. Якщо ви не скидаєте пароль протягом цього часу, запросіть нове посилання.
-            </div>
-            
-            <p><strong>Безпека вашого акаунту:</strong></p>
-            <ul>
-              <li>Ніколи не діліться цим посиланням з іншими</li>
-              <li>TTRPG Staff ніколи не буде просити вас клікати на подібні посилання</li>
-              <li>Переконайтеся, що ви на сайті ttrpg.local перед введенням пароля</li>
-            </ul>
+            ${bodyContent}
           </div>
-          
           <div class="footer">
-            <p>© 2026 TTRPG Platform. Всі права захищені.</p>
-            <p>
-              Цей лист був надісланий автоматично. Будь ласка, не відповідайте на нього.
-            </p>
+            <p>&copy; 2026 TTRPG Platform. Всі права захищені.</p>
+            <p>Цей лист був надісланий автоматично. Будь ласка, не відповідайте на нього.</p>
           </div>
         </div>
       </body>
@@ -237,73 +104,104 @@ class EmailService {
   }
 
   /**
-   * Текстовий варіант листа для клієнтів без HTML підтримки
+   * Відправити листа для ресету пароля
    */
-  getPasswordResetEmailText(resetUrl, userName) {
-    return `
-Привіт, ${userName}!
+  async sendPasswordResetEmail(email, resetUrl, userName = 'Користувач') {
+    if (process.env.EMAIL_PROVIDER === 'disabled') {
+        console.log('==========================================');
+        console.log('📧 MOCK EMAIL (Скидання пароля)');
+        console.log(`To: ${email}`);
+        console.log(`Link: ${resetUrl}`);
+        console.log('==========================================');
+        return { success: true, message: 'Email (Mock) успішно емульовано' };
+    }
 
-Ми отримали запит на скидання пароля для вашого акаунту. Якщо це не ви, просто ігноруйте цей лист.
+    if (!this.transporter) return { success: false, message: 'Email сервіс не налаштований' };
 
-Щоб встановити новий пароль, перейдіть за цим посиланням:
-${resetUrl}
+    // Формуємо вміст листа
+    const content = `
+      <h2>Привіт, ${userName}! 👋</h2>
+      <p>Ми отримали запит на скидання пароля для вашого акаунту. Якщо це не ви, просто ігноруйте цей лист.</p>
+      <p>Щоб встановити новий пароль, натисніть на кнопку нижче:</p>
+      
+      <div style="text-align: center;">
+        <a href="${resetUrl}" class="btn">Скинути пароль</a>
+      </div>
 
-⚠️ ВАЖЛИВО: Це посилання дійсне тільки 1 годину.
+      <div class="warning-box">
+        ⚠️ <strong>Важливо:</strong> Це посилання дійсне тільки 1 годину. Якщо ви не скидаєте пароль протягом цього часу, запросіть нове посилання.
+      </div>
 
-Безпека вашого акаунту:
-- Ніколи не діліться цим посиланням з іншими
-- TTRPG Staff ніколи не буде просити вас клікати на подібні посилання
-- Переконайтеся, що ви на сайті ttrpg.local перед введенням пароля
-
----
-© 2026 TTRPG Platform. Всі права захищені.
-Цей лист був надісланий автоматично. Будь ласка, не відповідайте на нього.
+      <p><strong>Безпека вашого акаунту:</strong></p>
+      <ul class="security-list">
+        <li>Ніколи не діліться цим посиланням з іншими</li>
+        <li>TTRPG Staff ніколи не буде просити вас клікати на підозрілі посилання</li>
+        <li>Переконайтеся, що ви на сайті ttrpg.local перед введенням пароля</li>
+      </ul>
     `;
+
+    const html = this.getHtmlTemplate('Скидання пароля', content);
+
+    try {
+      const info = await this.transporter.sendMail({
+        from: `"TTRPG Platform" <${process.env.EMAIL_FROM || 'noreply@ttrpg.local'}>`,
+        to: email,
+        subject: '🔐 Скидання пароля - TTRPG Platform',
+        html: html,
+      });
+      console.log(`✅ Email надіслано: ${email} (ID: ${info.messageId})`);
+      return { success: true, message: 'Email успішно надіслано' };
+    } catch (error) {
+      console.error(`❌ Помилка надсилання:`, error.message);
+      return { success: false, message: 'Помилка при надсиланні email' };
+    }
   }
 
   /**
-   * Відправити листа для верифікації email (для майбутнього використання)
+   * Відправити листа для верифікації email
    */
   async sendEmailVerificationEmail(email, verificationUrl, userName = 'Користувач') {
     if (process.env.EMAIL_PROVIDER === 'disabled') {
         console.log('==========================================');
         console.log('📧 MOCK EMAIL (Верифікація)');
+        console.log(`To: ${email}`);
         console.log(`Link: ${verificationUrl}`);
         console.log('==========================================');
         return { success: true, message: 'Email (Mock) успішно емульовано' };
     }
 
-    if (!this.transporter) {
-      return { success: false, message: 'Email сервіс не налаштований' };
-    }
+    if (!this.transporter) return { success: false, message: 'Email сервіс не налаштований' };
+
+    // Формуємо вміст листа
+    const content = `
+      <h2>Привіт, ${userName}! 👋</h2>
+      <p>Дякуємо за реєстрацію на TTRPG Platform! Щоб почати користуватися всіма можливостями та активувати акаунт, будь ласка, підтвердіть свою електронну адресу.</p>
+      
+      <div style="text-align: center;">
+        <a href="${verificationUrl}" class="btn">Підтвердити Email</a>
+      </div>
+      
+      <div class="warning-box" style="background-color: #e3f2fd; border-color: #90caf9; color: #0d47a1;">
+        ℹ️ <strong>Інформація:</strong> Посилання дійсне протягом 15 хвилин.
+      </div>
+
+      <p style="font-size: 14px; color: #666; margin-top: 30px;">Якщо кнопка не працює, скопіюйте це посилання у браузер:</p>
+      <p class="link-text">${verificationUrl}</p>
+    `;
+
+    const html = this.getHtmlTemplate('Підтвердження реєстрації', content);
 
     try {
-      const mailOptions = {
+      const info = await this.transporter.sendMail({
         from: `"TTRPG Platform" <${process.env.EMAIL_FROM || 'noreply@ttrpg.local'}>`,
         to: email,
-        subject: '✅ Підтвердіть вашу email адресу - TTRPG Platform',
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <body style="font-family: Arial, sans-serif; background-color: #f5f5f5;">
-            <div style="max-width: 600px; margin: 20px auto; background-color: white; padding: 20px; border-radius: 8px;">
-              <h2>Привіт, ${userName}! 👋</h2>
-              <p>Дякуємо за реєстрацію на TTRPG Platform!</p>
-              <p>Щоб активувати ваш акаунт, підтвердіть вашу email адресу:</p>
-              <a href="${verificationUrl}" style="display: inline-block; background-color: #667eea; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none;">Підтвердити email</a>
-              <p><small>Це посилання дійсне 15 хвилин.</small></p>
-            </div>
-          </body>
-          </html>
-        `
-      };
-
-      const info = await this.transporter.sendMail(mailOptions);
-      console.log(`✅ Email верифікації надіслано: ${email}`);
-      
+        subject: '✅ Підтвердження реєстрації - TTRPG Platform',
+        html: html,
+      });
+      console.log(`✅ Email верифікації надіслано: ${email} (ID: ${info.messageId})`);
       return { success: true, message: 'Email верифікації надіслано' };
     } catch (error) {
-      console.error(`❌ Помилка надсилання email верифікації:`, error.message);
+      console.error(`❌ Помилка надсилання:`, error.message);
       return { success: false, message: 'Помилка при надсиланні email' };
     }
   }

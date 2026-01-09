@@ -1,13 +1,16 @@
 import { useForm } from "react-hook-form";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Додали useNavigate
 import api from "../../services/api";
 
 function LoginForm({ onSuccess }) {
-  const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm();
+  const { register, handleSubmit, formState: { isSubmitting } } = useForm();
   const [serverError, setServerError] = useState(null);
+  const navigate = useNavigate(); // Ініціалізуємо хук навігації
 
   const onSubmit = async (data) => {
+    setServerError(null); // Очищаємо помилки перед новим запитом
+
     try {
       const res = await api.post("/api/auth/login", data);
 
@@ -16,12 +19,23 @@ function LoginForm({ onSuccess }) {
       }
     } catch (error) {
       const resp = error.response?.data;
+      const errorMessage = resp?.message || resp?.error || ""; // Отримуємо текст помилки
+
+      // 🔥 НОВА ЛОГІКА: Перехоплення непідтвердженого email
+      // Якщо статус 403 (Forbidden) і в тексті йдеться про пошту
+      if (error.response?.status === 403 && 
+         (errorMessage.toLowerCase().includes("пошта") || errorMessage.toLowerCase().includes("email"))) {
+        
+        // Перенаправляємо на сторінку повідомлення і передаємо email,
+        // щоб користувачу не треба було його вводити знову
+        navigate("/verify-email-notice", { state: { email: data.email } });
+        return;
+      }
       
-      // Якщо це CSRF помилка (403) - спробуємо отримати новий токен та повторити
-      if (error.response?.status === 403 && (resp?.error?.toLowerCase().includes('csrf') || resp?.error?.toLowerCase().includes('токен'))) {
+      // Обробка CSRF (403 з іншим текстом)
+      if (error.response?.status === 403 && (errorMessage.toLowerCase().includes('csrf') || errorMessage.toLowerCase().includes('токен'))) {
         try {
           await api.get("/api/auth/csrf-token");
-          // Повторюємо запит після отримання нового CSRF токена
           const retryRes = await api.post("/api/auth/login", data);
           if (onSuccess) {
             onSuccess(retryRes);
@@ -33,33 +47,35 @@ function LoginForm({ onSuccess }) {
         }
       }
       
-      // Якщо це rate limiting (429) - показуємо повідомлення про обмеження
+      // Rate limiting (429)
       if (error.response?.status === 429) {
-        setServerError(resp?.error || 'Занадто багато спроб входу. Спробуйте знову через 15 хвилин.');
+        setServerError(errorMessage || 'Занадто багато спроб входу. Спробуйте знову через 15 хвилин.');
         return;
       }
       
-      // Якщо це помилка валідації (400) - показуємо про невідповідність email/пароля
+      // Помилка валідації (400) - невірний логін/пароль
       if (error.response?.status === 400) {
         setServerError('Невірний email або пароль');
         return;
       }
 
-      // Якщо це помилка мережі (немає response)
+      // Помилка мережі
       if (!error.response) {
         setServerError('Помилка з\'єднання з сервером. Перевірте, чи запущений сервер.');
         return;
       }
 
-      // Для інших помилок показуємо генеричне повідомлення
-      setServerError('Помилка сервера. Спробуйте пізніше.');
+      // Інші помилки
+      setServerError(errorMessage || 'Помилка сервера. Спробуйте пізніше.');
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       {serverError && (
-        <div className="p-2 bg-red-100 text-red-700 rounded">{serverError}</div>
+        <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+          {serverError}
+        </div>
       )}
 
       {/* Поле Email */}
@@ -116,4 +132,3 @@ function LoginForm({ onSuccess }) {
 }
 
 export default LoginForm;
-

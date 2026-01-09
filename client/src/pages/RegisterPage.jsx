@@ -5,8 +5,8 @@ import RegisterForm from "../components/forms/RegisterForm"; // Перевірт
 function RegisterPage() {
   const navigate = useNavigate();
 
-  const handleSuccess = () => {
-    navigate("/login"); 
+  const handleSuccess = (email) => {
+    navigate('/verify-email-notice', { state: { email } });
   };
 
   return (

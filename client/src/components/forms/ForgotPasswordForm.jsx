@@ -34,7 +34,7 @@ export default function ForgotPasswordForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#164A41] px-4"> 
       <div className="w-full max-w-md">
         <div className="bg-white border-2 border-[#9DC88D]/30 rounded-2xl shadow-xl p-8">
           
