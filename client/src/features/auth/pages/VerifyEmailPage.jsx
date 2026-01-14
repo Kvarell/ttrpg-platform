@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { verifyEmail } from "../api/authApi"; 
+import AuthLayout from "../components/AuthLayout";
+import AlertMessage from "../../../components/ui/AlertMessage";
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -26,41 +28,48 @@ export default function VerifyEmailPage() {
     if (verifyCalled.current) return;
     verifyCalled.current = true;
 
-    // Використовуємо .then() як у твоєму оригіналі, але адаптуємо під нове API
     verifyEmail(token)
       .then(data => { 
-        // ⚠️ Увага: authApi повертає response.data, тому тут 'data' це вже тіло відповіді
         setStatus("success");
         setMessage(data.message || "Email успішно підтверджено! Тепер ви можете увійти.");
         setTimeout(() => navigate("/login"), 4000);
       })
       .catch(err => {
         setStatus("error");
-        const msg = err.response?.data?.message || "Помилка під час підтвердження email.";
-        setMessage(msg);
+        setMessage(err.response?.data?.message || "Помилка під час підтвердження email.");
       });
   }, [query, navigate]);
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#164A41] px-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-2xl p-8 text-center">
-          <h2 className="text-3xl font-bold mb-4 text-[#4D774E]">Підтвердження email</h2>
-          {status === "loading" && <p>Перевіряємо токен...</p>}
-          {status === "success" && <p className="text-green-600 font-medium">{message}</p>}
-          {status === "error" && <p className="text-red-600 font-medium">{message}</p>}
-          {status !== "loading" && (
-            <div className="mt-6">
-              <button 
-                className="text-[#F1B24A] hover:text-[#4D774E] font-semibold transition-colors" 
-                onClick={() => navigate("/login")}
-              >
-                До входу
-              </button>
+    <AuthLayout title="Підтвердження email">
+      
+      <div className="py-4 text-center">
+        {status === "loading" && (
+            <div className="text-[#4D774E] animate-pulse font-medium">
+               ⏳ Перевіряємо ваш токен...
             </div>
-          )}
-        </div>
+        )}
+
+        {/* Використовуємо універсальний компонент повідомлень */}
+        {status !== "loading" && (
+            <AlertMessage 
+                type={status} // "success" або "error"
+                message={message} 
+            />
+        )}
+
+        {status !== "loading" && (
+          <div className="mt-6">
+            <Link 
+                to="/login" 
+                className="text-[#164A41] hover:text-[#F1B24A] font-semibold transition-colors border-b-2 border-transparent hover:border-[#F1B24A]"
+            >
+              Перейти до входу
+            </Link>
+          </div>
+        )}
       </div>
-    </div>
+
+    </AuthLayout>
   );
 }

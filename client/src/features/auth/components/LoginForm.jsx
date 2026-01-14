@@ -3,8 +3,16 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom"; // Додали useNavigate
 import { loginUser } from "../api/authApi";
 
+import AuthInput from "../ui/AuthInput";
+import AuthButton from "../ui/AuthButton";
+import AlertMessage from "../../../components/ui/AlertMessage";
+import { VALIDATION_RULES } from "../../../utils/validationRules";
 function LoginForm({ onSuccess }) {
-  const { register, handleSubmit, formState: { isSubmitting } } = useForm();
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { isSubmitting, errors } 
+  } = useForm();
   const [serverError, setServerError] = useState(null);
   const navigate = useNavigate();
 
@@ -58,47 +66,32 @@ function LoginForm({ onSuccess }) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       {serverError && (
-        <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-          {serverError}
-        </div>
+        <AlertMessage type="error" message={serverError} />
       )}
 
       {/* Поле Email */}
-      <div>
-        <input
-          {...register("email", {
-            required: 'Email обов\'язковий',
-            pattern: {
-              value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-              message: 'Невірний формат email',
-            },
-          })}
-          placeholder="Email"
-          type="email"
-          className="w-full px-4 py-3 border-2 border-[#9DC88D] rounded-lg focus:outline-none focus:border-[#4D774E] focus:ring-2 focus:ring-[#9DC88D] transition-colors"
-        />
-      </div>
-
+      <AuthInput
+        name="email"
+        type="email"
+        placeholder="Email"
+        register={register}
+        error={errors.email} 
+        rules={VALIDATION_RULES.email}  
+      />
       {/* Поле Пароль */}
-      <div>
-        <input
-          {...register("password", {
-            required: 'Пароль обов\'язковий',
-          })}
-          placeholder="Пароль"
-          type="password"
-          className="w-full px-4 py-3 border-2 border-[#9DC88D] rounded-lg focus:outline-none focus:border-[#4D774E] focus:ring-2 focus:ring-[#9DC88D] transition-colors"
-        />
-      </div>
+      <AuthInput
+        name="password"
+        type="password"
+        placeholder="Пароль"
+        register={register}
+        error={errors.password}
+        rules={{ required: VALIDATION_RULES.password.required }}
+      />
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full bg-[#F1B24A] hover:bg-[#4D774E] text-[#164A41] hover:text-[#FFFFFF] font-semibold py-3 px-6 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg disabled:opacity-60"
-      >
-        {isSubmitting ? 'Зачекайте...' : 'Увійти'}
-      </button>
-
+      <AuthButton isLoading={isSubmitting} loadingText="Вхід...">
+        Увійти
+      </AuthButton>
+      
       <div className="mt-6 text-center">
         <div className="mb-3">
           <Link to="/forgot-password" className="text-[#F1B24A] hover:text-[#4D774E] font-semibold transition-colors text-sm">
