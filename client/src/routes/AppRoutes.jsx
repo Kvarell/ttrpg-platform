@@ -8,7 +8,7 @@ import ResetPasswordPage from "../features/auth/pages/ResetPasswordPage";
 import VerifyEmailPage from "../features/auth/pages/VerifyEmailPage";
 import VerifyEmailNoticePage from "../features/auth/pages/VerifyEmailNoticePage";
 
-import DashboardPage from "../pages/DashboardPage"; 
+import DashboardPage from "../features/dashboard/pages/DashboardPage"; 
 
 import ProtectedRoute from "./ProtectedRoute";
 
