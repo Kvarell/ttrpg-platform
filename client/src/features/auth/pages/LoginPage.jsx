@@ -3,7 +3,8 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginForm from "../components/LoginForm";
 import AuthLayout from "../components/AuthLayout"; // Імпортуємо обгортку
-import { fetchCsrfToken } from "../api/authApi";
+import { fetchCsrfToken, getCurrentUser } from "../api/authApi";
+import { storage } from '../../../utils/storage';
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -18,10 +19,14 @@ function LoginPage() {
       subtitle="Раді бачити вас знову!"
     >
       <LoginForm 
-        onSuccess={(data) => {
+        onSuccess={async (data) => {
           const userData = data.user; 
-          if (userData) localStorage.setItem("user", JSON.stringify(userData));
-          navigate("/");
+          if (userData) {
+            storage.setUser(userData);
+          }
+          // Невелика затримка, щоб браузер встиг встановити cookies
+          await new Promise(resolve => setTimeout(resolve, 100));
+          navigate("/", { replace: true });
         }} 
       />
     </AuthLayout>

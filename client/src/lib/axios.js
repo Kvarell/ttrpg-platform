@@ -26,6 +26,15 @@ api.interceptors.request.use(
     (config) => {
       const csrfToken = getCSRFToken();
       if (csrfToken) config.headers['X-CSRF-Token'] = csrfToken;
+      
+      // Запобігаємо кешуванню для запитів автентифікації
+      // Використовуємо параметр замість заголовків, щоб уникнути CORS проблем
+      if (config.url?.includes('/profile') || config.url?.includes('/auth/')) {
+        // Додаємо timestamp до URL для запобігання кешуванню
+        const separator = config.url.includes('?') ? '&' : '?';
+        config.url = `${config.url}${separator}_t=${Date.now()}`;
+      }
+      
       return config;
     },
     (error) => Promise.reject(error)
@@ -82,9 +91,15 @@ api.interceptors.response.use(
         isRefreshing = false;
         
         // Тільки тут ми робимо редірект або чистку
-        // Краще викинути подію, яку зловить React, але поки hard reload ок
-        if (window.location.pathname !== '/login') {
-             window.location.href = '/login'; 
+        // Уникаємо циклу - не робимо редірект, якщо вже на сторінці логіну
+        // або якщо це запит зі сторінки логіну
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/login' && !originalRequest.url?.includes('/auth/login')) {
+          // Очищаємо localStorage перед редіректом
+          if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.removeItem('ttrpg_app_user');
+          }
+          window.location.href = '/login'; 
         }
         return Promise.reject(refreshError);
       }
