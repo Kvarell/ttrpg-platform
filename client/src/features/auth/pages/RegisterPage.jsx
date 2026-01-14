@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import Snowfall from 'react-snowfall';
-import RegisterForm from "../components/forms/RegisterForm"; // Перевірте шлях імпорту!
+import RegisterForm from "../components/RegisterForm";
 
 function RegisterPage() {
   const navigate = useNavigate();

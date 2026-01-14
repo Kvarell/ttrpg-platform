@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import api from "../../services/api";
+import { registerUser } from "../api/authApi";
 
 function RegisterForm({ onSuccess }) {
   const { 
@@ -15,7 +15,8 @@ function RegisterForm({ onSuccess }) {
   const [serverError, setServerError] = useState(null);
   const password = watch('password', '');
 
-  const checks = {
+  // Перевірки пароля (візуальні)
+  const checks = {    
     length: password.length >= 8,
     lower: /[a-zа-яіїєґ]/.test(password),
     upper: /[A-ZА-ЯІЇЄҐ]/.test(password),
@@ -23,36 +24,26 @@ function RegisterForm({ onSuccess }) {
   };
 
   const onSubmit = async (data) => {
+    setServerError(null);
     try {
-      await api.post("/api/auth/register", data);
+      // ✅ Використовуємо наш новий метод API
+      await registerUser(data);
+      
       if (onSuccess) onSuccess(data.email);
+      
     } catch (error) {
-      setServerError(null);
       const resp = error.response?.data;
-      
-      // КОРИСНО: Виводимо в консоль реальну помилку від сервера, щоб бачити, що там
-      console.log("Помилка реєстрації (Server Response):", resp); 
+      console.log("Помилка реєстрації:", resp); 
 
-      // 1. Обробка CSRF (залишаємо як було)
-      if (error.response?.status === 403 && (resp?.error?.toLowerCase().includes('csrf') || resp?.error?.toLowerCase().includes('токен'))) {
-        try {
-          await api.get("/api/auth/csrf-token");
-          await api.post("/api/auth/register", data);
-          if (onSuccess) onSuccess(data.email);
-          return;
-        } catch (retryError) {
-          setServerError('Помилка безпеки. Оновіть сторінку.');
-          return;
-        }
-      }
-      
-      // 2. Обробка ліміту запитів (залишаємо як було)
+      // ❌ CSRF логіку видалено, бо axios.js це робить сам
+
+      // 1. Обробка ліміту запитів
       if (error.response?.status === 429) {
         setServerError(resp?.error || 'Занадто багато спроб. Спробуйте пізніше.');
         return;
       }
       
-      // 3. Обробка масиву помилок (валідація полів)
+      // 2. Валідація (масив помилок)
       if (resp?.errors && Array.isArray(resp.errors)) {
         resp.errors.forEach(e => {
           if (e.path) setError(e.path, { type: 'server', message: e.message });
@@ -60,26 +51,21 @@ function RegisterForm({ onSuccess }) {
         return;
       }
 
-      // 4. ВИПРАВЛЕНА ЛОГІКА для одиночних помилок
+      // 3. Валідація (одиночні помилки)
       if (resp?.error) {
          const errorText = resp.error.toLowerCase();
          let handled = false;
 
-         // Перевіряємо Email (тепер окремий if)
          if (errorText.includes('email') || errorText.includes('пошта')) {
            setError('email', { type: 'server', message: 'Цей email вже використовується' });
            handled = true;
          } 
          
-         // Перевіряємо Нікнейм (тепер окремий if, а не else if)
-         // Додаємо 'username', бо іноді сервер може віддати англійський текст
          if (errorText.includes('нікнейм') || errorText.includes('username')) {
            setError('username', { type: 'server', message: 'Цей нікнейм зайнятий' });
            handled = true;
          } 
 
-         // Якщо ми розпізнали помилку в полях - виходимо. 
-         // Якщо ні (handled === false) - показуємо загальну помилку знизу.
          if (handled) return;
 
          setServerError(resp.error);
@@ -93,9 +79,9 @@ function RegisterForm({ onSuccess }) {
   const getInputClasses = (hasError) => {
     const base = "w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-colors";
     if (hasError) {
-      return `${base} border-red-500 focus:border-red-700 focus:ring-red-200`; // Червоний при помилці
+      return `${base} border-red-500 focus:border-red-700 focus:ring-red-200`;
     }
-    return `${base} border-[#9DC88D] focus:border-[#4D774E] focus:ring-[#9DC88D]`; // Зелений за замовчуванням
+    return `${base} border-[#9DC88D] focus:border-[#4D774E] focus:ring-[#9DC88D]`;
   };
 
   return (

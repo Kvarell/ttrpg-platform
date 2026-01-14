@@ -1,7 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useEffect, useState, useRef, useCallback } from "react";
-import api from "../services/api";
-
+import { getCurrentUser } from "../features/auth/api/authApi"; 
 /**
  * ProtectedRoute компонент - захищає маршрути, які потребують автентифікації
  * Перевіряє валідність токена через API (токен тепер в httpOnly cookie)
@@ -17,23 +16,27 @@ function ProtectedRoute({ children }) {
   const checkAuth = useCallback(async (showLoading = false) => {
     if (showLoading) setIsLoading(true);
     try {
-      const response = await api.get("/api/profile");
-      if (response.data) {
-        const userData = localStorage.getItem("user");
-        if (!userData || JSON.parse(userData).id !== response.data.id) {
-          localStorage.setItem("user", JSON.stringify(response.data));
+      // ✅ Викликаємо метод з authApi
+      const userDataFromApi = await getCurrentUser();
+      
+      if (userDataFromApi) {
+        const storedUser = localStorage.getItem("user");
+        // Оновлюємо localStorage, якщо дані змінилися
+        if (!storedUser || JSON.parse(storedUser).id !== userDataFromApi.id) {
+          localStorage.setItem("user", JSON.stringify(userDataFromApi));
         }
       }
 
       setIsAuthenticated(true);
-    } catch (apiError) {
+    } catch (error) {
+      console.log("Auth check failed:", error);
       localStorage.removeItem("user");
       setIsAuthenticated(false);
     } finally {
       if (showLoading) setIsLoading(false);
     }
   }, []);
-
+  
   useEffect(() => {
     // Initial (blocking) check when route mounts
     checkAuth(true);

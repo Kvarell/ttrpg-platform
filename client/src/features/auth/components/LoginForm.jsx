@@ -1,72 +1,57 @@
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom"; // Додали useNavigate
-import api from "../../services/api";
+import { loginUser } from "../api/authApi";
 
 function LoginForm({ onSuccess }) {
   const { register, handleSubmit, formState: { isSubmitting } } = useForm();
   const [serverError, setServerError] = useState(null);
-  const navigate = useNavigate(); // Ініціалізуємо хук навігації
+  const navigate = useNavigate();
 
-  const onSubmit = async (data) => {
-    setServerError(null); // Очищаємо помилки перед новим запитом
+  const onSubmit = async (formData) => { // data -> formData для ясності
+    setServerError(null);
 
     try {
-      const res = await api.post("/api/auth/login", data);
+      // ❌ Було: const res = await api.post("/api/auth/login", data);
+      // ✅ Стало: Викликаємо чисту функцію. URL схований всередині.
+      const responseData = await loginUser(formData);
 
       if (onSuccess) {
-        onSuccess(res);
+        // Увага: authApi повертає response.data, тому тут ми передаємо вже чисті дані
+        onSuccess(responseData);
       }
     } catch (error) {
+      // Логіка помилок залишається майже такою ж, бо помилки приходять з axios
       const resp = error.response?.data;
-      const errorMessage = resp?.message || resp?.error || ""; // Отримуємо текст помилки
+      const errorMessage = resp?.message || resp?.error || "";
 
-      // 🔥 НОВА ЛОГІКА: Перехоплення непідтвердженого email
-      // Якщо статус 403 (Forbidden) і в тексті йдеться про пошту
+      // Перехоплення непідтвердженого email
       if (error.response?.status === 403 && 
          (errorMessage.toLowerCase().includes("пошта") || errorMessage.toLowerCase().includes("email"))) {
-        
-        // Перенаправляємо на сторінку повідомлення і передаємо email,
-        // щоб користувачу не треба було його вводити знову
-        navigate("/verify-email-notice", { state: { email: data.email } });
+        navigate("/verify-email-notice", { state: { email: formData.email } });
         return;
       }
       
-      // Обробка CSRF (403 з іншим текстом)
-      if (error.response?.status === 403 && (errorMessage.toLowerCase().includes('csrf') || errorMessage.toLowerCase().includes('токен'))) {
-        try {
-          await api.get("/api/auth/csrf-token");
-          const retryRes = await api.post("/api/auth/login", data);
-          if (onSuccess) {
-            onSuccess(retryRes);
-          }
-          return;
-        } catch (retryError) {
-          setServerError('Помилка безпеки. Будь ласка, оновіть сторінку.');
-          return;
-        }
-      }
+      // ⚠️ CSRF логіку Retry ми прибираємо звідси!
+      // Чому? Бо lib/axios.js повинен додавати токен автоматично.
+      // Якщо 403 CSRF стається постійно - це проблема налаштування axios, а не форми.
       
-      // Rate limiting (429)
       if (error.response?.status === 429) {
-        setServerError(errorMessage || 'Занадто багато спроб входу. Спробуйте знову через 15 хвилин.');
+        setServerError(errorMessage || 'Занадто багато спроб. Спробуйте пізніше.');
         return;
       }
       
-      // Помилка валідації (400) - невірний логін/пароль
       if (error.response?.status === 400) {
         setServerError('Невірний email або пароль');
         return;
       }
 
-      // Помилка мережі
       if (!error.response) {
-        setServerError('Помилка з\'єднання з сервером. Перевірте, чи запущений сервер.');
+        setServerError('Помилка з\'єднання з сервером.');
         return;
       }
 
-      // Інші помилки
-      setServerError(errorMessage || 'Помилка сервера. Спробуйте пізніше.');
+      setServerError(errorMessage || 'Помилка сервера.');
     }
   };
 

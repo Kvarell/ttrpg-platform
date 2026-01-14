@@ -1,26 +1,24 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { resendVerification } from "../services/api";
+import { resendVerification } from "../api/authApi";
 
 export default function VerifyEmailNoticePage() {
   const location = useLocation();
-  // Отримуємо email з історії переходів
   const initialEmail = location.state?.email || "";
 
   const [email, setEmail] = useState(initialEmail);
-  const [status, setStatus] = useState("idle"); // idle, loading, success, error
+  const [status, setStatus] = useState("idle"); 
   const [message, setMessage] = useState("");
 
   const handleResend = async (e) => {
-    // Якщо це форма - зупиняємо перезавантаження, якщо просто кнопка - ігноруємо
     if (e?.preventDefault) e.preventDefault();
-    
     if (!email) return;
 
     setStatus("loading");
     setMessage("");
 
     try {
+      // ✅ Виклик API
       await resendVerification(email);
       setStatus("success");
       setMessage("Лист успішно відправлено повторно!");
@@ -30,7 +28,6 @@ export default function VerifyEmailNoticePage() {
       setMessage(errorMsg);
     }
   };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#164A41] px-4">
       <div className="w-full max-w-md">

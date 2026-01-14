@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../services/api';
+import { forgotPassword } from '../api/authApi';
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
@@ -15,24 +15,23 @@ export default function ForgotPasswordForm() {
     setLoading(true);
 
     try {
-      await api.post('/api/auth/forgot-password', { email });
-      setSuccess(true);
-      // Ми не очищуємо email одразу, щоб користувач бачив, куди відправив
-      // Але поле буде заблоковане
+      // ✅ Виклик чистої функції
+      await forgotPassword(email);
       
+      setSuccess(true);
       setTimeout(() => {
-        // Через 5 секунд знімаємо статус успіху, якщо користувач ще тут
         setSuccess(false);
         setEmail('');
       }, 5000);
     } catch (err) {
-      const message = err.response?.data?.message || 'Помилка при запиті ресету пароля';
+      // Помилки приходять від axios interceptor, структура стандартна
+      const message = err.response?.data?.message || 'Помилка при запиті відновлення пароля';
       setError(message);
     } finally {
       setLoading(false);
     }
   };
-
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#164A41] px-4"> 
       <div className="w-full max-w-md">
