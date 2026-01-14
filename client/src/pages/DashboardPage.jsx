@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Snowfall from 'react-snowfall';
+import { storage } from '../utils/storage';
 
 // ✅ Імпорт нашого нового Layout
 import DashboardLayout from "../components/layout/DashboardLayout";
@@ -13,12 +14,13 @@ function DashboardPage() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    try {
-      const userData = localStorage.getItem("user");
-      if (userData) {
-        setUser(JSON.parse(userData));
-      }
-    } catch (error) {
+    const userData = storage.getUser();
+    if (userData) {
+      // storage.getUser() вже повертає об'єкт, не рядок
+      setUser(userData);
+    } else {
+      // Якщо користувача немає в localStorage, редіректимо на логін
+      // Але це не повинно статися, бо ProtectedRoute вже перевірив автентифікацію
       navigate("/login");
     }
   }, [navigate]);
@@ -29,7 +31,7 @@ function DashboardPage() {
     } catch (error) {
       console.error("Logout error", error);
     } finally {
-      localStorage.removeItem("user");
+      storage.clearUser();
       navigate("/login");
     }
   };

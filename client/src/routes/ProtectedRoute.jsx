@@ -1,36 +1,36 @@
 import { Navigate } from "react-router-dom";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { getCurrentUser } from "../features/auth/api/authApi"; 
-/**
- * ProtectedRoute компонент - захищає маршрути, які потребують автентифікації
- * Перевіряє валідність токена через API (токен тепер в httpOnly cookie)
- * Якщо користувач не автентифікований - перенаправляє на сторінку входу
- */
+import { storage } from '../utils/storage';
+
 function ProtectedRoute({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(null); // null = перевірка, true/false = результат
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const lastCheckRef = useRef(0);
-  const MIN_CHECK_INTERVAL = 30 * 1000; // 30 seconds between automatic checks
+  const MIN_CHECK_INTERVAL = 30 * 1000;
 
   const checkAuth = useCallback(async (showLoading = false) => {
     if (showLoading) setIsLoading(true);
+    
     try {
-      // ✅ Викликаємо метод з authApi
       const userDataFromApi = await getCurrentUser();
       
       if (userDataFromApi) {
-        const storedUser = localStorage.getItem("user");
-        // Оновлюємо localStorage, якщо дані змінилися
-        if (!storedUser || JSON.parse(storedUser).id !== userDataFromApi.id) {
-          localStorage.setItem("user", JSON.stringify(userDataFromApi));
+        // Беремо локального юзера (це вже ОБ'ЄКТ, не рядок)
+        const storedUser = storage.getUser();
+
+        // Порівнюємо ID без JSON.parse
+        // Якщо локально пусто АБО id не збігаються — оновлюємо
+        if (!storedUser || storedUser.id !== userDataFromApi.id) {
+          storage.setUser(userDataFromApi);
         }
       }
 
       setIsAuthenticated(true);
     } catch (error) {
-      console.log("Auth check failed:", error);
-      localStorage.removeItem("user");
+      // Очищаємо localStorage при помилці автентифікації
+      storage.clearUser();
       setIsAuthenticated(false);
     } finally {
       if (showLoading) setIsLoading(false);
@@ -38,7 +38,6 @@ function ProtectedRoute({ children }) {
   }, []);
   
   useEffect(() => {
-    // Initial (blocking) check when route mounts
     checkAuth(true);
 
     const tryCheckOnVisible = () => {
@@ -46,7 +45,6 @@ function ProtectedRoute({ children }) {
         const now = Date.now();
         if (now - lastCheckRef.current > MIN_CHECK_INTERVAL) {
           lastCheckRef.current = now;
-          // Non-blocking background re-check
           checkAuth(false);
         }
       }
@@ -59,7 +57,8 @@ function ProtectedRoute({ children }) {
     };
   }, [checkAuth]);
 
-  if (isLoading) {
+  // Показуємо завантаження, якщо ще завантажується АБО якщо isAuthenticated ще не встановлено
+  if (isLoading || isAuthenticated === null) {
     return (
       <div className="min-h-screen bg-[#164A41] flex items-center justify-center">
         <div className="text-center text-[#FFFFFF]">
@@ -69,12 +68,11 @@ function ProtectedRoute({ children }) {
     );
   }
 
-  // Якщо не автентифікований - перенаправляємо на сторінку входу
-  if (!isAuthenticated) {
+  // Тільки якщо isAuthenticated явно false (не null), редіректимо на логін
+  if (isAuthenticated === false) {
     return <Navigate to="/login" replace />;
   }
 
-  // Якщо автентифікований - показуємо захищений контент
   return children;
 }
 

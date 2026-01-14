@@ -70,7 +70,15 @@ app.use(cors({
   },
   credentials: true, // Дозволяємо відправку cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-XSRF-Token'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-CSRF-Token', 
+    'X-XSRF-Token',
+    'Cache-Control',
+    'Pragma',
+    'Expires'
+  ],
   exposedHeaders: ['X-CSRF-Token'],
 }));
 
