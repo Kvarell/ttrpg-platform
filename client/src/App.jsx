@@ -8,7 +8,7 @@ function App() {
   if (!isInitialized) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#164A41] text-white">
-        Завантаження додатку...
+        Завантаження...
       </div>
     );
   }
