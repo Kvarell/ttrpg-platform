@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import Snowfall from 'react-snowfall';
-import LoginForm from "../components/forms/LoginForm";
-import api from "../services/api";
+import LoginForm from "../components/LoginForm";
+import { fetchCsrfToken } from "../api/authApi";
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -11,9 +11,9 @@ function LoginPage() {
   useEffect(() => {
     const initCSRF = async () => {
       try {
-        await api.get("/api/auth/csrf-token");
+        await fetchCsrfToken();
       } catch (error) {
-        console.error("Помилка ініціалізації CSRF токена:", error);
+        console.error("CSRF Init Error:", error);
       }
     };
     initCSRF();
@@ -30,13 +30,15 @@ function LoginPage() {
           </div>
           
           <LoginForm
-            onSuccess={(res) => {
-              const userData = res.data.user;
-              if (userData) {
-                localStorage.setItem("user", JSON.stringify(userData));
-              }
-              navigate("/");
-            }}
+          onSuccess={(data) => { // Тут приходить вже чистий об'єкт з бекенду (наприклад { user: {...}, token: ... })
+          // ✅ Просто беремо user з об'єкта
+          const userData = data.user; 
+    
+          if (userData) {
+            localStorage.setItem("user", JSON.stringify(userData));
+          }
+          navigate("/");
+          }}
           />
         </div>
       </div>

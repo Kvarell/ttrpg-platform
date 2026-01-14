@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import api from "../services/api";
+import { verifyEmail } from "../api/authApi"; 
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -12,43 +12,35 @@ export default function VerifyEmailPage() {
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
   
-  // useRef зберігає значення між рендерами, але його зміна не викликає ре-рендер.
-  // Використовуємо його як "прапорець", що запит вже пішов.
   const verifyCalled = useRef(false);
 
   useEffect(() => {
     const token = query.get("token");
     
-    // Якщо токена немає, показуємо помилку одразу
     if (!token) {
       setStatus("error");
       setMessage("Токен підтвердження не вказано.");
       return;
     }
 
-    // Якщо запит вже був виконаний (verifyCalled.current === true) — виходимо.
     if (verifyCalled.current) return;
-
-    // Ставимо прапорець, що почали обробку
     verifyCalled.current = true;
 
-    api.get(`/api/auth/verify-email?token=${token}`)
-      .then(res => {
+    // Використовуємо .then() як у твоєму оригіналі, але адаптуємо під нове API
+    verifyEmail(token)
+      .then(data => { 
+        // ⚠️ Увага: authApi повертає response.data, тому тут 'data' це вже тіло відповіді
         setStatus("success");
-        setMessage(res.data.message || "Email успішно підтверджено! Тепер ви можете увійти.");
+        setMessage(data.message || "Email успішно підтверджено! Тепер ви можете увійти.");
         setTimeout(() => navigate("/login"), 4000);
       })
       .catch(err => {
-        // Додаткова перевірка: якщо сервер каже "токен не знайдено", 
-        // але ми знаємо, що це міг бути подвійний запит,
-        // можна було б це ігнорувати, але useRef вирішує проблему в корені.
-        
         setStatus("error");
         const msg = err.response?.data?.message || "Помилка під час підтвердження email.";
         setMessage(msg);
       });
-  }, [query, navigate]); // Залежності залишаємо, але useRef блокує повторний запуск логіки
-
+  }, [query, navigate]);
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#164A41] px-4">
       <div className="w-full max-w-md">

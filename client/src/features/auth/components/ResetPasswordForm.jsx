@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import api from '../../services/api';
+import { resetPassword } from '../api/authApi';
 
 export default function ResetPasswordForm() {
   const [searchParams] = useSearchParams();
@@ -11,23 +11,19 @@ export default function ResetPasswordForm() {
   const [success, setSuccess] = useState(false);
   const [serverError, setServerError] = useState('');
 
-  // Ініціалізація форми
   const { 
     register, 
     handleSubmit, 
     watch, 
     formState: { errors, isSubmitting } 
-  } = useForm({
-    mode: 'onChange'
-  });
+  } = useForm({ mode: 'onChange' });
 
-  // Спостерігаємо за паролем для відображення вимог
   const password = watch('password', '');
 
   useEffect(() => {
     const token = searchParams.get('token');
     if (!token) {
-      setTokenError('Невалідне посилання для ресету. Токен не знайдений.');
+      setTokenError('Невалідне посилання для скидання. Токен не знайдений.');
     } else {
       setResetToken(token);
     }
@@ -36,7 +32,8 @@ export default function ResetPasswordForm() {
   const onSubmit = async (data) => {
     setServerError('');
     try {
-      await api.post('/api/auth/reset-password', {
+      // ✅ Виклик API
+      await resetPassword({
         resetToken,
         newPassword: data.password,
       });
@@ -51,7 +48,11 @@ export default function ResetPasswordForm() {
     }
   };
 
-  // Логіка перевірки для UI (галочки)
+  // ... (Решта коду з checks та JSX залишається без змін, копіюєш зі свого файлу) ...
+  // Щоб зекономити місце, я не дублюю JSX, бо він у тебе правильний.
+  // Головне - переконайся, що імпорт api видалено.
+  
+  // Checks...
   const checks = {
     length: password.length >= 8,
     lower: /[a-zа-яіїєґ]/.test(password),
@@ -60,22 +61,20 @@ export default function ResetPasswordForm() {
   };
 
   if (tokenError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#164A41] px-4">
-        <div className="w-full max-w-md bg-white border-2 border-red-300 rounded-2xl shadow-xl p-8 text-center">
-          <div className="text-5xl mb-4">⚠️</div>
-          <p className="text-[#164A41] mb-6 font-medium">{tokenError}</p>
-          <Link
-            to="/forgot-password"
-            className="inline-block px-6 py-2 bg-[#F1B24A] hover:bg-[#4D774E] text-[#164A41] hover:text-white rounded-lg transition font-semibold"
-          >
-            Спробувати ще раз
-          </Link>
+      // Твій код помилки токена
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-[#164A41] px-4">
+            <div className="w-full max-w-md bg-white border-2 border-red-300 rounded-2xl shadow-xl p-8 text-center">
+            <div className="text-5xl mb-4">⚠️</div>
+            <p className="text-[#164A41] mb-6 font-medium">{tokenError}</p>
+            <Link to="/forgot-password" className="inline-block px-6 py-2 bg-[#F1B24A] hover:bg-[#4D774E] text-[#164A41] hover:text-white rounded-lg transition font-semibold">
+                Спробувати ще раз
+            </Link>
+            </div>
         </div>
-      </div>
-    );
+      );
   }
-
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#164A41] px-4">
       <div className="w-full max-w-md">
