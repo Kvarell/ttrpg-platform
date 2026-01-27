@@ -1,6 +1,7 @@
 const prisma = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const { createError, AppError, ERROR_CODES } = require('../constants/errors');
 
 // Поля для власного профілю (для відповідей)
 const PRIVATE_PROFILE_FIELDS = {
@@ -33,25 +34,19 @@ async function changePassword(userId, currentPassword, newPassword) {
   });
 
   if (!user) {
-    const error = new Error('Користувача не знайдено');
-    error.status = 404;
-    throw error;
+    throw createError.userNotFound();
   }
 
   // Перевіряємо поточний пароль
   const isValidPassword = await bcrypt.compare(currentPassword, user.password);
   if (!isValidPassword) {
-    const error = new Error('Невірний поточний пароль');
-    error.status = 400;
-    throw error;
+    throw createError.passwordInvalid();
   }
 
   // Перевіряємо, що новий пароль відрізняється від старого
   const isSamePassword = await bcrypt.compare(newPassword, user.password);
   if (isSamePassword) {
-    const error = new Error('Новий пароль має відрізнятися від поточного');
-    error.status = 400;
-    throw error;
+    throw createError.passwordSameAsCurrent();
   }
 
   // Хешуємо новий пароль
@@ -97,24 +92,18 @@ async function requestEmailChange(userId, password, newEmail) {
   });
 
   if (!user) {
-    const error = new Error('Користувача не знайдено');
-    error.status = 404;
-    throw error;
+    throw createError.userNotFound();
   }
 
   // Перевіряємо пароль
   const isValidPassword = await bcrypt.compare(password, user.password);
   if (!isValidPassword) {
-    const error = new Error('Невірний пароль');
-    error.status = 400;
-    throw error;
+    throw createError.passwordInvalid();
   }
 
   // Перевіряємо, що новий email відрізняється
   if (user.email.toLowerCase() === newEmail.toLowerCase()) {
-    const error = new Error('Новий email має відрізнятися від поточного');
-    error.status = 400;
-    throw error;
+    throw createError.emailSameAsCurrent();
   }
 
   // Перевіряємо, чи email не зайнятий іншим користувачем
@@ -123,9 +112,7 @@ async function requestEmailChange(userId, password, newEmail) {
   });
 
   if (existingUser) {
-    const error = new Error('Цей email вже використовується');
-    error.status = 409;
-    throw error;
+    throw createError.emailTaken();
   }
 
   // Видаляємо старі токени зміни email для цього користувача
@@ -157,7 +144,7 @@ async function requestEmailChange(userId, password, newEmail) {
   );
 
   if (!emailResult.success) {
-    throw new Error('Не вдалося відправити лист. Спробуйте пізніше.');
+    throw createError.emailSendFailed();
   }
 
   return { message: 'Лист для підтвердження надіслано на новий email' };
@@ -176,18 +163,14 @@ async function confirmEmailChange(token) {
   });
 
   if (!record) {
-    const error = new Error('Недійсний або прострочений токен');
-    error.status = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.EMAIL_CHANGE_TOKEN_INVALID);
   }
 
   // Перевіряємо термін дії
   if (record.expiresAt < new Date()) {
     // Видаляємо прострочений токен
     await prisma.emailChangeToken.deleteMany({ where: { id: record.id } });
-    const error = new Error('Токен прострочений. Запросіть зміну email повторно.');
-    error.status = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.EMAIL_CHANGE_TOKEN_EXPIRED);
   }
 
   // Ще раз перевіряємо, чи email не зайнятий
@@ -197,9 +180,7 @@ async function confirmEmailChange(token) {
 
   if (existingUser) {
     await prisma.emailChangeToken.deleteMany({ where: { id: record.id } });
-    const error = new Error('Цей email вже використовується');
-    error.status = 409;
-    throw error;
+    throw createError.emailTaken();
   }
 
   // Виконуємо в транзакції: видаляємо токен і оновлюємо email атомарно
@@ -238,17 +219,13 @@ async function deleteAccount(userId, password) {
   });
 
   if (!user) {
-    const error = new Error('Користувача не знайдено');
-    error.status = 404;
-    throw error;
+    throw createError.userNotFound();
   }
 
   // Перевіряємо пароль
   const isValidPassword = await bcrypt.compare(password, user.password);
   if (!isValidPassword) {
-    const error = new Error('Невірний пароль');
-    error.status = 400;
-    throw error;
+    throw createError.passwordInvalid();
   }
 
   // Видаляємо всі пов'язані дані в транзакції

@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { createError, AppError, ERROR_CODES } = require('../constants/errors');
 
 // Поля, які можна повертати публічно
 const PUBLIC_PROFILE_FIELDS = {
@@ -51,9 +52,7 @@ async function getMyProfile(userId) {
   });
 
   if (!user) {
-    const error = new Error('Користувача не знайдено');
-    error.status = 404;
-    throw error;
+    throw createError.userNotFound();
   }
 
   return user;
@@ -85,9 +84,7 @@ async function getProfileByUsername(username) {
   });
 
   if (!user) {
-    const error = new Error('Користувача не знайдено');
-    error.status = 404;
-    throw error;
+    throw createError.userNotFound();
   }
 
   return user;
@@ -108,9 +105,7 @@ async function updateProfile(userId, data) {
   }
 
   if (Object.keys(updateData).length === 0) {
-    const error = new Error('Немає даних для оновлення');
-    error.status = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Немає даних для оновлення');
   }
 
   const updatedUser = await prisma.user.update({
@@ -134,9 +129,7 @@ async function updateUsername(userId, newUsername) {
   });
 
   if (existing && existing.id !== userId) {
-    const error = new Error('Цей username вже зайнятий');
-    error.status = 409; // Conflict
-    throw error;
+    throw createError.usernameTaken();
   }
 
   const updatedUser = await prisma.user.update({
