@@ -9,6 +9,8 @@ import VerifyEmailPage from "../features/auth/pages/VerifyEmailPage";
 import VerifyEmailNoticePage from "../features/auth/pages/VerifyEmailNoticePage";
 
 import DashboardPage from "../features/dashboard/pages/DashboardPage"; 
+import PublicProfilePage from "../features/profile/pages/PublicProfilePage";
+import ConfirmEmailChangePage from "../features/profile/pages/ConfirmEmailChangePage";
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -36,6 +38,12 @@ const AppRoutes = () => {
       {/* Верифікація пошти */}
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/verify-email-notice" element={<VerifyEmailNoticePage />} />
+
+      {/* Підтвердження зміни email */}
+      <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
+
+      {/* Публічний профіль користувача */}
+      <Route path="/user/:username" element={<PublicProfilePage />} />
 
       {/* 404 - Перенаправлення на головну */}
       <Route path="*" element={<Navigate to="/" replace />} />
