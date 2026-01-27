@@ -1,0 +1,73 @@
+/**
+ * Express Application Configuration
+ * Окремий модуль для налаштування Express app
+ */
+
+const express = require('express');
+const cookieParser = require('cookie-parser');
+
+// Routes
+const authRoutes = require('./routes/auth.routes');
+const profileRoutes = require('./routes/profile.routes');
+const securityRoutes = require('./routes/security.routes');
+const adminRoutes = require('./routes/admin.routes');
+
+// Middlewares
+const { errorHandler } = require('./middlewares/error.middleware');
+
+// Startup modules
+const { createCorsMiddleware, setupStaticFiles } = require('./startup');
+
+/**
+ * Створює та налаштовує Express application
+ * @returns {Express} Налаштований Express app
+ */
+function createApp() {
+  const app = express();
+
+  // ========== MIDDLEWARE ==========
+
+  // Налаштування CORS для роботи з cookies
+  app.use(createCorsMiddleware());
+
+  // Парсери
+  app.use(express.json({ limit: '10mb' })); // JSON з підтримкою UTF-8
+  app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Для форм
+  app.use(cookieParser()); // Парсер для cookies
+
+  // Статична папка для завантажених файлів (аватари тощо)
+  setupStaticFiles(app);
+
+  // Налаштування для отримання правильного IP адреси (для rate limiting)
+  // Важливо для роботи за proxy/load balancer
+  app.set('trust proxy', 1);
+
+  // ========== ROUTES ==========
+
+  // Health check / Root endpoint
+  app.get('/', (req, res) => {
+    res.send('Сервер працює! Готовий до НРІ.');
+  });
+
+  // Health check endpoint для Docker/Kubernetes
+  app.get('/health', (req, res) => {
+    res.status(200).json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString() 
+    });
+  });
+
+  // API Routes
+  app.use('/api/auth', authRoutes);
+  app.use('/api/profile', profileRoutes);
+  app.use('/api/security', securityRoutes);
+  app.use('/api/admin', adminRoutes);
+
+  // ========== ERROR HANDLER ==========
+  // Повинен бути останнім middleware
+  app.use(errorHandler);
+
+  return app;
+}
+
+module.exports = { createApp };

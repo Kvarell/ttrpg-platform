@@ -27,7 +27,7 @@ export default function VerifyEmailNoticePage() {
       setMessage("Лист успішно відправлено повторно!");
     } catch (err) {
       setStatus("error");
-      setMessage(err.response?.data?.message || "Помилка відправки.");
+      setMessage(err.response?.data?.error || err.response?.data?.message || "Помилка відправки.");
     }
   };
 

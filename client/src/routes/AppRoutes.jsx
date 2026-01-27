@@ -10,7 +10,7 @@ import VerifyEmailNoticePage from "../features/auth/pages/VerifyEmailNoticePage"
 
 import DashboardPage from "../features/dashboard/pages/DashboardPage"; 
 import PublicProfilePage from "../features/profile/pages/PublicProfilePage";
-import ConfirmEmailChangePage from "../features/profile/pages/ConfirmEmailChangePage";
+import ConfirmEmailChangePage from "../features/security/pages/ConfirmEmailChangePage";
 
 import ProtectedRoute from "./ProtectedRoute";
 

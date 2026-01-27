@@ -1,35 +1,43 @@
-// Константа ключа. Краще дати унікальне ім'я, щоб не перетиналось з іншими проектами на localhost
+/**
+ * @deprecated Використовуйте useAuthStore замість storage
+ * Цей файл залишено для зворотної сумісності
+ * 
+ * Міграція:
+ * - storage.getUser() → useAuthStore.getState().user
+ * - storage.setUser(user) → useAuthStore.getState().setUser(user)
+ * - storage.clearUser() → useAuthStore.getState().clearUser()
+ * 
+ * В React компонентах:
+ * - const { user, setUser, clearUser } = useAuthStore()
+ */
+
+import useAuthStore from '../stores/useAuthStore';
+
+// Константа ключа (для сумісності, Zustand використовує той самий ключ)
 const USER_KEY = 'ttrpg_app_user'; 
 
 export const storage = {
-  // Безпечне отримання юзера
+  /**
+   * @deprecated Використовуйте useAuthStore(state => state.user)
+   */
   getUser: () => {
-    try {
-      const data = localStorage.getItem(USER_KEY);
-      // Якщо даних немає, повертаємо null
-      if (!data) return null;
-      
-      // Спробуємо розпарсити
-      return JSON.parse(data);
-    } catch (error) {
-      console.error("Помилка читання localStorage:", error);
-      // Якщо там сміття — краще його видалити, щоб не ламати логіку далі
-      localStorage.removeItem(USER_KEY);
-      return null;
-    }
+    console.warn('[Deprecated] storage.getUser() - використовуйте useAuthStore');
+    return useAuthStore.getState().user;
   },
 
-  // Збереження юзера
+  /**
+   * @deprecated Використовуйте useAuthStore.getState().setUser(user)
+   */
   setUser: (user) => {
-    try {
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
-    } catch (error) {
-      console.error("Помилка запису в localStorage:", error);
-    }
+    console.warn('[Deprecated] storage.setUser() - використовуйте useAuthStore');
+    useAuthStore.getState().setUser(user);
   },
 
-  // Очищення (Logout)
+  /**
+   * @deprecated Використовуйте useAuthStore.getState().clearUser()
+   */
   clearUser: () => {
-    localStorage.removeItem(USER_KEY);
+    console.warn('[Deprecated] storage.clearUser() - використовуйте useAuthStore');
+    useAuthStore.getState().clearUser();
   },
 };

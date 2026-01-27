@@ -78,50 +78,6 @@ class ProfileController {
   }
 
   /**
-   * PATCH /api/profile/me/password
-   * Змінити пароль
-   */
-  async changePassword(req, res, next) {
-    try {
-      const userId = req.user.id;
-      const { currentPassword, newPassword } = req.body;
-      
-      await profileService.changePassword(userId, currentPassword, newPassword);
-      
-      res.json({ 
-        success: true, 
-        message: 'Пароль успішно змінено',
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * DELETE /api/profile/me/avatar
-   * Видалити аватар
-   */
-  async deleteAvatar(req, res, next) {
-    try {
-      const userId = req.user.id;
-      const { profile, oldAvatarUrl } = await profileService.deleteAvatar(userId);
-      
-      // Видаляємо файл у фоні
-      if (oldAvatarUrl) {
-        deleteOldAvatar(oldAvatarUrl);
-      }
-      
-      res.json({ 
-        success: true, 
-        message: 'Аватар видалено',
-        profile,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
    * POST /api/profile/me/avatar
    * Завантажити новий аватар
    */
@@ -159,71 +115,23 @@ class ProfileController {
   }
 
   /**
-   * POST /api/profile/me/email
-   * Запит на зміну email
+   * DELETE /api/profile/me/avatar
+   * Видалити аватар
    */
-  async requestEmailChange(req, res, next) {
+  async deleteAvatar(req, res, next) {
     try {
       const userId = req.user.id;
-      const { password, newEmail } = req.body;
+      const { profile, oldAvatarUrl } = await profileService.deleteAvatar(userId);
       
-      const result = await profileService.requestEmailChange(userId, password, newEmail);
-      
-      res.json({ 
-        success: true, 
-        message: result.message,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * POST /api/profile/confirm-email-change
-   * Підтвердити зміну email (публічний, з токеном)
-   */
-  async confirmEmailChange(req, res, next) {
-    try {
-      const { token } = req.body;
-      
-      const profile = await profileService.confirmEmailChange(token);
+      // Видаляємо файл у фоні
+      if (oldAvatarUrl) {
+        deleteOldAvatar(oldAvatarUrl);
+      }
       
       res.json({ 
         success: true, 
-        message: 'Email успішно змінено',
+        message: 'Аватар видалено',
         profile,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * DELETE /api/profile/me
-   * Видалити акаунт
-   */
-  async deleteAccount(req, res, next) {
-    try {
-      const userId = req.user.id;
-      const { password } = req.body;
-      
-      await profileService.deleteAccount(userId, password);
-      
-      // Очищаємо cookies (logout)
-      res.clearCookie('accessToken', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-      });
-      res.clearCookie('refreshToken', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-      });
-      
-      res.json({ 
-        success: true, 
-        message: 'Акаунт успішно видалено',
       });
     } catch (error) {
       next(error);

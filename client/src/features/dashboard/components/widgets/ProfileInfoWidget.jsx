@@ -1,20 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import DashboardCard from '../../ui/DashboardCard';
 import { getMyProfile } from '@/features/profile/api/profileApi';
+import useAuthStore from '@/stores/useAuthStore';
 
 // Базовий URL для API (для аватарів)
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 export default function ProfileInfoWidget() {
-  const [profile, setProfile] = useState(null);
+  // Підписуємось на Zustand store для реактивного оновлення
+  const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Завантажуємо повний профіль з API при першому рендері
   useEffect(() => {
     const loadProfile = async () => {
       try {
         const { profile: data } = await getMyProfile();
-        setProfile(data);
+        // Оновлюємо store повними даними профілю
+        updateUser(data);
       } catch (err) {
         setError('Не вдалося завантажити профіль');
         console.error(err);
@@ -24,7 +30,7 @@ export default function ProfileInfoWidget() {
     };
 
     loadProfile();
-  }, []);
+  }, [updateUser]);
 
   // Генеруємо ініціали для дефолтного аватара
   const getInitials = (name) => {
@@ -69,7 +75,16 @@ export default function ProfileInfoWidget() {
     );
   }
 
-  const avatarUrl = getAvatarUrl(profile.avatarUrl);
+  // Якщо user ще не завантажений
+  if (!user) {
+    return (
+      <DashboardCard title="Інформація про гравця">
+        <p className="text-gray-500">Завантаження...</p>
+      </DashboardCard>
+    );
+  }
+
+  const avatarUrl = getAvatarUrl(user.avatarUrl);
 
   return (
     <DashboardCard title="Інформація про гравця">
@@ -83,42 +98,33 @@ export default function ProfileInfoWidget() {
           />
         ) : (
           <div className="w-24 h-24 bg-[#164A41] rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-[#9DC88D]">
-            {getInitials(profile.displayName || profile.username)}
+            {getInitials(user.displayName || user.username)}
           </div>
         )}
         
         {/* Інформація */}
         <div className="flex-1">
           <h2 className="text-2xl font-bold text-[#164A41]">
-            {profile.displayName || profile.username}
+            {user.displayName || user.username}
           </h2>
-          <p className="text-[#4D774E]">@{profile.username}</p>
+          <p className="text-[#4D774E]">@{user.username}</p>
           
           {/* Статистика */}
           <div className="mt-3 flex gap-4 text-sm">
             <div className="bg-[#9DC88D]/20 px-3 py-1 rounded-full text-[#164A41]">
-              🎮 {profile.stats?.sessionsPlayed || 0} сесій
+              🎮 {user.stats?.sessionsPlayed || 0} сесій
             </div>
             <div className="bg-[#9DC88D]/20 px-3 py-1 rounded-full text-[#164A41]">
-              ⏱️ {profile.stats?.hoursPlayed || 0} годин
+              ⏱️ {user.stats?.hoursPlayed || 0} годин
             </div>
-          </div>
-          
-          {/* Email статус */}
-          <div className="mt-2 text-xs text-[#4D774E]">
-            {profile.emailVerified ? (
-              <span className="text-green-600">✅ Email підтверджено</span>
-            ) : (
-              <span className="text-orange-500">⚠️ Email не підтверджено</span>
-            )}
           </div>
         </div>
       </div>
 
       {/* Біо */}
-      {profile.bio && (
+      {user.bio && (
         <div className="mt-4 pt-4 border-t border-[#9DC88D]/20">
-          <p className="text-[#164A41] text-sm">{profile.bio}</p>
+          <p className="text-[#164A41] text-sm">{user.bio}</p>
         </div>
       )}
     </DashboardCard>

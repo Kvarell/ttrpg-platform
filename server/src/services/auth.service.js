@@ -1,25 +1,10 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { jwtSecret } = require('../config/config');
 const emailService = require('./email.service');
-
-// Lazy prisma initialization to avoid errors on module require (if prisma client not generated yet)
-let prisma = null;
-function getPrisma() {
-  if (!prisma) {
-    try {
-      prisma = new PrismaClient();
-    } catch (error) {
-      console.error('Помилка ініціалізації Prisma Client:', error);
-      const err = new Error('Помилка сервера. Спробуйте пізніше.');
-      err.status = 500;
-      throw err;
-    }
-  }
-  return prisma;
-}
+const { checkRefreshRateLimit } = require('./rateLimit.service');
 
 // Mutex для запобігання race conditions при refresh токенів
 // Зберігає блокування для кожного userId
@@ -43,138 +28,9 @@ function setMutexForUser(userId, promise) {
   refreshMutexes.set(userId, promise);
 }
 
-// ===== RATE LIMITING =====
-// Структура: Map<userId, { count, resetTime, isBlocked }>
-const refreshRateLimits = new Map();
-
-// Конфігурація rate limit
-const REFRESH_RATE_LIMIT = {
-  maxRequests: 5,        // Макс 5 refresh запитів
-  windowMs: 60 * 1000,   // За 60 секунд (1 хвилина)
-  blockDurationMs: 5 * 60 * 1000, // Блокування на 5 хвилин після перевищення
-};
-
-/**
- * Перевіряє rate limit для користувача
- * @param {number} userId - ID користувача
- * @returns {boolean} true якщо можна робити refresh, false якщо заблокований
- * @throws {Error} Якщо перевищено ліміт
- */
-function checkRefreshRateLimit(userId) {
-  const now = Date.now();
-  const userLimit = refreshRateLimits.get(userId);
-
-  // Якщо користувач не в системі ліміту - створюємо запис
-  if (!userLimit) {
-    refreshRateLimits.set(userId, {
-      count: 1,
-      resetTime: now + REFRESH_RATE_LIMIT.windowMs,
-      isBlocked: false,
-      blockedUntil: null,
-    });
-    return true;
-  }
-
-  // Перевіряємо, чи користувач заблокований
-  if (userLimit.isBlocked && now < userLimit.blockedUntil) {
-    const remainingSeconds = Math.ceil((userLimit.blockedUntil - now) / 1000);
-    const err = new Error(`Занадто багато refresh запитів. Спробуйте через ${remainingSeconds} секунд.`);
-    err.status = 429; // Too Many Requests
-    err.retryAfter = remainingSeconds;
-    throw err;
-  }
-
-  // Якщо період скінчився - скидуємо лічильник
-  if (now > userLimit.resetTime) {
-    userLimit.count = 1;
-    userLimit.resetTime = now + REFRESH_RATE_LIMIT.windowMs;
-    userLimit.isBlocked = false;
-    userLimit.blockedUntil = null;
-    return true;
-  }
-
-  // Збільшуємо лічильник
-  userLimit.count++;
-
-  // Перевіряємо, чи перевищено ліміт
-  if (userLimit.count > REFRESH_RATE_LIMIT.maxRequests) {
-    userLimit.isBlocked = true;
-    userLimit.blockedUntil = now + REFRESH_RATE_LIMIT.blockDurationMs;
-    
-    const remainingSeconds = Math.ceil(REFRESH_RATE_LIMIT.blockDurationMs / 1000);
-    const err = new Error(`Занадто багато refresh запитів. Спробуйте через ${remainingSeconds} секунд.`);
-    err.status = 429; // Too Many Requests
-    err.retryAfter = remainingSeconds;
-    throw err;
-  }
-
-  return true;
-}
-
-/**
- * Очищує застарілі rate limit записи (викликається за расписанием)
- */
-function cleanupRateLimits() {
-  const now = Date.now();
-  const expiredUsers = [];
-
-  for (const [userId, limit] of refreshRateLimits.entries()) {
-    // Видаляємо запис, якщо період ліміту давно закінчився
-    // (до наступного периоду + 1 хвилина для вірогідності)
-    if (now > limit.resetTime + 60000 && !limit.isBlocked) {
-      expiredUsers.push(userId);
-    }
-    // Видаляємо заблокованого користувача через 10 хвилин після розблокування
-    if (now > limit.blockedUntil + 10 * 60 * 1000) {
-      expiredUsers.push(userId);
-    }
-  }
-
-  expiredUsers.forEach(userId => refreshRateLimits.delete(userId));
-  
-  if (expiredUsers.length > 0) {
-    console.log(`[Rate Limit Cleanup] Видалено ${expiredUsers.length} застарілих записів`);
-  }
-}
-
 class AuthService {
-  constructor() {
-    // Запускаємо автоматичну очистку прострочених токенів
-    this.startCleanupJob();
-  }
-
-  startCleanupJob() {
-    // Запускаємо кожну годину (3600000 мс)
-    setInterval(async () => {
-      try {
-        const prismaClient = getPrisma();
-        const now = new Date();
-        
-        // Видаляємо прострочені токени верифікації
-        const { count: emailCount } = await prismaClient.emailVerificationToken.deleteMany({
-          where: { expiresAt: { lt: now } }
-        });
-        
-        // Видаляємо прострочені АБО відкликані refresh токени (які старіші за 7 днів відкликання)
-        // (Тут проста логіка - видаляємо всі прострочені)
-        const { count: refreshCount } = await prismaClient.refreshToken.deleteMany({
-          where: { expiresAt: { lt: now } }
-        });
-        
-        // Очищаємо rate limits для refresh токенів (з модуля rate limit)
-        // cleanupRateLimits(); // Якщо функція експортована
-
-        if (emailCount > 0 || refreshCount > 0) {
-          console.log(`[Cleanup] Видалено ${emailCount} email токенів та ${refreshCount} refresh токенів.`);
-        }
-      } catch (error) {
-        console.error('[Cleanup Error] Помилка очищення токенів:', error.message);
-      }
-    }, 60 * 60 * 1000); // 1 година
-  }
-
   async verifyEmailToken(token) {
-    const prismaClient = getPrisma();
+    const prismaClient = prisma;
     const now = new Date();
     
     // Шукаємо токен
@@ -209,7 +65,7 @@ class AuthService {
 
 // 📩 Повторна відправка листа верифікації (ОНОВЛЕНО: Smart Logic)
   async resendVerificationEmail(email) {
-    const prismaClient = getPrisma();
+    const prismaClient = prisma;
 
     const user = await prismaClient.user.findUnique({
       where: { email },
@@ -271,7 +127,7 @@ class AuthService {
   }
   // Функція реєстрації
   async registerUser(username, email, password) {
-    const prismaClient = getPrisma();
+    const prismaClient = prisma;
         
     // 1. Перевіряємо Username
 
@@ -337,7 +193,7 @@ class AuthService {
 
   // Функція входу
   async loginUser(email, password) {
-    const prismaClient = getPrisma();
+    const prismaClient = prisma;
     
     // 1. Оптимізація: Вибираємо тільки ті поля, які нам потрібні для перевірки та відповіді
     const user = await prismaClient.user.findUnique({ 
@@ -404,7 +260,7 @@ class AuthService {
 
   // Обмін refresh токена на нові токени (ротація) з mutex для запобігання race conditions
   async refreshTokens(oldRefreshToken) {
-    const prismaClient = getPrisma();
+    const prismaClient = prisma;
     
     if (!prismaClient || !prismaClient.refreshToken) {
       console.error('Prisma Client або модель refreshToken недоступні');
@@ -517,7 +373,7 @@ class AuthService {
 
   // Відкликати (revoke) refresh token
   async revokeRefreshToken(refreshToken) {
-    const prismaClient = getPrisma();
+    const prismaClient = prisma;
     if (!refreshToken) return;
     if (!prismaClient || !prismaClient.refreshToken) {
       // Якщо Prisma недоступний, просто ігноруємо (не критична помилка для logout)
@@ -538,7 +394,7 @@ class AuthService {
 
   // 🔐 Запит на ресет пароля
   async requestPasswordReset(email) {
-    const prismaClient = getPrisma();
+    const prismaClient = prisma;
     
     // 1. Перевіряємо, чи існує користувач з таким email
     const user = await prismaClient.user.findUnique({
@@ -588,7 +444,7 @@ class AuthService {
 
   // 🔐 Скинути пароль
   async resetPassword(resetToken, newPassword) {
-    const prismaClient = getPrisma();
+    const prismaClient = prisma;
     const now = new Date();
 
     // 1. Шукаємо користувача по токену
@@ -647,7 +503,3 @@ class AuthService {
 }
 
 module.exports = new AuthService();
-
-// Експортуємо функції для очистки
-module.exports.checkRefreshRateLimit = checkRefreshRateLimit;
-module.exports.cleanupRateLimits = cleanupRateLimits;

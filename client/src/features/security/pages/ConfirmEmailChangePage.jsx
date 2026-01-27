@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { confirmEmailChange } from '../api/profileApi';
+import { confirmEmailChange } from '../api/securityApi';
 import AuthLayout from '@/features/auth/components/AuthLayout';
 import AlertMessage from '@/components/ui/AlertMessage';
 import Button from '@/components/ui/Button';
