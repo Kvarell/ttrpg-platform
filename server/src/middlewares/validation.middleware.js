@@ -1,6 +1,8 @@
 /**
  * Базова утиліта для валідації будь-якого об'єкта (body, params, query) за схемою Joi
  */
+const { AppError, ERROR_CODES } = require('../constants/errors');
+
 const runValidation = (schema, data, label = 'Validation Error') => {
   const options = { abortEarly: false, allowUnknown: false };
   const { error, value } = schema.validate(data, options);
@@ -10,10 +12,7 @@ const runValidation = (schema, data, label = 'Validation Error') => {
       path: d.path.join('.'),
       message: d.message,
     }));
-    const err = new Error(label);
-    err.status = 400;
-    err.details = details;
-    throw err;
+    throw new AppError(ERROR_CODES.VALIDATION_FAILED, label, details);
   }
 
   return value;

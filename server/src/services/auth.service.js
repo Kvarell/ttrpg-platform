@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const { jwtSecret } = require('../config/config');
 const emailService = require('./email.service');
 const { checkRefreshRateLimit } = require('./rateLimit.service');
+const { createError, AppError, ERROR_CODES } = require('../constants/errors');
 
 // Mutex для запобігання race conditions при refresh токенів
 // Зберігає блокування для кожного userId
@@ -120,7 +121,7 @@ class AuthService {
     const emailResult = await emailService.sendEmailVerificationEmail(user.email, verificationUrl, user.username);
     
     if (!emailResult.success) {
-      throw new Error("Не вдалося відправити лист. Спробуйте пізніше.");
+      throw createError.emailSendFailed();
     }
 
     return { message: "Лист з посиланням надіслано!" };
@@ -137,9 +138,7 @@ class AuthService {
     });
     
     if (existingUserByUsername) {
-      const err = new Error("Цей нікнейм зайнятий");
-      err.status = 400;
-      throw err;
+      throw createError.usernameTaken();
     }
 
     // 2. Перевіряємо Email
@@ -149,9 +148,7 @@ class AuthService {
     });
 
     if (existingUserByEmail) {
-      const err = new Error("Цей email вже використовується"); 
-      err.status = 400;
-      throw err;
+      throw createError.emailTaken();
     }
 
     
@@ -209,26 +206,20 @@ class AuthService {
     
     // Якщо користувача не знайдено - помилка
     if (!user) {
-      const err = new Error("Невірний логін або пароль");
-      err.status = 400;
-      throw err;
+      throw createError.invalidCredentials();
     }
 
     // 2. Оптимізація: Перевіряємо статус email ПЕРЕД важкою операцією порівняння пароля
     // Це економить ресурси CPU і дозволяє швидше повернути 403, щоб спрацював наш редірект на фронті
     if (!user.emailVerified) {
-      const err = new Error("Пошта не підтверджена. Перевірте свою електронну скриньку.");
-      err.status = 403;
-      throw err;
+      throw createError.emailNotVerified();
     }
 
     // 3. Важка операція (bcrypt) виконується тільки якщо попередні перевірки пройшли
     const isValid = await bcrypt.compare(password, user.password);
     
     if (!isValid) {
-      const err = new Error("Невірний логін або пароль");
-      err.status = 400;
-      throw err;
+      throw createError.invalidCredentials();
     }
 
     // 4. Генерація токенів
@@ -264,16 +255,12 @@ class AuthService {
     
     if (!prismaClient || !prismaClient.refreshToken) {
       console.error('Prisma Client або модель refreshToken недоступні');
-      const err = new Error('Помилка сервера. Спробуйте пізніше.');
-      err.status = 500;
-      throw err;
+      throw createError.serverError();
     }
 
     // Перевіряємо наявність refresh token (завантажуємо тільки потрібні поля)
     if (!oldRefreshToken) {
-      const err = new Error('Refresh token не надано');
-      err.status = 401;
-      throw err;
+      throw createError.refreshTokenMissing();
     }
 
     // Перший запит - отримуємо userId для блокування та rate limit перевірки
@@ -288,15 +275,11 @@ class AuthService {
     });
     
     if (!stored || stored.revoked) {
-      const err = new Error('Невалідний refresh token');
-      err.status = 401;
-      throw err;
+      throw createError.refreshTokenInvalid();
     }
 
     if (new Date() > stored.expiresAt) {
-      const err = new Error('Refresh token прострочено');
-      err.status = 401;
-      throw err;
+      throw createError.refreshTokenExpired();
     }
 
     // 🔥 RATE LIMITING - перевіряємо ліміт запитів для користувача
@@ -320,9 +303,7 @@ class AuthService {
       });
 
       if (!storedAgain || storedAgain.revoked) {
-        const err = new Error('Невалідний refresh token');
-        err.status = 401;
-        throw err;
+        throw createError.refreshTokenInvalid();
       }
 
       // Завантажуємо користувача (тільки потрібні поля)
@@ -336,9 +317,7 @@ class AuthService {
       });
       
       if (!user) {
-        const err = new Error('Користувача не знайдено');
-        err.status = 401;
-        throw err;
+        throw createError.userNotFound();
       }
 
       // Відкликаємо старий refresh token
@@ -459,23 +438,17 @@ class AuthService {
     });
 
     if (!user) {
-      const err = new Error("Невалідний або прострочений токен ресету");
-      err.status = 400;
-      throw err;
+      throw createError.passwordResetTokenInvalid();
     }
 
     // 2. Перевіряємо, чи не прострочено токен
     if (!user.passwordResetExpiry || now > user.passwordResetExpiry) {
-      const err = new Error("Токен ресету прострочено. Спробуйте знову запросити ресет.");
-      err.status = 400;
-      throw err;
+      throw new AppError(ERROR_CODES.PASSWORD_RESET_TOKEN_EXPIRED);
     }
 
     // 3. Валідація нового пароля (відповідає схемі валідації - мінімум 8 символів)
     if (!newPassword || newPassword.length < 8) {
-      const err = new Error("Пароль повинен бути мінімум 8 символів");
-      err.status = 400;
-      throw err;
+      throw new AppError(ERROR_CODES.PASSWORD_TOO_WEAK, 'Пароль повинен бути мінімум 8 символів');
     }
 
     // 4. Хешуємо новий пароль

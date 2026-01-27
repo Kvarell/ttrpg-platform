@@ -3,6 +3,7 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { createError } = require('../constants/errors');
 
 // Папка для зберігання аватарів
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/avatars');
@@ -41,9 +42,7 @@ const fileFilter = (req, file, cb) => {
   if (AVATAR_CONFIG.allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    const error = new Error('Недопустимий формат файлу. Дозволено: JPG, PNG, GIF, WebP');
-    error.status = 400;
-    cb(error, false);
+    cb(createError.fileInvalidFormat('JPG, PNG, GIF, WebP'), false);
   }
 };
 

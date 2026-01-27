@@ -3,6 +3,8 @@
  * Відповідає за обмеження частоти запитів (rate limiting)
  */
 
+const { createError } = require('../constants/errors');
+
 // ===== RATE LIMITING =====
 // Структура: Map<key, { count, resetTime, isBlocked, blockedUntil }>
 const rateLimits = new Map();
@@ -70,10 +72,7 @@ function checkRateLimit(type, identifier, customConfig = null) {
   // Перевіряємо, чи користувач заблокований
   if (userLimit.isBlocked && now < userLimit.blockedUntil) {
     const remainingSeconds = Math.ceil((userLimit.blockedUntil - now) / 1000);
-    const err = new Error(`Занадто багато запитів. Спробуйте через ${remainingSeconds} секунд.`);
-    err.status = 429; // Too Many Requests
-    err.retryAfter = remainingSeconds;
-    throw err;
+    throw createError.rateLimitExceeded(remainingSeconds);
   }
 
   // Якщо період скінчився - скидуємо лічильник
@@ -94,10 +93,7 @@ function checkRateLimit(type, identifier, customConfig = null) {
     userLimit.blockedUntil = now + config.blockDurationMs;
     
     const remainingSeconds = Math.ceil(config.blockDurationMs / 1000);
-    const err = new Error(`Занадто багато запитів. Спробуйте через ${remainingSeconds} секунд.`);
-    err.status = 429; // Too Many Requests
-    err.retryAfter = remainingSeconds;
-    throw err;
+    throw createError.rateLimitExceeded(remainingSeconds);
   }
 
   return true;

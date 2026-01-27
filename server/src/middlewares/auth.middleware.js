@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { jwtSecret } = require('../config/config');
+const { ERROR_CODES, ERROR_MESSAGES, HTTP_STATUS } = require('../constants/errors');
 
 /**
  * Middleware для верифікації JWT токена
@@ -17,7 +18,10 @@ const authenticateToken = (req, res, next) => {
 
   // Якщо токена немає взагалі
   if (!token) {
-    return res.status(401).json({ error: 'Токен доступу не надано' });
+    return res.status(HTTP_STATUS.UNAUTHORIZED).json({ 
+      error: ERROR_MESSAGES[ERROR_CODES.AUTH_TOKEN_MISSING],
+      code: ERROR_CODES.AUTH_TOKEN_MISSING,
+    });
   }
 
   // Верифікуємо токен
@@ -27,9 +31,17 @@ const authenticateToken = (req, res, next) => {
       // Повертаємо уніфікований JSON + заголовок для клієнта/інтеграцій
       if (err.name === 'TokenExpiredError') {
         res.set('WWW-Authenticate', 'Bearer error="invalid_token", error_description="The access token expired"');
-        return res.status(401).json({ code: 'TOKEN_EXPIRED', message: 'Токен прострочено', canRefresh: true });
+        return res.status(HTTP_STATUS.UNAUTHORIZED).json({ 
+          code: ERROR_CODES.AUTH_TOKEN_EXPIRED, 
+          error: ERROR_MESSAGES[ERROR_CODES.AUTH_TOKEN_EXPIRED], 
+          canRefresh: true 
+        });
       }
-      return res.status(403).json({ code: 'TOKEN_INVALID', message: 'Токен невалідний', canRefresh: false });
+      return res.status(HTTP_STATUS.FORBIDDEN).json({ 
+        code: ERROR_CODES.AUTH_TOKEN_INVALID, 
+        error: ERROR_MESSAGES[ERROR_CODES.AUTH_TOKEN_INVALID], 
+        canRefresh: false 
+      });
     }
 
     // Додаємо дані користувача до об'єкта запиту
