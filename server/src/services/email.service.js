@@ -205,6 +205,55 @@ class EmailService {
       return { success: false, message: 'Помилка при надсиланні email' };
     }
   }
+
+  /**
+   * Відправити листа для підтвердження зміни email
+   */
+  async sendEmailChangeConfirmation(newEmail, confirmUrl, userName = 'Користувач') {
+    if (process.env.EMAIL_PROVIDER === 'disabled') {
+        console.log('==========================================');
+        console.log('📧 MOCK EMAIL (Зміна email)');
+        console.log(`To: ${newEmail}`);
+        console.log(`Link: ${confirmUrl}`);
+        console.log('==========================================');
+        return { success: true, message: 'Email (Mock) успішно емульовано' };
+    }
+
+    if (!this.transporter) return { success: false, message: 'Email сервіс не налаштований' };
+
+    const content = `
+      <h2>Привіт, ${userName}! 👋</h2>
+      <p>Ви запросили зміну email адреси вашого акаунту на TTRPG Platform.</p>
+      <p>Щоб підтвердити цю зміну, натисніть на кнопку нижче:</p>
+      
+      <div style="text-align: center;">
+        <a href="${confirmUrl}" class="btn">Підтвердити новий Email</a>
+      </div>
+      
+      <div class="warning-box">
+        ⚠️ <strong>Важливо:</strong> Посилання дійсне протягом 15 хвилин. Якщо ви не запитували зміну email, проігноруйте цей лист.
+      </div>
+
+      <p style="font-size: 14px; color: #666; margin-top: 30px;">Якщо кнопка не працює, скопіюйте це посилання у браузер:</p>
+      <p class="link-text">${confirmUrl}</p>
+    `;
+
+    const html = this.getHtmlTemplate('Підтвердження зміни Email', content);
+
+    try {
+      const info = await this.transporter.sendMail({
+        from: `"TTRPG Platform" <${process.env.EMAIL_FROM || 'noreply@ttrpg.local'}>`,
+        to: newEmail,
+        subject: '📧 Підтвердження зміни Email - TTRPG Platform',
+        html: html,
+      });
+      console.log(`✅ Email підтвердження зміни надіслано: ${newEmail} (ID: ${info.messageId})`);
+      return { success: true, message: 'Email підтвердження надіслано' };
+    } catch (error) {
+      console.error(`❌ Помилка надсилання:`, error.message);
+      return { success: false, message: 'Помилка при надсиланні email' };
+    }
+  }
 }
 
 module.exports = new EmailService();

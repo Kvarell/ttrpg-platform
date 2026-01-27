@@ -5,6 +5,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { PrismaClient } = require('@prisma/client');
 const authRoutes = require('./src/routes/auth.routes');
+const profileRoutes = require('./src/routes/profile.routes');
 const { authenticateToken } = require('./src/middlewares/auth.middleware');
 const { errorHandler } = require('./src/middlewares/error.middleware');
 const { port, frontendUrl, nodeEnv, corsAllowedOrigins } = require('./src/config/config');
@@ -87,6 +88,10 @@ app.use(express.json({ limit: '10mb' })); // Щоб сервер розумів 
 app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Для форм
 app.use(cookieParser()); // Парсер для cookies
 
+// Статична папка для завантажених файлів (аватари тощо)
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Налаштування для отримання правильного IP адреси (для rate limiting)
 // Важливо для роботи за proxy/load balancer
 app.set('trust proxy', 1);
@@ -96,6 +101,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/profile', profileRoutes);
 
 // ========== ADMIN ENDPOINTS ДЛЯ УПРАВЛІННЯ ОЧИСТКОЮ ТОКЕНІВ ==========
 // Ці endpoints потребують автентифікації і рекомендуються тільки для адміністраторів

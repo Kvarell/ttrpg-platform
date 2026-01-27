@@ -12,11 +12,20 @@ datasource db {
 model User {
   id                      Int       @id @default(autoincrement())
   email                   String    @unique
-  username                String
+  username                String    @unique
   password                String    // Зберігаємо хеш пароля
+  
+  // --- ПРОФІЛЬ ---
   avatarUrl               String?
+  displayName             String?             // Відображуване ім'я
   bio                     String?
+  timezone                String?             // Europe/Kyiv - для планування сесій
+  language                String?   @default("uk") // Мова інтерфейсу
+  
+  // --- МЕТА-ДАНІ ---
   createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  lastActiveAt            DateTime?           // Останній візит
 
   // 🔐 Ресет пароля
   passwordResetToken      String?   @unique
@@ -36,6 +45,7 @@ model User {
   refreshTokens           RefreshToken[]
 
   emailVerificationTokens EmailVerificationToken[]
+  emailChangeTokens       EmailChangeToken[]
 }
 
 model Wallet {
@@ -101,6 +111,17 @@ model EmailVerificationToken {
   token       String   @unique
   userId      Int
   user        User     @relation(fields: [userId], references: [id])
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+}
+
+// Токен для зміни email
+model EmailChangeToken {
+  id          Int      @id @default(autoincrement())
+  token       String   @unique
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  newEmail    String   // Новий email, на який надіслано підтвердження
   expiresAt   DateTime
   createdAt   DateTime @default(now())
 }
