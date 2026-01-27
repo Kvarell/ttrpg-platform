@@ -1,21 +1,10 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const cron = require('node-cron');
 
 class TokenCleanupService {
   constructor() {
-    this.prisma = null;
     this.cronJob = null;
     this.isRunning = false;
-  }
-
-  /**
-   * Ініціалізація Prisma клієнта
-   */
-  getPrisma() {
-    if (!this.prisma) {
-      this.prisma = new PrismaClient();
-    }
-    return this.prisma;
   }
 
   /**
@@ -23,8 +12,6 @@ class TokenCleanupService {
    * @returns {Object} Результат операції з кількістю видалених токенів
    */
   async cleanupExpiredTokens() {
-    const prisma = this.getPrisma();
-    
     try {
       const now = new Date();
       
@@ -70,7 +57,6 @@ class TokenCleanupService {
    * @returns {Object} Результат операції
    */
   async cleanupRevokedTokens(daysOld = 30) {
-    const prisma = this.getPrisma();
     const timestamp = new Date().toISOString();
     
     try {
@@ -175,8 +161,6 @@ class TokenCleanupService {
    * Отримує статистику по токенах
    */
   async getTokenStats() {
-    const prisma = this.getPrisma();
-    
     try {
       const now = new Date();
 

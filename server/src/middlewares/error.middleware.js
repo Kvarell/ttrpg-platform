@@ -2,24 +2,48 @@
  * Central error handling middleware
  * Formats validation errors (from validation.middleware) and general errors
  */
+const { AppError, ERROR_CODES, ERROR_MESSAGES, HTTP_STATUS } = require('../constants/errors');
+
 const errorHandler = (err, req, res, next) => {
-  // 1. Спеціальна обробка помилки CORS (з index.js)
+  // 1. Якщо це AppError - використовуємо його структуру
+  if (err instanceof AppError) {
+    // Для rate limit помилок (429) - додаємо заголовок Retry-After
+    if (err.status === HTTP_STATUS.TOO_MANY_REQUESTS && err.retryAfter) {
+      res.set('Retry-After', err.retryAfter.toString());
+    }
+    
+    // Логуємо серверні помилки
+    if (err.status >= 500) {
+      console.error('Server Error:', {
+        code: err.code,
+        message: err.message,
+        stack: err.stack,
+        timestamp: err.timestamp,
+        path: req.path,
+        method: req.method,
+      });
+    }
+    
+    return res.status(err.status).json(err.toJSON());
+  }
+
+  // 2. Спеціальна обробка помилки CORS (з startup/cors.js)
   if (err.message === 'Не дозволено CORS') {
-    return res.status(403).json({ 
-      error: 'Доступ заборонено',
+    return res.status(HTTP_STATUS.FORBIDDEN).json({ 
+      error: ERROR_MESSAGES[ERROR_CODES.SECURITY_CORS_BLOCKED],
+      code: ERROR_CODES.SECURITY_CORS_BLOCKED,
     });
   }
 
-  // 2. Визначаємо статус (якщо не заданий — то 500)
-  const status = err.status || 500;
+  // 3. Визначаємо статус (якщо не заданий — то 500)
+  const status = err.status || HTTP_STATUS.INTERNAL_SERVER_ERROR;
 
-  // 3. Для rate limit помилок (429) - додаємо заголовок Retry-After
-  if (status === 429
-     && err.retryAfter) {
+  // 4. Для rate limit помилок (429) - додаємо заголовок Retry-After
+  if (status === HTTP_STATUS.TOO_MANY_REQUESTS && err.retryAfter) {
     res.set('Retry-After', err.retryAfter.toString());
   }
 
-  // 4. Логуємо детальну помилку на сервері
+  // 5. Логуємо детальну помилку на сервері
   if (status >= 500) {
     console.error('Server Error:', {
       message: err.message,
@@ -30,18 +54,28 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // 5. Якщо є деталі валідації — повертаємо їх у стандартизованому виді
+  // 6. Якщо є деталі валідації — повертаємо їх у стандартизованому виді
   if (err.details) {
-    return res.status(status).json({ errors: err.details });
+    return res.status(status).json({ 
+      error: err.message || ERROR_MESSAGES[ERROR_CODES.VALIDATION_FAILED],
+      code: ERROR_CODES.VALIDATION_FAILED,
+      details: err.details,
+    });
   }
 
-  // 6. Для помилок сервера (500) — не розкриваємо деталі
+  // 7. Для помилок сервера (500) — не розкриваємо деталі
   if (status >= 500) {
-    return res.status(status).json({ error: 'Помилка сервера. Спробуйте пізніше.' });
+    return res.status(status).json({ 
+      error: ERROR_MESSAGES[ERROR_CODES.SERVER_ERROR],
+      code: ERROR_CODES.SERVER_ERROR,
+    });
   }
 
-  // 7. Для помилок клієнта (4xx) — повертаємо користувацьке повідомлення
-  return res.status(status).json({ error: err.message || 'Сталася помилка' });
+  // 8. Для помилок клієнта (4xx) — повертаємо користувацьке повідомлення
+  return res.status(status).json({ 
+    error: err.message || 'Сталася помилка',
+    ...(err.code && { code: err.code }),
+  });
 };
 
 module.exports = { errorHandler };

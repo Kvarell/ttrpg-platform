@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { deleteAccount } from '../api/profileApi';
+import { deleteAccount } from '../api/securityApi';
 import AlertMessage from '@/components/ui/AlertMessage';
 import Button from '@/components/ui/Button';
 

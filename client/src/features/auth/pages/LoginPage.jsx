@@ -3,11 +3,12 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginForm from "../components/LoginForm";
 import AuthLayout from "../components/AuthLayout"; // Імпортуємо обгортку
-import { fetchCsrfToken, getCurrentUser } from "../api/authApi";
-import { storage } from '../../../utils/storage';
+import { fetchCsrfToken } from "../api/authApi";
+import useAuthStore from '../../../stores/useAuthStore';
 
 function LoginPage() {
   const navigate = useNavigate();
+  const setUser = useAuthStore((state) => state.setUser);
 
   useEffect(() => {
     fetchCsrfToken().catch(console.error);
@@ -22,7 +23,7 @@ function LoginPage() {
         onSuccess={async (data) => {
           const userData = data.user; 
           if (userData) {
-            storage.setUser(userData);
+            setUser(userData);
           }
           // Невелика затримка, щоб браузер встиг встановити cookies
           await new Promise(resolve => setTimeout(resolve, 100));

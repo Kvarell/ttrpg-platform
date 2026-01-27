@@ -1,4 +1,5 @@
 const authService = require('../services/auth.service');
+const { setAuthCookies, clearAuthCookies, getRefreshTokenFromCookies } = require('../utils/cookie.helper');
 
 class AuthController {
 
@@ -50,83 +51,42 @@ class AuthController {
       const { email, password } = req.body;
       const data = await authService.loginUser(email, password);
 
-      // Визначаємо, чи ми в проді
-      const isProduction = process.env.NODE_ENV === 'production';
-
-      const cookieOptions = {
-        httpOnly: true,
-        secure: isProduction, // false для http://localhost
-        sameSite: isProduction ? 'strict' : 'lax', // 'lax' краще працює з localhost
-        path: '/', // Важливо: встановлюємо path для всіх шляхів
-      };
-
-      res.cookie('token', data.accessToken, {
-        ...cookieOptions,
-        maxAge: 15 * 60 * 1000, // 15 хвилин
-      });
-
-      res.cookie('refreshToken', data.refreshToken, {
-        ...cookieOptions,
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 днів
-      });
+      setAuthCookies(res, data.accessToken, data.refreshToken);
 
       res.json({ user: data.user });
     } catch (error) {
       next(error);
     }
   }
+
   // Обробка оновлення токенів
   async refresh(req, res, next) {
     try {
-      const { refreshToken } = req.cookies || {};
+      const refreshToken = getRefreshTokenFromCookies(req);
       const data = await authService.refreshTokens(refreshToken);
       
-      const isProduction = process.env.NODE_ENV === 'production';
-      const cookieOptions = {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'strict' : 'lax',
-        path: '/', // Важливо: встановлюємо path для всіх шляхів
-      };
-
-      res.cookie('token', data.accessToken, {
-        ...cookieOptions,
-        maxAge: 15 * 60 * 1000, // 15 хвилин
-      });
-
-      res.cookie('refreshToken', data.refreshToken, {
-        ...cookieOptions,
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 днів
-      });
+      setAuthCookies(res, data.accessToken, data.refreshToken);
 
       res.json({ user: data.user });
     } catch (error) {
       next(error);
     }
   }
+
   // Обробка виходу
-async logout(req, res, next) {
+  async logout(req, res, next) {
     try {
-      const { refreshToken } = req.cookies || {};
+      const refreshToken = getRefreshTokenFromCookies(req);
       await authService.revokeRefreshToken(refreshToken);
 
-      const isProduction = process.env.NODE_ENV === 'production';
-      const cookieOptions = { 
-          httpOnly: true, 
-          secure: isProduction, 
-          sameSite: isProduction ? 'strict' : 'lax' 
-      };
-
-      res.clearCookie('token', cookieOptions);
-      res.clearCookie('refreshToken', cookieOptions);
-      // XSRF токен зазвичай не httpOnly, щоб JS міг його читати (якщо треба)
-      res.clearCookie('XSRF-TOKEN', { ...cookieOptions, httpOnly: false });
+      clearAuthCookies(res);
 
       res.json({ message: 'Вихід виконано успішно' });
     } catch (error) {
       next(error);
     }
   }
+
   // Запит на ресет пароля
   async forgotPassword(req, res, next) {
     try {

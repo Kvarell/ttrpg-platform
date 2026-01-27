@@ -54,6 +54,6 @@ export const resendVerification = async (email) => {
 
 // 9. Отримання профілю поточного користувача
 export const getCurrentUser = async () => {  
-  const response = await api.get('/profile'); 
+  const response = await api.get('/profile/me'); 
   return response.data;
 };

@@ -36,7 +36,7 @@ export default function VerifyEmailPage() {
       })
       .catch(err => {
         setStatus("error");
-        setMessage(err.response?.data?.message || "Помилка під час підтвердження email.");
+        setMessage(err.response?.data?.error || err.response?.data?.message || "Помилка під час підтвердження email.");
       });
   }, [query, navigate]);
   

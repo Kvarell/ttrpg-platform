@@ -74,11 +74,14 @@ export default function ProfileEditForm({ onSuccess }) {
       const result = await updateProfile(dataToSend);
       setSuccess('Профіль успішно оновлено!');
       
-      if (onSuccess) {
+      // Викликаємо onSuccess з оновленим профілем
+      if (onSuccess && result.profile) {
         onSuccess(result.profile);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Помилка при збереженні');
+      // Підтримуємо новий формат помилок (error замість message)
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Помилка при збереженні';
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }

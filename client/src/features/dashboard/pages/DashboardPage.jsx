@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { storage } from '../../../utils/storage';
+import useAuthStore from '../../../stores/useAuthStore';
 import { logoutUser } from '../../auth/api/authApi';
 import { getMyProfile } from '../../profile/api/profileApi';
 
@@ -16,8 +16,10 @@ import {
 export default function DashboardPage() {
   const navigate = useNavigate();
   
-  // 1. Стан даних (User Logic)
-  const [user, setUser] = useState(null);
+  // Використовуємо Zustand store для user state
+  const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
+  const clearUser = useAuthStore((state) => state.clearUser);
   const [loading, setLoading] = useState(true);
   
   // 2. Стан інтерфейсу (View Logic)
@@ -28,39 +30,45 @@ export default function DashboardPage() {
 
   // Перевірка авторизації та завантаження актуального профілю
   useEffect(() => {
+    let isMounted = true;
+    
     const loadUserData = async () => {
-      const cachedUser = storage.getUser();
+      // Отримуємо актуальний стан через getState() щоб уникнути циклу
+      const currentUser = useAuthStore.getState().user;
       
-      if (!cachedUser) {
+      if (!currentUser) {
         navigate("/login");
         return;
       }
-      
-      // Спочатку показуємо кешовані дані
-      setUser(cachedUser);
       
       try {
         // Завантажуємо актуальний профіль з API
         const { profile } = await getMyProfile();
         
-        // Оновлюємо стан та localStorage актуальними даними
-        const updatedUser = { ...cachedUser, ...profile };
-        setUser(updatedUser);
-        storage.setUser(updatedUser);
+        // Оновлюємо store актуальними даними
+        if (isMounted) {
+          useAuthStore.getState().updateUser(profile);
+        }
       } catch (error) {
         console.error("Failed to fetch profile:", error);
         // Якщо помилка авторизації - редіректимо на логін
         if (error.response?.status === 401) {
-          storage.clearUser();
+          useAuthStore.getState().clearUser();
           navigate("/login");
         }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     
     loadUserData();
-  }, [navigate]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]); // Тільки navigate в залежностях
 
   // Скидаємо секцію профілю при переході на іншу в'юху
   useEffect(() => {
@@ -69,10 +77,9 @@ export default function DashboardPage() {
     }
   }, [currentView]);
 
-  // Оновлення профілю
-  const handleProfileUpdate = (updatedUser) => {
-    setUser(prev => ({ ...prev, ...updatedUser }));
-    storage.setUser({ ...user, ...updatedUser });
+  // Оновлення профілю - тепер просто оновлюємо store
+  const handleProfileUpdate = (updatedData) => {
+    updateUser(updatedData);
   };
 
   // Логіка виходу
@@ -82,7 +89,7 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Logout error", error);
     } finally {
-      storage.clearUser();
+      clearUser();
       navigate("/login");
     }
   };

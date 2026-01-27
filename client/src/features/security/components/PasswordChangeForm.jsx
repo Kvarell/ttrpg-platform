@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { changePassword } from '../api/profileApi';
+import { changePassword } from '../api/securityApi';
 import AlertMessage from '@/components/ui/AlertMessage';
 import Button from '@/components/ui/Button';
 import PasswordStrength from '@/features/auth/ui/PasswordStrength';

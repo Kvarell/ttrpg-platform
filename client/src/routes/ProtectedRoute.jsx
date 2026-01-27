@@ -1,43 +1,44 @@
 import { Navigate } from "react-router-dom";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { getCurrentUser } from "../features/auth/api/authApi"; 
-import { storage } from '../utils/storage';
+import useAuthStore from '../stores/useAuthStore';
 
 function ProtectedRoute({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Використовуємо Zustand store
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const setUser = useAuthStore((state) => state.setUser);
+  const clearUser = useAuthStore((state) => state.clearUser);
+  const setLoading = useAuthStore((state) => state.setLoading);
 
   const lastCheckRef = useRef(0);
+  const hasCheckedRef = useRef(false);
   const MIN_CHECK_INTERVAL = 30 * 1000;
 
   const checkAuth = useCallback(async (showLoading = false) => {
-    if (showLoading) setIsLoading(true);
+    if (showLoading) setLoading(true);
     
     try {
       const userDataFromApi = await getCurrentUser();
       
       if (userDataFromApi) {
-        // Беремо локального юзера (це вже ОБ'ЄКТ, не рядок)
-        const storedUser = storage.getUser();
-
-        // Порівнюємо ID без JSON.parse
-        // Якщо локально пусто АБО id не збігаються — оновлюємо
-        if (!storedUser || storedUser.id !== userDataFromApi.id) {
-          storage.setUser(userDataFromApi);
-        }
+        // Оновлюємо store - Zustand сам порівняє і не оновить, якщо дані однакові
+        setUser(userDataFromApi);
       }
-
-      setIsAuthenticated(true);
     } catch (error) {
-      // Очищаємо localStorage при помилці автентифікації
-      storage.clearUser();
-      setIsAuthenticated(false);
+      // Очищаємо store при помилці автентифікації
+      clearUser();
     } finally {
-      if (showLoading) setIsLoading(false);
+      if (showLoading) setLoading(false);
     }
-  }, []);
+  }, [setUser, clearUser, setLoading]);
   
   useEffect(() => {
+    // Виконуємо перевірку тільки один раз при монтуванні
+    if (hasCheckedRef.current) return;
+    hasCheckedRef.current = true;
+    
     checkAuth(true);
 
     const tryCheckOnVisible = () => {
@@ -57,8 +58,8 @@ function ProtectedRoute({ children }) {
     };
   }, [checkAuth]);
 
-  // Показуємо завантаження, якщо ще завантажується АБО якщо isAuthenticated ще не встановлено
-  if (isLoading || isAuthenticated === null) {
+  // Показуємо завантаження
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-[#164A41] flex items-center justify-center">
         <div className="text-center text-[#FFFFFF]">
@@ -68,8 +69,8 @@ function ProtectedRoute({ children }) {
     );
   }
 
-  // Тільки якщо isAuthenticated явно false (не null), редіректимо на логін
-  if (isAuthenticated === false) {
+  // Якщо не авторизований - редірект на логін
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 

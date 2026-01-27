@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { requestEmailChange } from '../api/profileApi';
+import { requestEmailChange } from '../api/securityApi';
 import AlertMessage from '@/components/ui/AlertMessage';
 import Button from '@/components/ui/Button';
 

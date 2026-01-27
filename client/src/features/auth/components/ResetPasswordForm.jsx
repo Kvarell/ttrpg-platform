@@ -48,7 +48,7 @@ export default function ResetPasswordForm() {
         navigate('/login');
       }, 3000);
     } catch (err) {
-      const message = err.response?.data?.message || 'Помилка при скиданні пароля';
+      const message = err.response?.data?.error || err.response?.data?.message || 'Помилка при скиданні пароля';
       setServerError(message);
     }
   };

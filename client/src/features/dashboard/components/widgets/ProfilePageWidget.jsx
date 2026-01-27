@@ -4,9 +4,9 @@ import MenuButton from '@/components/ui/MenuButton';
 import ProfileInfoWidget from './ProfileInfoWidget';
 import ProfileEditForm from '@/features/profile/components/ProfileEditForm';
 import AvatarUpload from '@/features/profile/components/AvatarUpload';
-import PasswordChangeForm from '@/features/profile/components/PasswordChangeForm';
-import EmailChangeForm from '@/features/profile/components/EmailChangeForm';
-import DeleteAccountForm from '@/features/profile/components/DeleteAccountForm';
+import PasswordChangeForm from '@/features/security/components/PasswordChangeForm';
+import EmailChangeForm from '@/features/security/components/EmailChangeForm';
+import DeleteAccountForm from '@/features/security/components/DeleteAccountForm';
 
 // Визначаємо опції меню профілю
 export const PROFILE_SECTIONS = {
