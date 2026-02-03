@@ -37,7 +37,13 @@ model User {
   
   // Участь у кампаніях та сесіях
   campaignsOwned          Campaign[] @relation("OwnerCampaigns") // Кампанії, де він власник
+  campaignMembers         CampaignMember[] // Членство в кампаніях
   sessionsJoined          SessionParticipant[] // Сесії, де він гравець/майстер
+  createdSessions         Session[] @relation("CreatedSessions") // Сесії, які він створив
+  
+  // Заявки на вступ
+  joinRequests            JoinRequest[]
+  reviewedJoinRequests    JoinRequest[] @relation("ReviewedBy")
   
   // Комунікація
   messages                ChatMessage[] // Повідомлення в чатах
@@ -71,39 +77,132 @@ model Campaign {
   id          Int       @id @default(autoincrement())
   title       String
   description String?
+  imageUrl    String?                           // Обкладинка
+  system      String?                           // D&D 5e, Pathfinder, тощо
+  
+  visibility  CampaignVisibility @default(PRIVATE)
+  inviteCode  String?   @unique                // Для LINK_ONLY
+  
   ownerId     Int
   owner       User      @relation("OwnerCampaigns", fields: [ownerId], references: [id])
   
-  sessions    Session[] // Кампанія має багато сесій
+  members     CampaignMember[]                 // Учасники кампанії
+  sessions    Session[]                        // Кампанія має багато сесій
+  joinRequests JoinRequest[]
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+enum CampaignVisibility {
+  PUBLIC      // Видно в пошуку
+  PRIVATE     // Тільки для учасників
+  LINK_ONLY   // Доступ за посиланням
+}
+
+// === Учасники кампанії ===
+model CampaignMember {
+  id         Int          @id @default(autoincrement())
+  role       CampaignRole @default(PLAYER)
+  joinedAt   DateTime     @default(now())
+  
+  userId     Int
+  user       User         @relation(fields: [userId], references: [id])
+  
+  campaignId Int
+  campaign   Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, campaignId])
+}
+
+enum CampaignRole {
+  OWNER
+  GM
+  PLAYER
 }
 
 model Session {
-  id          Int       @id @default(autoincrement())
+  id          Int           @id @default(autoincrement())
   title       String
   description String?
-  date        DateTime
+  
+  date        DateTime                        // Дата і час початку (UTC)
+  duration    Int           @default(180)     // Тривалість в хвилинах
+  
   status      SessionStatus @default(PLANNED) // Active, Planned, Finished
-  price       Float     @default(0.0) // Ціна за гру
+  visibility  CampaignVisibility @default(PRIVATE)  // Наслідує від кампанії або окремо
+  
+  price       Float     @default(0.0)         // Ціна за гру
   maxPlayers  Int       @default(4)
   
-  campaignId  Int?
+  campaignId  Int?                            // Nullable для one-shots
   campaign    Campaign? @relation(fields: [campaignId], references: [id])
   
+  creatorId   Int                             // Хто створив (GM)
+  creator     User      @relation("CreatedSessions", fields: [creatorId], references: [id])
+  
   participants SessionParticipant[]
-  messages     ChatMessage[] // Чат сесії 
+  messages     ChatMessage[]                  // Чат сесії 
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@index([date])                             // Індекс для швидкого пошуку по даті
 }
 
 // Таблиця зв'язку: Хто є хто в сесії 
 model SessionParticipant {
-  id        Int      @id @default(autoincrement())
+  id        Int              @id @default(autoincrement())
+  role      SessionRole      @default(PLAYER)
+  status    ParticipantStatus @default(PENDING)  // Підтвердив участь?
+  isGuest   Boolean          @default(false)     // Гість (не член кампанії)
+  
   userId    Int
   sessionId Int
-  role      GameRole @default(PLAYER) // Player, Master, Owner
-
+  
   user      User    @relation(fields: [userId], references: [id])
-  session   Session @relation(fields: [sessionId], references: [id])
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, sessionId]) // Юзер не може бути двічі в одній грі
+}
+
+enum SessionRole {
+  GM
+  PLAYER
+}
+
+enum ParticipantStatus {
+  PENDING     // Запрошений, але не підтвердив
+  CONFIRMED   // Підтвердив участь
+  DECLINED    // Відмовився
+  ATTENDED    // Був присутній (після гри)
+  NO_SHOW     // Не з'явився
+}
+
+// === Заявки на вступ до кампанії ===
+model JoinRequest {
+  id         Int              @id @default(autoincrement())
+  status     JoinRequestStatus @default(PENDING)
+  message    String?                           // Повідомлення від заявника
+  
+  userId     Int
+  user       User             @relation(fields: [userId], references: [id])
+  
+  campaignId Int
+  campaign   Campaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime         @default(now())
+  reviewedAt DateTime?
+  reviewedBy Int?
+  reviewer   User?            @relation("ReviewedBy", fields: [reviewedBy], references: [id])
+  
+  @@unique([userId, campaignId])
+}
+
+enum JoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model EmailVerificationToken {
@@ -151,12 +250,6 @@ model Transaction {
 }
 
 // --- ENUMS (Списки варіантів) ---
-
-enum GameRole {
-  PLAYER
-  MASTER
-  OWNER
-}
 
 enum SessionStatus {
   PLANNED

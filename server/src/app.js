@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth.routes');
 const profileRoutes = require('./routes/profile.routes');
 const securityRoutes = require('./routes/security.routes');
 const adminRoutes = require('./routes/admin.routes');
+const campaignRoutes = require('./routes/campaign.routes');
 
 // Middlewares
 const { errorHandler } = require('./middlewares/error.middleware');
@@ -62,6 +63,7 @@ function createApp() {
   app.use('/api/profile', profileRoutes);
   app.use('/api/security', securityRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/campaigns', campaignRoutes);
 
   // ========== ERROR HANDLER ==========
   // Повинен бути останнім middleware
