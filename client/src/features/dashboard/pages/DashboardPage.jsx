@@ -13,6 +13,12 @@ import {
   PROFILE_SECTIONS 
 } from '../components/widgets/ProfilePageWidget';
 
+// Нові віджети для MY_GAMES та SEARCH
+import MyGamesCalendarWidget from '../components/widgets/MyGamesCalendarWidget';
+import DaySessionsWidget from '../components/widgets/DaySessionsWidget';
+import MyCampaignsWidget from '../components/widgets/MyCampaignsWidget';
+import { SearchFiltersWidget, SearchResultsWidget } from '../components/widgets/SearchWidgets';
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   
@@ -27,6 +33,9 @@ export default function DashboardPage() {
   
   // 3. Стан секції профілю (для внутрішньої навігації)
   const [profileSection, setProfileSection] = useState(PROFILE_SECTIONS.INFO);
+
+  // 4. Стан для MY_GAMES view (вибрана дата в календарі)
+  const [selectedDate, setSelectedDate] = useState(null);
 
   // Перевірка авторизації та завантаження актуального профілю
   useEffect(() => {
@@ -122,8 +131,25 @@ export default function DashboardPage() {
         user={user}
       />
     );
+  } else if (currentView === DASHBOARD_VIEWS.MY_GAMES) {
+    // Мої ігри: Календар + Сесії дня / Кампанії
+    leftPanel = (
+      <div className="flex flex-col gap-4 h-full">
+        <div className="flex-1 min-h-0">
+          <MyGamesCalendarWidget onDateSelect={setSelectedDate} />
+        </div>
+        <div className="flex-1 min-h-0">
+          <DaySessionsWidget selectedDate={selectedDate} />
+        </div>
+      </div>
+    );
+    rightPanel = <MyCampaignsWidget />;
+  } else if (currentView === DASHBOARD_VIEWS.SEARCH) {
+    // Пошук: Фільтри + Результати
+    leftPanel = <SearchResultsWidget />;
+    rightPanel = <SearchFiltersWidget />;
   } else {
-    // Для інших в'юх використовуємо конфігурацію
+    // Для інших в'юх (HOME) використовуємо конфігурацію
     const viewConfig = getViewConfig(user, handleProfileUpdate);
     const currentConfig = viewConfig[currentView];
     leftPanel = currentConfig.left;

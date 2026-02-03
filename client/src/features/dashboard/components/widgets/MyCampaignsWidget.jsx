@@ -1,0 +1,155 @@
+import React, { useEffect, useState } from 'react';
+import useCampaignStore from '../../../../stores/useCampaignStore';
+import DashboardCard from '../../ui/DashboardCard';
+
+/**
+ * Віджет списку моїх кампаній
+ */
+export default function MyCampaignsWidget() {
+  const { campaigns, fetchMyCampaigns, isLoading, error } = useCampaignStore();
+  const [filter, setFilter] = useState('all'); // all, owner, member
+
+  useEffect(() => {
+    fetchMyCampaigns(filter);
+  }, [filter, fetchMyCampaigns]);
+
+  // Роль бейдж
+  const getRoleBadge = (campaign, userId) => {
+    // Визначаємо роль через members масив
+    const myMembership = campaign.members?.find(m => m.userId === userId);
+    const role = myMembership?.role || (campaign.ownerId === userId ? 'OWNER' : null);
+    
+    const badges = {
+      OWNER: { text: 'Власник', class: 'bg-[#F1B24A] text-[#164A41]' },
+      GM: { text: 'GM', class: 'bg-[#164A41] text-white' },
+      PLAYER: { text: 'Гравець', class: 'bg-[#9DC88D] text-[#164A41]' },
+    };
+    const badge = badges[role];
+    if (!badge) return null;
+    
+    return (
+      <span className={`px-2 py-1 text-xs rounded-full font-bold ${badge.class}`}>
+        {badge.text}
+      </span>
+    );
+  };
+
+  // Видимість бейдж
+  const getVisibilityIcon = (visibility) => {
+    const icons = {
+      PUBLIC: '🌐',
+      PRIVATE: '🔒',
+      LINK_ONLY: '🔗',
+    };
+    return icons[visibility] || '🔒';
+  };
+
+  return (
+    <DashboardCard 
+      title="Мої кампанії"
+      actions={
+        <div className="flex gap-1">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-3 py-1 text-xs rounded-lg transition-colors ${
+              filter === 'all' 
+                ? 'bg-[#164A41] text-white' 
+                : 'bg-gray-100 text-[#164A41] hover:bg-gray-200'
+            }`}
+          >
+            Всі
+          </button>
+          <button
+            onClick={() => setFilter('owner')}
+            className={`px-3 py-1 text-xs rounded-lg transition-colors ${
+              filter === 'owner' 
+                ? 'bg-[#164A41] text-white' 
+                : 'bg-gray-100 text-[#164A41] hover:bg-gray-200'
+            }`}
+          >
+            Мої
+          </button>
+          <button
+            onClick={() => setFilter('member')}
+            className={`px-3 py-1 text-xs rounded-lg transition-colors ${
+              filter === 'member' 
+                ? 'bg-[#164A41] text-white' 
+                : 'bg-gray-100 text-[#164A41] hover:bg-gray-200'
+            }`}
+          >
+            Участь
+          </button>
+        </div>
+      }
+    >
+      {isLoading ? (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-pulse text-[#164A41]">Завантаження...</div>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center h-full text-red-500">
+          <p>{error}</p>
+        </div>
+      ) : campaigns.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-full text-[#4D774E]">
+          <div className="text-4xl mb-4">📚</div>
+          <p>Немає кампаній</p>
+          <p className="text-sm mt-2">Створіть нову або приєднайтесь до існуючої</p>
+          <button className="mt-4 px-4 py-2 bg-[#164A41] text-white rounded-xl hover:bg-[#1f5c52] transition-colors">
+            + Створити кампанію
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {campaigns.map((campaign) => (
+            <div 
+              key={campaign.id}
+              className="p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/30 transition-colors cursor-pointer"
+            >
+              {/* Заголовок та роль */}
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="text-lg">{getVisibilityIcon(campaign.visibility)}</span>
+                  <h4 className="font-bold text-[#164A41]">{campaign.title}</h4>
+                </div>
+                {getRoleBadge(campaign)}
+              </div>
+
+              {/* Опис */}
+              {campaign.description && (
+                <p className="text-sm text-[#4D774E] mb-2 line-clamp-2">
+                  {campaign.description}
+                </p>
+              )}
+
+              {/* Система */}
+              {campaign.system && (
+                <div className="text-sm text-[#4D774E] mb-2">
+                  🎲 {campaign.system}
+                </div>
+              )}
+
+              {/* Статистика */}
+              <div className="flex items-center gap-4 text-sm text-[#4D774E]">
+                <span>👥 {campaign.members?.length || 0} учасників</span>
+                <span>📅 {campaign.sessions?.length || 0} сесій</span>
+              </div>
+
+              {/* Заявки (якщо власник/GM і є pending) */}
+              {campaign.joinRequests?.length > 0 && (
+                <div className="mt-2 px-2 py-1 bg-[#F1B24A]/20 rounded-lg text-sm text-[#164A41]">
+                  ⚠️ {campaign.joinRequests.length} заявок на приєднання
+                </div>
+              )}
+            </div>
+          ))}
+          
+          {/* Кнопка створення */}
+          <button className="p-4 border-2 border-dashed border-[#9DC88D]/50 rounded-xl text-[#4D774E] hover:border-[#164A41] hover:text-[#164A41] transition-colors">
+            + Створити нову кампанію
+          </button>
+        </div>
+      )}
+    </DashboardCard>
+  );
+}

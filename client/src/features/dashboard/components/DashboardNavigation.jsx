@@ -22,6 +22,16 @@ export default function DashboardNavigation({ currentView, onNavigate, user, onL
           onClick={() => onNavigate(DASHBOARD_VIEWS.HOME)}
         />
         <NavButton 
+          label="Мої ігри" 
+          isActive={currentView === DASHBOARD_VIEWS.MY_GAMES}
+          onClick={() => onNavigate(DASHBOARD_VIEWS.MY_GAMES)}
+        />
+        <NavButton 
+          label="Пошук" 
+          isActive={currentView === DASHBOARD_VIEWS.SEARCH}
+          onClick={() => onNavigate(DASHBOARD_VIEWS.SEARCH)}
+        />
+        <NavButton 
           label="Профіль" 
           isActive={currentView === DASHBOARD_VIEWS.PROFILE}
           onClick={() => onNavigate(DASHBOARD_VIEWS.PROFILE)}
