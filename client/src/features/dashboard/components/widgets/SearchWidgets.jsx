@@ -1,0 +1,378 @@
+import React, { useState, useEffect } from 'react';
+import useSearchStore from '../../../../stores/useSearchStore';
+import DashboardCard from '../../ui/DashboardCard';
+
+/**
+ * Віджет фільтрів пошуку
+ */
+export function SearchFiltersWidget({ onSearch }) {
+  const { filters, setFilters, clearFilters, activeTab, setActiveTab } = useSearchStore();
+  
+  const [localFilters, setLocalFilters] = useState({
+    q: '',
+    system: '',
+    dateFrom: '',
+    dateTo: '',
+    minPrice: '',
+    maxPrice: '',
+    hasAvailableSlots: false,
+    oneShot: false,
+  });
+
+  // Синхронізуємо локальний стан зі store
+  useEffect(() => {
+    setLocalFilters({
+      q: filters.q || '',
+      system: filters.system || '',
+      dateFrom: filters.dateFrom || '',
+      dateTo: filters.dateTo || '',
+      minPrice: filters.minPrice ?? '',
+      maxPrice: filters.maxPrice ?? '',
+      hasAvailableSlots: filters.hasAvailableSlots || false,
+      oneShot: filters.oneShot || false,
+    });
+  }, [filters]);
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setLocalFilters(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleSearch = () => {
+    setFilters(localFilters);
+    if (onSearch) {
+      onSearch(localFilters);
+    }
+  };
+
+  const handleClear = () => {
+    clearFilters();
+    setLocalFilters({
+      q: '',
+      system: '',
+      dateFrom: '',
+      dateTo: '',
+      minPrice: '',
+      maxPrice: '',
+      hasAvailableSlots: false,
+      oneShot: false,
+    });
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  // Популярні системи для швидкого вибору
+  const popularSystems = ['D&D 5e', 'Pathfinder 2e', 'Call of Cthulhu', 'Cyberpunk RED'];
+
+  return (
+    <DashboardCard title="Пошук ігор">
+      <div className="flex flex-col gap-4">
+        {/* Вкладки: Сесії / Кампанії */}
+        <div className="flex gap-2 border-b border-[#9DC88D]/30 pb-3">
+          <button
+            onClick={() => setActiveTab('sessions')}
+            className={`px-4 py-2 rounded-t-lg transition-colors ${
+              activeTab === 'sessions'
+                ? 'bg-[#164A41] text-white'
+                : 'text-[#4D774E] hover:bg-gray-100'
+            }`}
+          >
+            🎲 Сесії
+          </button>
+          <button
+            onClick={() => setActiveTab('campaigns')}
+            className={`px-4 py-2 rounded-t-lg transition-colors ${
+              activeTab === 'campaigns'
+                ? 'bg-[#164A41] text-white'
+                : 'text-[#4D774E] hover:bg-gray-100'
+            }`}
+          >
+            📚 Кампанії
+          </button>
+        </div>
+
+        {/* Пошуковий рядок */}
+        <div>
+          <input
+            type="text"
+            name="q"
+            value={localFilters.q}
+            onChange={handleInputChange}
+            onKeyPress={handleKeyPress}
+            placeholder="Пошук за назвою або описом..."
+            className="w-full px-4 py-2 border-2 border-[#9DC88D]/30 rounded-xl focus:border-[#164A41] focus:outline-none transition-colors"
+          />
+        </div>
+
+        {/* Система */}
+        <div>
+          <label className="block text-sm font-medium text-[#164A41] mb-1">Система</label>
+          <input
+            type="text"
+            name="system"
+            value={localFilters.system}
+            onChange={handleInputChange}
+            placeholder="D&D 5e, Pathfinder..."
+            className="w-full px-4 py-2 border-2 border-[#9DC88D]/30 rounded-xl focus:border-[#164A41] focus:outline-none transition-colors"
+          />
+          <div className="flex gap-2 mt-2 flex-wrap">
+            {popularSystems.map(sys => (
+              <button
+                key={sys}
+                onClick={() => setLocalFilters(prev => ({ ...prev, system: sys }))}
+                className="px-2 py-1 text-xs bg-gray-100 text-[#164A41] rounded-lg hover:bg-[#9DC88D]/30 transition-colors"
+              >
+                {sys}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Фільтри для сесій */}
+        {activeTab === 'sessions' && (
+          <>
+            {/* Дати */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-[#164A41] mb-1">Від</label>
+                <input
+                  type="date"
+                  name="dateFrom"
+                  value={localFilters.dateFrom}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border-2 border-[#9DC88D]/30 rounded-xl focus:border-[#164A41] focus:outline-none transition-colors text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#164A41] mb-1">До</label>
+                <input
+                  type="date"
+                  name="dateTo"
+                  value={localFilters.dateTo}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border-2 border-[#9DC88D]/30 rounded-xl focus:border-[#164A41] focus:outline-none transition-colors text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Ціна */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-[#164A41] mb-1">Мін. ціна</label>
+                <input
+                  type="number"
+                  name="minPrice"
+                  value={localFilters.minPrice}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                  min="0"
+                  className="w-full px-3 py-2 border-2 border-[#9DC88D]/30 rounded-xl focus:border-[#164A41] focus:outline-none transition-colors text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#164A41] mb-1">Макс. ціна</label>
+                <input
+                  type="number"
+                  name="maxPrice"
+                  value={localFilters.maxPrice}
+                  onChange={handleInputChange}
+                  placeholder="∞"
+                  min="0"
+                  className="w-full px-3 py-2 border-2 border-[#9DC88D]/30 rounded-xl focus:border-[#164A41] focus:outline-none transition-colors text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Чекбокси */}
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="hasAvailableSlots"
+                  checked={localFilters.hasAvailableSlots}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 accent-[#164A41]"
+                />
+                <span className="text-sm text-[#164A41]">Тільки з вільними місцями</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="oneShot"
+                  checked={localFilters.oneShot}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 accent-[#164A41]"
+                />
+                <span className="text-sm text-[#164A41]">Тільки one-shot</span>
+              </label>
+            </div>
+          </>
+        )}
+
+        {/* Кнопки */}
+        <div className="flex gap-3 mt-2">
+          <button
+            onClick={handleSearch}
+            className="flex-1 py-2 bg-[#164A41] text-white rounded-xl hover:bg-[#1f5c52] transition-colors font-medium"
+          >
+            🔍 Шукати
+          </button>
+          <button
+            onClick={handleClear}
+            className="px-4 py-2 border-2 border-[#9DC88D]/30 text-[#4D774E] rounded-xl hover:bg-gray-50 transition-colors"
+          >
+            Очистити
+          </button>
+        </div>
+      </div>
+    </DashboardCard>
+  );
+}
+
+/**
+ * Віджет результатів пошуку
+ */
+export function SearchResultsWidget() {
+  const { 
+    activeTab,
+    campaignResults,
+    sessionResults,
+    searchCampaignsAction,
+    searchSessionsAction,
+    loadMore,
+    isLoading,
+    error,
+    filters,
+  } = useSearchStore();
+
+  // Виконуємо пошук при зміні вкладки або фільтрів
+  useEffect(() => {
+    if (activeTab === 'campaigns') {
+      searchCampaignsAction();
+    } else {
+      searchSessionsAction();
+    }
+  }, [activeTab, filters, searchCampaignsAction, searchSessionsAction]);
+
+  const results = activeTab === 'campaigns' ? campaignResults : sessionResults;
+  const items = activeTab === 'campaigns' ? results.campaigns : results.sessions;
+
+  // Форматування часу
+  const formatDateTime = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('uk-UA', { 
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  return (
+    <DashboardCard 
+      title={`Результати (${results.total || 0})`}
+    >
+      {isLoading && items.length === 0 ? (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-pulse text-[#164A41]">Шукаємо...</div>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center h-full text-red-500">
+          <p>{error}</p>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-full text-[#4D774E]">
+          <div className="text-4xl mb-4">🔍</div>
+          <p>Нічого не знайдено</p>
+          <p className="text-sm mt-2">Спробуйте змінити фільтри пошуку</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {/* Сесії */}
+          {activeTab === 'sessions' && items.map((session) => (
+            <div 
+              key={session.id}
+              className="p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/30 transition-colors cursor-pointer"
+            >
+              <div className="flex items-start justify-between mb-2">
+                <h4 className="font-bold text-[#164A41] flex-1">{session.title}</h4>
+                {session.isOneShot && (
+                  <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                    One-shot
+                  </span>
+                )}
+              </div>
+              
+              {session.description && (
+                <p className="text-sm text-[#4D774E] mb-2 line-clamp-2">{session.description}</p>
+              )}
+              
+              <div className="flex flex-wrap gap-3 text-sm text-[#4D774E]">
+                <span>📅 {formatDateTime(session.date)}</span>
+                <span>👥 {session.currentPlayers}/{session.maxPlayers}</span>
+                {session.price > 0 && <span className="font-bold text-[#164A41]">💰 {session.price} грн</span>}
+                {session.price === 0 && <span className="text-green-600">Безкоштовно</span>}
+              </div>
+              
+              {session.campaign && (
+                <div className="mt-2 text-sm text-[#4D774E]">
+                  📚 {session.campaign.title}
+                  {session.campaign.system && ` • ${session.campaign.system}`}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Кампанії */}
+          {activeTab === 'campaigns' && items.map((campaign) => (
+            <div 
+              key={campaign.id}
+              className="p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/30 transition-colors cursor-pointer"
+            >
+              <div className="flex items-start justify-between mb-2">
+                <h4 className="font-bold text-[#164A41] flex-1">{campaign.title}</h4>
+              </div>
+              
+              {campaign.description && (
+                <p className="text-sm text-[#4D774E] mb-2 line-clamp-2">{campaign.description}</p>
+              )}
+              
+              <div className="flex flex-wrap gap-3 text-sm text-[#4D774E]">
+                {campaign.system && <span>🎲 {campaign.system}</span>}
+                <span>👥 {campaign.membersCount} учасників</span>
+                <span>📅 {campaign.sessionsCount} сесій</span>
+              </div>
+              
+              <div className="mt-2 text-sm">
+                <span className="text-[#4D774E]">Власник: </span>
+                <span className="font-medium text-[#164A41]">
+                  {campaign.owner?.displayName || campaign.owner?.username}
+                </span>
+              </div>
+            </div>
+          ))}
+
+          {/* Кнопка "Завантажити ще" */}
+          {results.hasMore && (
+            <button
+              onClick={loadMore}
+              disabled={isLoading}
+              className="py-3 border-2 border-dashed border-[#9DC88D]/50 rounded-xl text-[#4D774E] hover:border-[#164A41] hover:text-[#164A41] transition-colors disabled:opacity-50"
+            >
+              {isLoading ? 'Завантаження...' : 'Завантажити ще'}
+            </button>
+          )}
+        </div>
+      )}
+    </DashboardCard>
+  );
+}
+
+export default { SearchFiltersWidget, SearchResultsWidget };

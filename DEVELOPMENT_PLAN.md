@@ -237,20 +237,28 @@ client/src/features/
 - `client/src/stores/useCampaignStore.js` ✅ (раніше)
 
 ### Фаза 5: Frontend — Dashboard Views (4-6 год)
+
+**Статус:** ✅ ЗАВЕРШЕНО
+
 ```jsx
 DASHBOARD_VIEWS = {
   HOME: 'home',
-  MY_GAMES: 'my-games',  // НОВИЙ
+  MY_GAMES: 'my-games',  // ✅ НОВИЙ
   PROFILE: 'profile',
-  SEARCH: 'search',      // НОВИЙ
+  SEARCH: 'search',      // ✅ НОВИЙ
 }
 ```
 
 **Нові віджети:**
-- MyGamesCalendar — календар моїх сесій
-- DaySessionsList — сесії обраного дня
-- MyCampaignsList — список кампаній
-- SearchFilters/Results — пошук
+- `MyGamesCalendarWidget.jsx` ✅ — функціональний календар з API інтеграцією
+- `DaySessionsWidget.jsx` ✅ — сесії обраного дня
+- `MyCampaignsWidget.jsx` ✅ — список моїх кампаній з фільтрами
+- `SearchWidgets.jsx` ✅ — фільтри та результати пошуку
+
+**Оновлені файли:**
+- `DashboardViews.jsx` ✅ — додано MY_GAMES та SEARCH views
+- `DashboardNavigation.jsx` ✅ — додано кнопки навігації
+- `DashboardPage.jsx` ✅ — логіка рендерингу нових views
 
 ### Фаза 6: Frontend — Сторінки деталей (3-4 год)
 - CampaignDetailsPage
