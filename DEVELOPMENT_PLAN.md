@@ -165,29 +165,49 @@ server/src/
 ### Фаза 2: Backend — Сесії (4-6 год)
 ```
 server/src/
-├── controllers/session.controller.js
-├── services/session.service.js
-├── routes/session.routes.js
-└── validation/session.validation.js
+├── controllers/session.controller.js ✅
+├── services/session.service.js ✅
+├── routes/session.routes.js ✅
+└── validation/session.validation.js ✅
 ```
 
 **Ендпоінти:**
-- POST `/api/sessions` — створити
-- GET `/api/sessions` — мої сесії
-- GET `/api/sessions/calendar` — агрегація для календаря
-- GET `/api/sessions/:id` — деталі
-- PATCH `/api/sessions/:id` — оновити
-- DELETE `/api/sessions/:id` — скасувати
-- POST `/api/sessions/:id/join` — приєднатися
-- POST `/api/sessions/:id/leave` — вийти
+- POST `/api/sessions` — створити ✅
+- GET `/api/sessions` — мої сесії ✅
+- GET `/api/sessions/calendar` — агрегація для календаря ✅
+- GET `/api/sessions/:id` — деталі ✅
+- PATCH `/api/sessions/:id` — оновити ✅
+- DELETE `/api/sessions/:id` — скасувати ✅
+- GET `/api/sessions/:id/participants` — учасники ✅
+- POST `/api/sessions/:id/join` — приєднатися ✅
+- POST `/api/sessions/:id/leave` — вийти ✅
+- PATCH `/api/sessions/:id/participants/:participantId` — змінити статус ✅
+- DELETE `/api/sessions/:id/participants/:participantId` — видалити учасника ✅
+- GET `/api/sessions/day/:date` — сесії дня ✅
+- GET `/api/campaigns/:campaignId/sessions` — сесії кампанії ✅
 
 ### Фаза 3: Backend — Пошук та заявки (2-3 год)
-- GET `/api/search/campaigns` — публічні кампанії
-- GET `/api/search/sessions` — публічні сесії
-- GET `/api/campaigns/join/:inviteCode` — приєднатися за кодом
-- POST `/api/campaigns/:id/join-request` — подати заявку
-- GET `/api/campaigns/:id/join-requests` — список заявок
-- PATCH `/api/join-requests/:id` — approve/reject
+
+**Статус:** ✅ ЗАВЕРШЕНО
+
+```
+server/src/
+├── controllers/search.controller.js ✅
+├── services/search.service.js ✅
+├── routes/search.routes.js ✅
+└── validation/search.validation.js ✅
+```
+
+**Ендпоінти пошуку:**
+- GET `/api/search/campaigns` — пошук публічних кампаній ✅
+- GET `/api/search/sessions` — пошук публічних сесій ✅
+
+**Раніше реалізовані (Фаза 1):**
+- POST `/api/campaigns/invite/:inviteCode` — приєднатися за кодом ✅
+- POST `/api/campaigns/:campaignId/requests` — подати заявку ✅
+- GET `/api/campaigns/:campaignId/requests` — список заявок ✅
+- POST `/api/campaigns/requests/:requestId/approve` — схвалити ✅
+- POST `/api/campaigns/requests/:requestId/reject` — відхилити ✅
 
 ### Фаза 4: Frontend — Структура (2-3 год)
 ```
