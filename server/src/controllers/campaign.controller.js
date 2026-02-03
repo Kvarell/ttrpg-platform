@@ -110,8 +110,10 @@ class CampaignController {
   async getCampaignMembers(req, res, next) {
     try {
       const { campaignId } = req.params;
+      // Беремо ID користувача (якщо він залогінений)
+      const userId = req.user?.id;
 
-      const members = await campaignService.getCampaignMembers(campaignId);
+      const members = await campaignService.getCampaignMembers(campaignId, userId);
 
       res.json({ 
         success: true, 
@@ -121,7 +123,6 @@ class CampaignController {
       next(error);
     }
   }
-
   // Додати учасника в кампанію
   async addMemberToCampaign(req, res, next) {
     try {

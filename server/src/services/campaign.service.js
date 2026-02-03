@@ -3,6 +3,27 @@ const crypto = require('crypto');
 const { AppError, ERROR_CODES } = require('../constants/errors');
 
 class CampaignService {
+  _getRequesterCampaignRole(campaign, userId) {
+    if (!userId) return null;
+    if (campaign.ownerId === userId) return 'OWNER';
+    const member = campaign.members?.find(m => m.userId === userId);
+    return member?.role ?? null;
+  }
+
+  _requireCampaignOwner(campaign, userId, message = 'Тільки власник може виконати цю дію') {
+    if (!userId || campaign.ownerId !== userId) {
+      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, message);
+    }
+  }
+
+  _requireCampaignRoles(campaign, userId, allowedRoles, message = 'У вас немає прав для виконання цієї дії') {
+    const role = this._getRequesterCampaignRole(campaign, userId);
+    if (!role || !allowedRoles.includes(role)) {
+      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, message);
+    }
+    return role;
+  }
+
   
   // === CRUD ===
 
@@ -95,6 +116,7 @@ class CampaignService {
   }
 
   async getCampaignById(campaignId, userId = null) {
+    // 1. Отримуємо кампанію з бази
     const campaign = await prisma.campaign.findUnique({
       where: { id: parseInt(campaignId) },
       include: {
@@ -113,6 +135,7 @@ class CampaignService {
           select: { id: true, title: true, date: true, status: true, maxPlayers: true },
           orderBy: { date: 'asc' },
         },
+        // Заявки потрібні тільки власнику, але поки тягнемо (почистимо нижче)
         joinRequests: {
           where: { status: 'PENDING' },
           select: { id: true },
@@ -124,24 +147,44 @@ class CampaignService {
       throw new AppError('CAMPAIGN_NOT_FOUND', 'Кампанія не знайдена');
     }
 
-    // Перевіряємо доступ до приватних кампаній
-    if (campaign.visibility === 'PRIVATE' && userId) {
-      const isMember = campaign.members.some(m => m.userId === userId);
-      if (!isMember && campaign.ownerId !== userId) {
+    // 2. Визначаємо роль поточного користувача
+    let isOwner = false;
+    let isMember = false;
+
+    if (userId) {
+      isOwner = campaign.ownerId === userId;
+      // Перевіряємо масив members, який ми вже дістали
+      isMember = campaign.members.some(m => m.userId === userId);
+    }
+
+    // 3. ПЕРЕВІРКА ДОСТУПУ (Security Check)
+    // Якщо Private -> вимагаємо бути учасником або власником.
+    // Якщо userId немає (анонім) і кампанія Private -> Access Denied.
+    if (campaign.visibility === 'PRIVATE') {
+      if (!userId || (!isOwner && !isMember)) {
         throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, 'У вас немає доступу до цієї кампанії');
       }
     }
 
+    // 4. ОЧИЩЕННЯ ДАНИХ (Sanitization)
+    // Заявки та invite код бачать тільки OWNER та GM (для запрошення гравців)
+    const requesterRole = this._getRequesterCampaignRole(campaign, userId);
+    const canSeeAdminData = requesterRole === 'OWNER' || requesterRole === 'GM';
+    
+    if (!canSeeAdminData) {
+      // Заявки на вступ бачать тільки OWNER та GM
+      delete campaign.joinRequests;
+      
+      // Invite код бачать тільки OWNER та GM (для запрошення гравців)
+      delete campaign.inviteCode;
+    }
+
     return campaign;
   }
-
   async updateCampaign(campaignId, userId, updateData) {
     const campaign = await this.getCampaignById(campaignId, userId);
 
-    // Тільки власник може оновлювати
-    if (campaign.ownerId !== userId) {
-      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, 'Тільки власник може оновлювати кампанію');
-    }
+    this._requireCampaignOwner(campaign, userId, 'Тільки власник може оновлювати кампанію');
 
     const updated = await prisma.campaign.update({
       where: { id: parseInt(campaignId) },
@@ -176,10 +219,7 @@ class CampaignService {
   async deleteCampaign(campaignId, userId) {
     const campaign = await this.getCampaignById(campaignId, userId);
 
-    // Тільки власник може видаляти
-    if (campaign.ownerId !== userId) {
-      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, 'Тільки власник може видаляти кампанію');
-    }
+    this._requireCampaignOwner(campaign, userId, 'Тільки власник може видаляти кампанію');
 
     // Каскадне видалення: members, sessions, participants видаляються автоматично
     await prisma.campaign.delete({
@@ -189,42 +229,78 @@ class CampaignService {
 
   // === Учасники ===
 
-  async getCampaignMembers(campaignId) {
+  async getCampaignMembers(campaignId, userId) {
+    const id = parseInt(campaignId);
+
     const campaign = await prisma.campaign.findUnique({
-      where: { id: parseInt(campaignId) },
-      select: {
-        members: {
-          include: {
-            user: {
-              select: { 
-                id: true, 
-                username: true, 
-                displayName: true, 
-                avatarUrl: true,
-                email: true,
-              },
-            },
-          },
-          orderBy: [{ role: 'asc' }, { joinedAt: 'asc' }],
-        },
-      },
+      where: { id },
+      select: { id: true, visibility: true, ownerId: true }
     });
 
     if (!campaign) {
       throw new AppError('CAMPAIGN_NOT_FOUND', 'Кампанія не знайдена');
     }
 
-    return campaign.members;
+    // 1. Визначаємо роль того, хто запитує
+    let isOwner = false;
+    let requesterRole = null;
+
+    if (userId) {
+      isOwner = campaign.ownerId === userId;
+      
+      // Шукаємо запис про членство
+      const memberRecord = await prisma.campaignMember.findUnique({
+        where: {
+          userId_campaignId: { userId, campaignId: id }
+        },
+        select: { role: true }
+      });
+      
+      if (memberRecord) {
+        requesterRole = memberRecord.role;
+      }
+    }
+
+    // 2. Перевірка доступу (Private Check)
+    const isMember = requesterRole !== null;
+    if (campaign.visibility !== 'PUBLIC' && !isOwner && !isMember) {
+      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, 'У вас немає доступу до перегляду учасників');
+    }
+
+    // 3. Логіка видимості Email
+    // Email бачить тільки Власник (OWNER) або Майстер (GM)
+    const canSeeSensitiveData = isOwner || (requesterRole === 'GM') || (requesterRole === 'OWNER');
+
+    // 4. Отримуємо список
+    const members = await prisma.campaignMember.findMany({
+      where: { campaignId: id },
+      include: {
+        user: {
+          select: { 
+            id: true, 
+            username: true, 
+            displayName: true, 
+            avatarUrl: true,
+            // Якщо canSeeSensitiveData === true, повернемо email, інакше undefined
+            email: canSeeSensitiveData, 
+          },
+        },
+      },
+      orderBy: [{ role: 'asc' }, { joinedAt: 'asc' }],
+    });
+
+    return members;
   }
 
   async addMemberToCampaign(campaignId, userId, newMemberId, role = 'PLAYER') {
     const campaign = await this.getCampaignById(campaignId, userId);
 
-    // Тільки OWNER та GM можуть додавати учасників
-    const requesterMember = campaign.members.find(m => m.userId === userId);
-    if (!requesterMember || !['OWNER', 'GM'].includes(requesterMember.role)) {
-      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, 'Ви не маєте права додавати учасників');
-    }
+    this._requireCampaignRoles(
+      campaign,
+      userId,
+      ['OWNER', 'GM'],
+      'Ви не маєте права додавати учасників'
+    );
 
     // Перевіряємо, чи не додаємо один раз
     const existingMember = await prisma.campaignMember.findUnique({
@@ -268,11 +344,12 @@ class CampaignService {
   async removeMemberFromCampaign(campaignId, userId, memberId) {
     const campaign = await this.getCampaignById(campaignId, userId);
 
-    // Тільки OWNER та GM можуть видаляти учасників (але не себе)
-    const requesterMember = campaign.members.find(m => m.userId === userId);
-    if (!requesterMember || !['OWNER', 'GM'].includes(requesterMember.role)) {
-      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, 'Ви не маєте права видаляти учасників');
-    }
+    this._requireCampaignRoles(
+      campaign,
+      userId,
+      ['OWNER', 'GM'],
+      'Ви не маєте права видаляти учасників'
+    );
 
     // OWNER не може видаляти себе таким чином (тільки видалити кампанію)
     if (campaign.ownerId === userId && parseInt(memberId) === userId) {
@@ -305,10 +382,7 @@ class CampaignService {
   async updateMemberRole(campaignId, userId, memberId, newRole) {
     const campaign = await this.getCampaignById(campaignId, userId);
 
-    // Тільки OWNER може змінювати ролі
-    if (campaign.ownerId !== userId) {
-      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, 'Тільки власник може змінювати ролі учасників');
-    }
+    this._requireCampaignOwner(campaign, userId, 'Тільки власник може змінювати ролі учасників');
 
     // Валідуємо роль
     const validRoles = ['OWNER', 'GM', 'PLAYER'];
@@ -345,9 +419,10 @@ class CampaignService {
   async regenerateInviteCode(campaignId, userId) {
     const campaign = await this.getCampaignById(campaignId, userId);
 
-    // Тільки OWNER може регенерувати код
-    if (campaign.ownerId !== userId) {
-      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, 'Тільки власник може регенерувати код');
+    this._requireCampaignOwner(campaign, userId, 'Тільки власник може регенерувати код');
+
+    if (campaign.visibility === 'PRIVATE') {
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Приватні кампанії не використовують invite-коди');
     }
 
     const newInviteCode = crypto.randomBytes(8).toString('hex');
@@ -363,14 +438,24 @@ class CampaignService {
   async joinByInviteCode(inviteCode, userId) {
     const campaign = await prisma.campaign.findUnique({
       where: { inviteCode },
-      select: { id: true, visibility: true, title: true },
+      select: { id: true, visibility: true, title: true, ownerId: true },
     });
 
     if (!campaign) {
       throw new AppError('INVITE_CODE_INVALID', 'Невірний invite код');
     }
 
-    // Перевіряємо, чи не medlem уже
+    // 1. ПЕРЕВІРКА ВИДИМОСТІ
+    // За кодом можна зайти тільки в LINK_ONLY (це їх суть) або PUBLIC (як швидкий вхід).
+    // У PRIVATE кампанії вхід тільки через Join Request або ручне додавання ГМом.
+    if (!['LINK_ONLY', 'PUBLIC'].includes(campaign.visibility)) {
+      throw new AppError(
+        ERROR_CODES.SECURITY_ACCESS_DENIED, 
+        'Ця кампанія є приватною. Вступ можливий тільки через подачу заявки або запрошення власника.'
+      );
+    }
+
+    // 2. Перевіряємо, чи користувач вже є учасником
     const existingMember = await prisma.campaignMember.findUnique({
       where: {
         userId_campaignId: {
@@ -384,6 +469,7 @@ class CampaignService {
       throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Ви вже член цієї кампанії');
     }
 
+    // 3. Додаємо учасника
     const member = await prisma.campaignMember.create({
       data: {
         userId,
@@ -399,12 +485,13 @@ class CampaignService {
 
     return member;
   }
-
   // === Заявки на вступ ===
 
   async submitJoinRequest(campaignId, userId, message = null) {
+    const id = parseInt(campaignId);
+
     const campaign = await prisma.campaign.findUnique({
-      where: { id: parseInt(campaignId) },
+      where: { id },
       select: { id: true, visibility: true, ownerId: true },
     });
 
@@ -412,44 +499,65 @@ class CampaignService {
       throw new AppError('CAMPAIGN_NOT_FOUND', 'Кампанія не знайдена');
     }
 
-    // Перевіряємо, чи не medlem уже
+    // 1. Перевіряємо, чи користувач вже є учасником
     const existingMember = await prisma.campaignMember.findUnique({
       where: {
         userId_campaignId: {
           userId,
-          campaignId: parseInt(campaignId),
+          campaignId: id,
         },
       },
     });
 
     if (existingMember) {
-      throw new ApiError(400, 'Ви вже член цієї кампанії');
+      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Ви вже член цієї кампанії');
     }
 
-    // Перевіряємо, чи не є вже заявка
-    const existingRequest = await prisma.joinRequest.findUnique({
-      where: {
-        userId_campaignId: {
-          userId,
-          campaignId: parseInt(campaignId),
-        },
-      },
-    });
-
-    if (existingRequest && existingRequest.status === 'PENDING') {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Ви вже подали заявку на цю кампанію');
-    }
-
-    // Якщо публічна кампанія, одразу додаємо
+    // Якщо публічна кампанія, одразу додаємо (заявка не потрібна)
     if (campaign.visibility === 'PUBLIC') {
       return this.addMemberToCampaign(campaignId, campaign.ownerId, userId, 'PLAYER');
     }
 
-    // Інакше створюємо заявку
+    // 2. Перевіряємо наявність будь-якої заявки (незалежно від статусу)
+    const existingRequest = await prisma.joinRequest.findUnique({
+      where: {
+        userId_campaignId: {
+          userId,
+          campaignId: id,
+        },
+      },
+    });
+
+    if (existingRequest) {
+      // Якщо заявка вже висить у черзі
+      if (existingRequest.status === 'PENDING') {
+        throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Ви вже подали заявку на цю кампанію');
+      }
+
+      // ВИПРАВЛЕНО: Якщо заявка була REJECTED або APPROVED (але юзер вийшов),
+      // ми оновлюємо стару заявку замість створення нової, щоб уникнути конфлікту unique constraint.
+      return prisma.joinRequest.update({
+        where: { id: existingRequest.id },
+        data: {
+          status: 'PENDING',
+          message: message,      // Оновлюємо повідомлення
+          reviewedAt: null,      // Скидаємо час розгляду
+          reviewedBy: null,      // Скидаємо рецензента
+          createdAt: new Date()  // Оновлюємо дату створення, щоб заявка піднялася вгору списку
+        },
+        include: {
+          user: {
+            select: { id: true, username: true, displayName: true, avatarUrl: true },
+          },
+        },
+      });
+    }
+
+    // 3. Якщо заявки не існує — створюємо нову
     const joinRequest = await prisma.joinRequest.create({
       data: {
         userId,
-        campaignId: parseInt(campaignId),
+        campaignId: id,
         message,
         status: 'PENDING',
       },
@@ -466,11 +574,12 @@ class CampaignService {
   async getJoinRequests(campaignId, userId) {
     const campaign = await this.getCampaignById(campaignId, userId);
 
-    // Тільки OWNER та GM можуть переглядати заявки
-    const requesterMember = campaign.members.find(m => m.userId === userId);
-    if (!requesterMember || !['OWNER', 'GM'].includes(requesterMember.role)) {
-      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, 'Ви не маєте права переглядати заявки');
-    }
+    this._requireCampaignRoles(
+      campaign,
+      userId,
+      ['OWNER', 'GM'],
+      'Ви не маєте права переглядати заявки'
+    );
 
     const joinRequests = await prisma.joinRequest.findMany({
       where: {
@@ -504,11 +613,12 @@ class CampaignService {
 
     const campaign = await this.getCampaignById(joinRequest.campaignId, userId);
 
-    // Тільки OWNER та GM можуть схвалювати
-    const requesterMember = campaign.members.find(m => m.userId === userId);
-    if (!requesterMember || !['OWNER', 'GM'].includes(requesterMember.role)) {
-      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, 'Ви не маєте права схвалювати заявки');
-    }
+    this._requireCampaignRoles(
+      campaign,
+      userId,
+      ['OWNER', 'GM'],
+      'Ви не маєте права схвалювати заявки'
+    );
 
     // Оновлюємо заявку
     await prisma.joinRequest.update({
@@ -553,11 +663,12 @@ class CampaignService {
 
     const campaign = await this.getCampaignById(joinRequest.campaignId, userId);
 
-    // Тільки OWNER та GM можуть відхиляти
-    const requesterMember = campaign.members.find(m => m.userId === userId);
-    if (!requesterMember || !['OWNER', 'GM'].includes(requesterMember.role)) {
-      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, 'Ви не маєте права відхиляти заявки');
-    }
+    this._requireCampaignRoles(
+      campaign,
+      userId,
+      ['OWNER', 'GM'],
+      'Ви не маєте права відхиляти заявки'
+    );
 
     await prisma.joinRequest.update({
       where: { id: parseInt(requestId) },

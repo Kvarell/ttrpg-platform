@@ -50,6 +50,38 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+/**
+ * Optional authentication middleware
+ * Не вимагає токен, але якщо він є і валідний - додає req.user
+ * Використовується для публічних ендпоінтів, які можуть працювати з анонімами та авторизованими
+ */
+const optionalAuthenticateToken = (req, res, next) => {
+  // Спробуємо отримати токен з cookie або заголовка
+  let token = req.cookies?.token;
+  if (!token) {
+    const authHeader = req.headers['authorization'];
+    token = authHeader && authHeader.split(' ')[1];
+  }
+
+  // Якщо токена немає - просто продовжуємо без req.user
+  if (!token) {
+    return next();
+  }
+
+  // Якщо токен є - верифікуємо його
+  jwt.verify(token, jwtSecret, (err, user) => {
+    if (err) {
+      // Якщо токен невалідний - просто ігноруємо і продовжуємо без req.user
+      return next();
+    }
+
+    // Якщо токен валідний - додаємо користувача
+    req.user = user;
+    next();
+  });
+};
+
 module.exports = {
   authenticateToken,
+  optionalAuthenticateToken,
 };
