@@ -1,4 +1,4 @@
-import axiosInstance from '../../../lib/axios';
+﻿import api from '@/lib/axios';
 
 // === CRUD Сесії ===
 
@@ -7,29 +7,21 @@ import axiosInstance from '../../../lib/axios';
  * @param {Object} sessionData - Дані сесії
  */
 export const createSession = async (sessionData) => {
-  try {
-    const response = await axiosInstance.post('/sessions', sessionData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при створенні сесії' };
-  }
+  const response = await api.post('/sessions', sessionData);
+  return response.data;
 };
 
 /**
  * Отримати мої сесії
  * @param {Object} params - Параметри фільтрації
- * @param {string} params.status - PLANNED | ACTIVE | FINISHED
- * @param {string} params.role - GM | PLAYER | ALL
- * @param {number} params.limit
- * @param {number} params.offset
+ * @param {string} [params.status] - PLANNED | ACTIVE | FINISHED
+ * @param {string} [params.role] - GM | PLAYER | ALL
+ * @param {number} [params.limit]
+ * @param {number} [params.offset]
  */
 export const getMySessions = async (params = {}) => {
-  try {
-    const response = await axiosInstance.get('/sessions', { params });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при отриманні сесій' };
-  }
+  const response = await api.get('/sessions', { params });
+  return response.data;
 };
 
 /**
@@ -37,12 +29,8 @@ export const getMySessions = async (params = {}) => {
  * @param {number} sessionId
  */
 export const getSessionById = async (sessionId) => {
-  try {
-    const response = await axiosInstance.get(`/sessions/${sessionId}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при отриманні деталей сесії' };
-  }
+  const response = await api.get(`/sessions/${sessionId}`);
+  return response.data;
 };
 
 /**
@@ -51,12 +39,8 @@ export const getSessionById = async (sessionId) => {
  * @param {Object} sessionData - Дані для оновлення
  */
 export const updateSession = async (sessionId, sessionData) => {
-  try {
-    const response = await axiosInstance.patch(`/sessions/${sessionId}`, sessionData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при оновленні сесії' };
-  }
+  const response = await api.patch(`/sessions/${sessionId}`, sessionData);
+  return response.data;
 };
 
 /**
@@ -64,12 +48,8 @@ export const updateSession = async (sessionId, sessionData) => {
  * @param {number} sessionId
  */
 export const deleteSession = async (sessionId) => {
-  try {
-    const response = await axiosInstance.delete(`/sessions/${sessionId}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при видаленні сесії' };
-  }
+  const response = await api.delete(`/sessions/${sessionId}`);
+  return response.data;
 };
 
 // === Календар ===
@@ -77,45 +57,65 @@ export const deleteSession = async (sessionId) => {
 /**
  * Отримати агрегацію для календаря
  * @param {Object} params
- * @param {number} params.year
- * @param {number} params.month
- * @param {string} params.type - MY | PUBLIC | ALL
+ * @param {number} [params.year]
+ * @param {number} [params.month]
+ * @param {string} [params.type] - MY | PUBLIC | ALL
  */
 export const getCalendar = async (params = {}) => {
-  try {
-    const response = await axiosInstance.get('/sessions/calendar', { params });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при отриманні календаря' };
-  }
+  const response = await api.get('/sessions/calendar', { params });
+  return response.data;
+};
+
+/**
+ * Отримати статистику календаря з фільтрами (новий API для Dashboard)
+ * @param {Object} params
+ * @param {string} [params.month] - ISO дата місяця (YYYY-MM-DD)
+ * @param {string} [params.scope] - 'global' | 'user' | 'search'
+ * @param {Object} [params.filters] - Об'єкт з фільтрами для пошуку
+ */
+export const getCalendarStats = async (params = {}) => {
+  const { filters, ...rest } = params;
+  const queryParams = {
+    ...rest,
+    ...(filters && { filters: JSON.stringify(filters) }),
+  };
+  const response = await api.get('/sessions/calendar-stats', { params: queryParams });
+  return response.data;
 };
 
 /**
  * Отримати сесії конкретного дня
  * @param {string} date - Дата у форматі YYYY-MM-DD
- * @param {Object} params - Додаткові параметри
+ * @param {Object} [params] - Додаткові параметри
  */
 export const getSessionsByDay = async (date, params = {}) => {
-  try {
-    const response = await axiosInstance.get(`/sessions/day/${date}`, { params });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при отриманні сесій дня' };
+  const response = await api.get(`/sessions/day/${date}`, { params });
+  return response.data;
+};
+
+/**
+ * Отримати сесії конкретного дня з фільтрами (новий API для Dashboard)
+ * @param {string} date - Дата у форматі YYYY-MM-DD
+ * @param {string} [scope] - 'global' | 'user' | 'search'
+ * @param {Object} [filters] - Об'єкт з фільтрами для пошуку
+ */
+export const getSessionsByDayFiltered = async (date, scope = 'global', filters = null) => {
+  const params = { scope };
+  if (filters) {
+    params.filters = JSON.stringify(filters);
   }
+  const response = await api.get(`/sessions/day-filtered/${date}`, { params });
+  return response.data;
 };
 
 /**
  * Отримати сесії кампанії
  * @param {number} campaignId
- * @param {Object} params - Параметри фільтрації
+ * @param {Object} [params] - Параметри фільтрації
  */
 export const getCampaignSessions = async (campaignId, params = {}) => {
-  try {
-    const response = await axiosInstance.get(`/campaigns/${campaignId}/sessions`, { params });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при отриманні сесій кампанії' };
-  }
+  const response = await api.get(`/campaigns/${campaignId}/sessions`, { params });
+  return response.data;
 };
 
 // === Учасники сесії ===
@@ -125,12 +125,8 @@ export const getCampaignSessions = async (campaignId, params = {}) => {
  * @param {number} sessionId
  */
 export const getSessionParticipants = async (sessionId) => {
-  try {
-    const response = await axiosInstance.get(`/sessions/${sessionId}/participants`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при отриманні учасників' };
-  }
+  const response = await api.get(`/sessions/${sessionId}/participants`);
+  return response.data;
 };
 
 /**
@@ -138,12 +134,8 @@ export const getSessionParticipants = async (sessionId) => {
  * @param {number} sessionId
  */
 export const joinSession = async (sessionId) => {
-  try {
-    const response = await axiosInstance.post(`/sessions/${sessionId}/join`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при приєднанні до сесії' };
-  }
+  const response = await api.post(`/sessions/${sessionId}/join`);
+  return response.data;
 };
 
 /**
@@ -151,12 +143,8 @@ export const joinSession = async (sessionId) => {
  * @param {number} sessionId
  */
 export const leaveSession = async (sessionId) => {
-  try {
-    const response = await axiosInstance.post(`/sessions/${sessionId}/leave`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при виході з сесії' };
-  }
+  const response = await api.post(`/sessions/${sessionId}/leave`);
+  return response.data;
 };
 
 /**
@@ -166,15 +154,11 @@ export const leaveSession = async (sessionId) => {
  * @param {string} status - PENDING | CONFIRMED | DECLINED | ATTENDED | NO_SHOW
  */
 export const updateParticipantStatus = async (sessionId, participantId, status) => {
-  try {
-    const response = await axiosInstance.patch(
-      `/sessions/${sessionId}/participants/${participantId}`,
-      { status }
-    );
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при оновленні статусу' };
-  }
+  const response = await api.patch(
+    `/sessions/${sessionId}/participants/${participantId}`,
+    { status }
+  );
+  return response.data;
 };
 
 /**
@@ -183,28 +167,8 @@ export const updateParticipantStatus = async (sessionId, participantId, status) 
  * @param {number} participantId
  */
 export const removeParticipant = async (sessionId, participantId) => {
-  try {
-    const response = await axiosInstance.delete(
-      `/sessions/${sessionId}/participants/${participantId}`
-    );
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при видаленні учасника' };
-  }
-};
-
-export default {
-  createSession,
-  getMySessions,
-  getSessionById,
-  updateSession,
-  deleteSession,
-  getCalendar,
-  getSessionsByDay,
-  getCampaignSessions,
-  getSessionParticipants,
-  joinSession,
-  leaveSession,
-  updateParticipantStatus,
-  removeParticipant,
+  const response = await api.delete(
+    `/sessions/${sessionId}/participants/${participantId}`
+  );
+  return response.data;
 };

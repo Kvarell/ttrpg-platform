@@ -1,5 +1,5 @@
 import CalendarWidget from '../components/widgets/CalendarWidget';
-import WelcomeWidget from '../components/widgets/WelcomeWidget';
+import HomeRightWidget from '../components/widgets/HomeRightWidget';
 
 export const DASHBOARD_VIEWS = {
   HOME: 'home',
@@ -12,10 +12,10 @@ export const DASHBOARD_VIEWS = {
 export const getViewConfig = (user, onProfileUpdate) => ({
   [DASHBOARD_VIEWS.HOME]: {
     left: <CalendarWidget />,
-    right: <WelcomeWidget />,
+    right: <HomeRightWidget />,
     title: 'Головна',
-    // Статична в'юха — не потребує внутрішнього стану
-    isDynamic: false,
+    // Тепер динамічна — керується useDashboardStore
+    isDynamic: true,
   },
   [DASHBOARD_VIEWS.PROFILE]: {
     // Динамічна в'юха — керується окремим компонентом

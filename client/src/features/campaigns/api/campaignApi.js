@@ -1,155 +1,161 @@
-import axiosInstance from '../../../lib/axios';
+﻿import api from '@/lib/axios';
 
 // === CRUD операції ===
 
+/**
+ * Створити нову кампанію
+ * @param {Object} campaignData - Дані кампанії
+ */
 export const createCampaign = async (campaignData) => {
-  try {
-    const response = await axiosInstance.post('/campaigns', campaignData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при створенні кампанії' };
-  }
+  const response = await api.post('/campaigns', campaignData);
+  return response.data;
 };
 
+/**
+ * Отримати мої кампанії
+ * @param {string} [role='all'] - Фільтр по ролі: 'all' | 'owner' | 'gm' | 'player'
+ */
 export const getMyCampaigns = async (role = 'all') => {
-  try {
-    const response = await axiosInstance.get('/campaigns', {
-      params: { role }
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при отриманні кампаній' };
-  }
+  const response = await api.get('/campaigns', { params: { role } });
+  return response.data;
 };
 
+/**
+ * Отримати деталі кампанії
+ * @param {number} campaignId
+ */
 export const getCampaignById = async (campaignId) => {
-  try {
-    const response = await axiosInstance.get(`/campaigns/${campaignId}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при отриманні деталей кампанії' };
-  }
+  const response = await api.get(`/campaigns/${campaignId}`);
+  return response.data;
 };
 
+/**
+ * Оновити кампанію
+ * @param {number} campaignId
+ * @param {Object} campaignData - Дані для оновлення
+ */
 export const updateCampaign = async (campaignId, campaignData) => {
-  try {
-    const response = await axiosInstance.put(`/campaigns/${campaignId}`, campaignData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при оновленні кампанії' };
-  }
+  const response = await api.put(`/campaigns/${campaignId}`, campaignData);
+  return response.data;
 };
 
+/**
+ * Видалити кампанію
+ * @param {number} campaignId
+ */
 export const deleteCampaign = async (campaignId) => {
-  try {
-    const response = await axiosInstance.delete(`/campaigns/${campaignId}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при видаленні кампанії' };
-  }
+  const response = await api.delete(`/campaigns/${campaignId}`);
+  return response.data;
 };
 
 // === Управління членами ===
 
+/**
+ * Отримати членів кампанії
+ * @param {number} campaignId
+ */
 export const getCampaignMembers = async (campaignId) => {
-  try {
-    const response = await axiosInstance.get(`/campaigns/${campaignId}/members`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при отриманні членів кампанії' };
-  }
+  const response = await api.get(`/campaigns/${campaignId}/members`);
+  return response.data;
 };
 
+/**
+ * Додати учасника до кампанії
+ * @param {number} campaignId
+ * @param {number} newMemberId - ID нового учасника
+ * @param {string} [role='PLAYER'] - Роль: 'PLAYER' | 'GM'
+ */
 export const addMemberToCampaign = async (campaignId, newMemberId, role = 'PLAYER') => {
-  try {
-    const response = await axiosInstance.post(`/campaigns/${campaignId}/members`, {
-      newMemberId,
-      role
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при додаванні учасника' };
-  }
+  const response = await api.post(`/campaigns/${campaignId}/members`, {
+    newMemberId,
+    role,
+  });
+  return response.data;
 };
 
+/**
+ * Видалити учасника з кампанії
+ * @param {number} campaignId
+ * @param {number} memberId
+ */
 export const removeMemberFromCampaign = async (campaignId, memberId) => {
-  try {
-    const response = await axiosInstance.delete(`/campaigns/${campaignId}/members/${memberId}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при видаленні учасника' };
-  }
+  const response = await api.delete(`/campaigns/${campaignId}/members/${memberId}`);
+  return response.data;
 };
 
+/**
+ * Оновити роль учасника
+ * @param {number} campaignId
+ * @param {number} memberId
+ * @param {string} role - Нова роль: 'PLAYER' | 'GM'
+ */
 export const updateMemberRole = async (campaignId, memberId, role) => {
-  try {
-    const response = await axiosInstance.patch(`/campaigns/${campaignId}/members/${memberId}`, {
-      role
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при оновленні ролі учасника' };
-  }
+  const response = await api.patch(`/campaigns/${campaignId}/members/${memberId}`, {
+    role,
+  });
+  return response.data;
 };
 
 // === Коди запрошень ===
 
+/**
+ * Перегенерувати код запрошення
+ * @param {number} campaignId
+ */
 export const regenerateInviteCode = async (campaignId) => {
-  try {
-    const response = await axiosInstance.post(`/campaigns/${campaignId}/invite`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при регенерації коду запрошення' };
-  }
+  const response = await api.post(`/campaigns/${campaignId}/invite`);
+  return response.data;
 };
 
+/**
+ * Приєднатися за кодом запрошення
+ * @param {string} inviteCode
+ */
 export const joinByInviteCode = async (inviteCode) => {
-  try {
-    const response = await axiosInstance.post(`/campaigns/invite/${inviteCode}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при приєднанні за кодом запрошення' };
-  }
+  const response = await api.post(`/campaigns/invite/${inviteCode}`);
+  return response.data;
 };
 
 // === Запити на приєднання ===
 
+/**
+ * Надіслати запит на приєднання
+ * @param {number} campaignId
+ * @param {string} [message=''] - Повідомлення до запиту
+ */
 export const submitJoinRequest = async (campaignId, message = '') => {
-  try {
-    const response = await axiosInstance.post(`/campaigns/${campaignId}/requests`, {
-      message
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при надіслані запиту на приєднання' };
-  }
+  const response = await api.post(`/campaigns/${campaignId}/requests`, {
+    message,
+  });
+  return response.data;
 };
 
+/**
+ * Отримати запити на приєднання
+ * @param {number} campaignId
+ */
 export const getJoinRequests = async (campaignId) => {
-  try {
-    const response = await axiosInstance.get(`/campaigns/${campaignId}/requests`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при отриманні запитів на приєднання' };
-  }
+  const response = await api.get(`/campaigns/${campaignId}/requests`);
+  return response.data;
 };
 
+/**
+ * Схвалити запит на приєднання
+ * @param {number} requestId
+ * @param {string} [role='PLAYER'] - Роль для нового учасника
+ */
 export const approveJoinRequest = async (requestId, role = 'PLAYER') => {
-  try {
-    const response = await axiosInstance.post(`/campaigns/requests/${requestId}/approve`, {
-      role
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при схвалюванні запиту' };
-  }
+  const response = await api.post(`/campaigns/requests/${requestId}/approve`, {
+    role,
+  });
+  return response.data;
 };
 
+/**
+ * Відхилити запит на приєднання
+ * @param {number} requestId
+ */
 export const rejectJoinRequest = async (requestId) => {
-  try {
-    const response = await axiosInstance.post(`/campaigns/requests/${requestId}/reject`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { success: false, message: 'Помилка при відхиленні запиту' };
-  }
+  const response = await api.post(`/campaigns/requests/${requestId}/reject`);
+  return response.data;
 };

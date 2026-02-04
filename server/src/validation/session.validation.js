@@ -177,6 +177,63 @@ const validateGetCalendar = [
 ];
 
 /**
+ * Отримати статистику календаря з фільтрами
+ */
+const validateGetCalendarStats = [
+  query('month')
+    .optional()
+    .isISO8601().withMessage('Місяць повинен бути в форматі ISO8601 (YYYY-MM-DD)'),
+
+  query('scope')
+    .optional()
+    .trim()
+    .isIn(['global', 'user', 'search']).withMessage('Невірний scope (global | user | search)'),
+
+  query('filters')
+    .optional()
+    .custom((value) => {
+      if (typeof value === 'string') {
+        try {
+          JSON.parse(value);
+        } catch (e) {
+          throw new Error('Невірний формат JSON для фільтрів');
+        }
+      }
+      return true;
+    }),
+
+  handleValidationErrors,
+];
+
+/**
+ * Отримати сесії по дню з фільтрами
+ */
+const validateGetSessionsByDayFiltered = [
+  param('date')
+    .matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('Дата повинна бути в форматі YYYY-MM-DD'),
+
+  query('scope')
+    .optional()
+    .trim()
+    .isIn(['global', 'user', 'search']).withMessage('Невірний scope (global | user | search)'),
+
+  query('filters')
+    .optional()
+    .custom((value) => {
+      if (typeof value === 'string') {
+        try {
+          JSON.parse(value);
+        } catch (e) {
+          throw new Error('Невірний формат JSON для фільтрів');
+        }
+      }
+      return true;
+    }),
+
+  handleValidationErrors,
+];
+
+/**
  * Приєднатися до сесії
  */
 const validateJoinSession = [
@@ -260,6 +317,8 @@ module.exports = {
   validateSessionId,
   validateGetMySessions,
   validateGetCalendar,
+  validateGetCalendarStats,
+  validateGetSessionsByDayFiltered,
   validateJoinSession,
   validateUpdateParticipantStatus,
   validateRemoveParticipant,

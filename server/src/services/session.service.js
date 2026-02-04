@@ -216,6 +216,201 @@ class SessionService {
 
     return calendar;
   }
+
+  /**
+   * Отримати статистику календаря з підтримкою фільтрів для пошуку
+   * 
+   * GET /api/sessions/calendar-stats
+   * 
+   * @param {number|null} userId - ID користувача (null для гостей)
+   * @param {Object} options - Опції запиту
+   * @param {string} options.month - ISO дата місяця (напр. "2026-02-01")
+   * @param {string} options.scope - 'global' | 'user' | 'search'
+   * @param {Object} options.filters - Фільтри для пошуку
+   * @param {string} options.filters.system - Система гри (D&D, Pathfinder, тощо)
+   * @param {string} options.filters.dateFrom - Початок діапазону дат
+   * @param {string} options.filters.dateTo - Кінець діапазону дат
+   * @param {string[]} options.filters.tags - Теги для пошуку
+   * @param {string} options.filters.searchQuery - Текстовий пошук
+   * 
+   * @returns {Object} { "2026-02-15": { count: 5, isHighlighted: true }, ... }
+   */
+  async getCalendarStats(userId, options = {}) {
+    const { month, scope = 'global', filters = {} } = options;
+
+    // Парсимо місяць з ISO дати
+    const monthDate = new Date(month);
+    const year = monthDate.getUTCFullYear();
+    const monthNum = monthDate.getUTCMonth(); // 0-based
+
+    // Визначаємо діапазон дат для місяця
+    const startDate = new Date(Date.UTC(year, monthNum, 1, 0, 0, 0, 0));
+    const lastDayOfMonth = new Date(Date.UTC(year, monthNum + 1, 0)).getUTCDate();
+    const endDate = new Date(Date.UTC(year, monthNum, lastDayOfMonth, 23, 59, 59, 999));
+
+    // Базова умова
+    const whereCondition = {
+      date: {
+        gte: startDate,
+        lte: endDate,
+      },
+      // Не показуємо скасовані сесії
+      status: { not: 'CANCELED' },
+    };
+
+    // Логіка scope
+    if (scope === 'user') {
+      // Сесії, де користувач є учасником або GM
+      if (!userId) {
+        throw new AppError(ERROR_CODES.AUTH_TOKEN_MISSING, 'Необхідна авторизація для перегляду особистого календаря');
+      }
+      whereCondition.participants = { some: { userId } };
+    } 
+    else if (scope === 'global') {
+      // Всі публічні сесії
+      whereCondition.visibility = { in: ['PUBLIC', 'LINK_ONLY'] };
+    }
+    else if (scope === 'search') {
+      // Пошуковий scope - публічні + фільтри
+      whereCondition.visibility = { in: ['PUBLIC', 'LINK_ONLY'] };
+    }
+
+    // Застосовуємо додаткові фільтри (для scope === 'search')
+    if (filters) {
+      // Фільтр по системі (через campaign.system)
+      if (filters.system) {
+        whereCondition.campaign = {
+          system: { contains: filters.system, mode: 'insensitive' },
+        };
+      }
+
+      // Фільтр по діапазону дат (перезаписує стандартний діапазон місяця)
+      if (filters.dateFrom) {
+        whereCondition.date = {
+          ...whereCondition.date,
+          gte: new Date(filters.dateFrom),
+        };
+      }
+      if (filters.dateTo) {
+        whereCondition.date = {
+          ...whereCondition.date,
+          lte: new Date(filters.dateTo),
+        };
+      }
+
+      // Текстовий пошук по назві або опису
+      if (filters.searchQuery) {
+        whereCondition.OR = [
+          { title: { contains: filters.searchQuery, mode: 'insensitive' } },
+          { description: { contains: filters.searchQuery, mode: 'insensitive' } },
+        ];
+      }
+    }
+
+    // Виконуємо запит
+    const sessions = await prisma.session.findMany({
+      where: whereCondition,
+      select: {
+        id: true,
+        date: true,
+      },
+    });
+
+    // Агрегуємо результати
+    const stats = {};
+    sessions.forEach(session => {
+      const dateKey = session.date.toISOString().split('T')[0];
+      if (!stats[dateKey]) {
+        stats[dateKey] = { count: 0, isHighlighted: scope === 'search' };
+      }
+      stats[dateKey].count += 1;
+    });
+
+    return stats;
+  }
+
+  /**
+   * Отримати сесії по даті з підтримкою фільтрів
+   * 
+   * @param {number|null} userId - ID користувача
+   * @param {string} dateString - Дата у форматі YYYY-MM-DD
+   * @param {string} scope - 'global' | 'user' | 'search'
+   * @param {Object} filters - Фільтри для пошуку
+   */
+  async getSessionsByDayFiltered(userId, dateString, scope = 'global', filters = {}) {
+    // Парсимо дату з формату YYYY-MM-DD
+    const [year, month, day] = dateString.split('-').map(Number);
+    const dayStart = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+    const dayEnd = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+
+    const whereCondition = {
+      date: {
+        gte: dayStart,
+        lte: dayEnd,
+      },
+      status: { not: 'CANCELED' },
+    };
+
+    // Логіка scope
+    if (scope === 'user') {
+      if (!userId) {
+        throw new AppError(ERROR_CODES.AUTH_TOKEN_MISSING, 'Необхідна авторизація');
+      }
+      whereCondition.participants = { some: { userId } };
+    } 
+    else if (scope === 'global' || scope === 'search') {
+      whereCondition.visibility = { in: ['PUBLIC', 'LINK_ONLY'] };
+    }
+
+    // Застосовуємо фільтри (для пошуку)
+    if (filters) {
+      if (filters.system) {
+        whereCondition.campaign = {
+          system: { contains: filters.system, mode: 'insensitive' },
+        };
+      }
+      if (filters.searchQuery) {
+        whereCondition.OR = [
+          { title: { contains: filters.searchQuery, mode: 'insensitive' } },
+          { description: { contains: filters.searchQuery, mode: 'insensitive' } },
+        ];
+      }
+    }
+
+    const sessions = await prisma.session.findMany({
+      where: whereCondition,
+      include: {
+        creator: {
+          select: { id: true, username: true, displayName: true, avatarUrl: true },
+        },
+        campaign: {
+          select: { id: true, title: true, system: true },
+        },
+        participants: {
+          include: {
+            user: {
+              select: { id: true, username: true, displayName: true, avatarUrl: true },
+            },
+          },
+        },
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    // Додаємо інформацію про роль користувача в кожній сесії
+    return sessions.map(session => {
+      const myParticipation = userId 
+        ? session.participants.find(p => p.userId === userId) 
+        : null;
+      
+      return {
+        ...session,
+        myRole: myParticipation?.role || null,
+        myStatus: myParticipation?.status || null,
+        currentPlayers: session.participants.filter(p => p.role === 'PLAYER').length,
+      };
+    });
+  }
   /**
    * Отримати деталі сесії
    */
