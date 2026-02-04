@@ -147,11 +147,11 @@ export default function CalendarWidget({ title, showTodayButton }) {
       ) : (
         <div className="flex flex-col h-full">
           {/* Заголовки днів тижня */}
-          <div className="grid grid-cols-7 gap-2 mb-2">
+          <div className="grid grid-cols-7 gap-1 mb-1">
             {weekDays.map((day) => (
               <div 
                 key={day} 
-                className="text-center font-bold text-[#4D774E] text-sm py-1"
+                className="text-center font-bold text-[#4D774E] text-xs py-0.5"
               >
                 {day}
               </div>
@@ -159,7 +159,7 @@ export default function CalendarWidget({ title, showTodayButton }) {
           </div>
           
           {/* Сітка днів */}
-          <div className="grid grid-cols-7 gap-2 flex-1">
+          <div className="grid grid-cols-7 gap-1 flex-1">
             {calendarDays.map((item, index) => {
               const stats = item.dateKey ? calendarStats[item.dateKey] : null;
               const count = stats?.count || 0;
@@ -167,7 +167,7 @@ export default function CalendarWidget({ title, showTodayButton }) {
               
               if (!item.day) {
                 // Порожня клітинка
-                return <div key={`empty-${index}`} className="aspect-square" />;
+                return <div key={`empty-${index}`} className="min-h-[70px]" />;
               }
               
               return (
