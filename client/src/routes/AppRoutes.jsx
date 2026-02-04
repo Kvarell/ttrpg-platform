@@ -12,6 +12,10 @@ import DashboardPage from "../features/dashboard/pages/DashboardPage";
 import PublicProfilePage from "../features/profile/pages/PublicProfilePage";
 import ConfirmEmailChangePage from "../features/security/pages/ConfirmEmailChangePage";
 
+// Сторінки деталей
+import CampaignDetailsPage from "../features/campaigns/pages/CampaignDetailsPage";
+import SessionDetailsPage from "../features/sessions/pages/SessionDetailsPage";
+
 import ProtectedRoute from "./ProtectedRoute";
 
 const AppRoutes = () => {
@@ -23,6 +27,26 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Деталі кампанії */}
+      <Route 
+        path="/campaign/:id" 
+        element={
+          <ProtectedRoute>
+            <CampaignDetailsPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Деталі сесії */}
+      <Route 
+        path="/session/:id" 
+        element={
+          <ProtectedRoute>
+            <SessionDetailsPage />
           </ProtectedRoute>
         } 
       />

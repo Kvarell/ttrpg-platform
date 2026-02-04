@@ -3,7 +3,7 @@
  * Обробляє адміністративні запити
  */
 
-const prisma = require('../lib/prisma');
+const { prisma } = require('../lib/prisma');
 const tokenCleanupService = require('../services/tokenCleanup.service');
 const { AppError, ERROR_CODES } = require('../constants/errors');
 

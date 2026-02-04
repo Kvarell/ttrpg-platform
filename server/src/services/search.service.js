@@ -61,9 +61,6 @@ class SearchService {
           owner: {
             select: { id: true, username: true, displayName: true, avatarUrl: true },
           },
-          members: {
-            select: { id: true, role: true },
-          },
           _count: {
             select: { sessions: true, members: true },
           },
