@@ -1,4 +1,4 @@
-const prisma = require('../lib/prisma');
+const { prisma } = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { createError, AppError, ERROR_CODES } = require('../constants/errors');

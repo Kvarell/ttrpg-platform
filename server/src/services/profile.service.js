@@ -1,4 +1,4 @@
-const prisma = require('../lib/prisma');
+const { prisma } = require('../lib/prisma');
 const { createError, AppError, ERROR_CODES } = require('../constants/errors');
 
 // Поля, які можна повертати публічно
