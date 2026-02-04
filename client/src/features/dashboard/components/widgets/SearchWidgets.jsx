@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import useSearchStore from '../../../../stores/useSearchStore';
+import useDashboardStore from '@/stores/useDashboardStore';
 import DashboardCard from '../../ui/DashboardCard';
 
 /**
  * Віджет фільтрів пошуку
+ * Використовує useDashboardStore для централізованого управління станом
  */
 export function SearchFiltersWidget({ onSearch }) {
-  const { filters, setFilters, clearFilters, activeTab, setActiveTab } = useSearchStore();
+  const { 
+    searchFilters, 
+    setSearchFilters, 
+    resetSearchFilters, 
+    searchActiveTab, 
+    setSearchActiveTab,
+    executeSearch,
+  } = useDashboardStore();
   
   const [localFilters, setLocalFilters] = useState({
     q: '',
@@ -22,16 +30,16 @@ export function SearchFiltersWidget({ onSearch }) {
   // Синхронізуємо локальний стан зі store
   useEffect(() => {
     setLocalFilters({
-      q: filters.q || '',
-      system: filters.system || '',
-      dateFrom: filters.dateFrom || '',
-      dateTo: filters.dateTo || '',
-      minPrice: filters.minPrice ?? '',
-      maxPrice: filters.maxPrice ?? '',
-      hasAvailableSlots: filters.hasAvailableSlots || false,
-      oneShot: filters.oneShot || false,
+      q: searchFilters.q || '',
+      system: searchFilters.system || '',
+      dateFrom: searchFilters.dateFrom || '',
+      dateTo: searchFilters.dateTo || '',
+      minPrice: searchFilters.minPrice ?? '',
+      maxPrice: searchFilters.maxPrice ?? '',
+      hasAvailableSlots: searchFilters.hasAvailableSlots || false,
+      oneShot: searchFilters.oneShot || false,
     });
-  }, [filters]);
+  }, [searchFilters]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -41,15 +49,24 @@ export function SearchFiltersWidget({ onSearch }) {
     }));
   };
 
-  const handleSearch = () => {
-    setFilters(localFilters);
+  const handleSearch = async () => {
+    // Оновлюємо фільтри в store
+    setSearchFilters({
+      ...localFilters,
+      minPrice: localFilters.minPrice ? Number(localFilters.minPrice) : null,
+      maxPrice: localFilters.maxPrice ? Number(localFilters.maxPrice) : null,
+    });
+    
+    // Виконуємо пошук (оновлює календар + результати)
+    await executeSearch();
+    
     if (onSearch) {
       onSearch(localFilters);
     }
   };
 
   const handleClear = () => {
-    clearFilters();
+    resetSearchFilters();
     setLocalFilters({
       q: '',
       system: '',
@@ -77,9 +94,9 @@ export function SearchFiltersWidget({ onSearch }) {
         {/* Вкладки: Сесії / Кампанії */}
         <div className="flex gap-2 border-b border-[#9DC88D]/30 pb-3">
           <button
-            onClick={() => setActiveTab('sessions')}
+            onClick={() => setSearchActiveTab('sessions')}
             className={`px-4 py-2 rounded-t-lg transition-colors ${
-              activeTab === 'sessions'
+              searchActiveTab === 'sessions'
                 ? 'bg-[#164A41] text-white'
                 : 'text-[#4D774E] hover:bg-gray-100'
             }`}
@@ -87,9 +104,9 @@ export function SearchFiltersWidget({ onSearch }) {
             🎲 Сесії
           </button>
           <button
-            onClick={() => setActiveTab('campaigns')}
+            onClick={() => setSearchActiveTab('campaigns')}
             className={`px-4 py-2 rounded-t-lg transition-colors ${
-              activeTab === 'campaigns'
+              searchActiveTab === 'campaigns'
                 ? 'bg-[#164A41] text-white'
                 : 'text-[#4D774E] hover:bg-gray-100'
             }`}
@@ -136,7 +153,7 @@ export function SearchFiltersWidget({ onSearch }) {
         </div>
 
         {/* Фільтри для сесій */}
-        {activeTab === 'sessions' && (
+        {searchActiveTab === 'sessions' && (
           <>
             {/* Дати */}
             <div className="grid grid-cols-2 gap-3">
@@ -238,31 +255,35 @@ export function SearchFiltersWidget({ onSearch }) {
 
 /**
  * Віджет результатів пошуку
+ * Використовує useDashboardStore для централізованого управління станом
  */
 export function SearchResultsWidget() {
   const { 
-    activeTab,
+    searchActiveTab,
     campaignResults,
     sessionResults,
     searchCampaignsAction,
     searchSessionsAction,
-    loadMore,
-    isLoading,
+    loadMoreSearchResults,
+    isSearchLoading,
     error,
-    filters,
-  } = useSearchStore();
+    searchFilters,
+    hasSearched,
+  } = useDashboardStore();
 
-  // Виконуємо пошук при зміні вкладки або фільтрів
+  // Виконуємо пошук при зміні вкладки (тільки якщо вже був пошук)
   useEffect(() => {
-    if (activeTab === 'campaigns') {
-      searchCampaignsAction();
-    } else {
-      searchSessionsAction();
+    if (hasSearched) {
+      if (searchActiveTab === 'campaigns') {
+        searchCampaignsAction();
+      } else {
+        searchSessionsAction();
+      }
     }
-  }, [activeTab, filters, searchCampaignsAction, searchSessionsAction]);
+  }, [searchActiveTab]);
 
-  const results = activeTab === 'campaigns' ? campaignResults : sessionResults;
-  const items = activeTab === 'campaigns' ? results.campaigns : results.sessions;
+  const results = searchActiveTab === 'campaigns' ? campaignResults : sessionResults;
+  const items = searchActiveTab === 'campaigns' ? results.campaigns : results.sessions;
 
   // Форматування часу
   const formatDateTime = (dateStr) => {
@@ -279,13 +300,19 @@ export function SearchResultsWidget() {
     <DashboardCard 
       title={`Результати (${results.total || 0})`}
     >
-      {isLoading && items.length === 0 ? (
+      {isSearchLoading && items.length === 0 ? (
         <div className="flex items-center justify-center h-full">
           <div className="animate-pulse text-[#164A41]">Шукаємо...</div>
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center h-full text-red-500">
           <p>{error}</p>
+        </div>
+      ) : !hasSearched ? (
+        <div className="flex flex-col items-center justify-center h-full text-[#4D774E]">
+          <div className="text-4xl mb-4">🔍</div>
+          <p>Введіть параметри пошуку</p>
+          <p className="text-sm mt-2">та натисніть "Шукати"</p>
         </div>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-[#4D774E]">
@@ -296,7 +323,7 @@ export function SearchResultsWidget() {
       ) : (
         <div className="flex flex-col gap-3">
           {/* Сесії */}
-          {activeTab === 'sessions' && items.map((session) => (
+          {searchActiveTab === 'sessions' && items.map((session) => (
             <div 
               key={session.id}
               className="p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/30 transition-colors cursor-pointer"
@@ -317,6 +344,7 @@ export function SearchResultsWidget() {
               <div className="flex flex-wrap gap-3 text-sm text-[#4D774E]">
                 <span>📅 {formatDateTime(session.date)}</span>
                 <span>👥 {session.currentPlayers}/{session.maxPlayers}</span>
+                {session.system && <span>🎲 {session.system}</span>}
                 {session.price > 0 && <span className="font-bold text-[#164A41]">💰 {session.price} грн</span>}
                 {session.price === 0 && <span className="text-green-600">Безкоштовно</span>}
               </div>
@@ -324,14 +352,13 @@ export function SearchResultsWidget() {
               {session.campaign && (
                 <div className="mt-2 text-sm text-[#4D774E]">
                   📚 {session.campaign.title}
-                  {session.campaign.system && ` • ${session.campaign.system}`}
                 </div>
               )}
             </div>
           ))}
 
           {/* Кампанії */}
-          {activeTab === 'campaigns' && items.map((campaign) => (
+          {searchActiveTab === 'campaigns' && items.map((campaign) => (
             <div 
               key={campaign.id}
               className="p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/30 transition-colors cursor-pointer"
@@ -362,11 +389,11 @@ export function SearchResultsWidget() {
           {/* Кнопка "Завантажити ще" */}
           {results.hasMore && (
             <button
-              onClick={loadMore}
-              disabled={isLoading}
+              onClick={loadMoreSearchResults}
+              disabled={isSearchLoading}
               className="py-3 border-2 border-dashed border-[#9DC88D]/50 rounded-xl text-[#4D774E] hover:border-[#164A41] hover:text-[#164A41] transition-colors disabled:opacity-50"
             >
-              {isLoading ? 'Завантаження...' : 'Завантажити ще'}
+              {isSearchLoading ? 'Завантаження...' : 'Завантажити ще'}
             </button>
           )}
         </div>

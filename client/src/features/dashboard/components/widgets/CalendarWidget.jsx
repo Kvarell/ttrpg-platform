@@ -1,18 +1,28 @@
 import React, { useEffect, useMemo } from 'react';
 import DashboardCard from '../../ui/DashboardCard';
-import useDashboardStore from '@/stores/useDashboardStore';
+import CalendarDayCell from '../ui/CalendarDayCell';
+import useDashboardStore, { VIEW_MODES } from '@/stores/useDashboardStore';
 
 /**
- * Оновлений CalendarWidget з підтримкою:
+ * Універсальний CalendarWidget для всіх режимів Dashboard
+ * 
+ * Підтримує:
+ * - HOME: глобальні публічні сесії
+ * - MY_GAMES: персональні сесії користувача
+ * - SEARCH: результати пошуку з фільтрами
+ * 
+ * Функції:
  * - Відображення кількості сесій на кожен день
  * - Підсвітка днів з результатами пошуку
  * - Навігація по місяцям
+ * - Кнопка "Сьогодні" для швидкої навігації
  * - Інтеграція з useDashboardStore
  * 
  * @param {Object} props
  * @param {string} props.title - Заголовок (опціонально, буде автогенерований)
+ * @param {boolean} props.showTodayButton - Показувати кнопку "Сьогодні" (за замовчуванням true для MY_GAMES)
  */
-export default function CalendarWidget({ title }) {
+export default function CalendarWidget({ title, showTodayButton }) {
   const {
     currentMonth,
     calendarStats,
@@ -21,9 +31,13 @@ export default function CalendarWidget({ title }) {
     viewMode,
     goToNextMonth,
     goToPrevMonth,
+    goToToday,
     selectDate,
     fetchCalendarStats,
   } = useDashboardStore();
+  
+  // Визначаємо чи показувати кнопку "Сьогодні"
+  const shouldShowTodayButton = showTodayButton ?? (viewMode === VIEW_MODES.MY_GAMES);
 
   // Завантажуємо статистику при першому рендері
   useEffect(() => {
@@ -44,17 +58,21 @@ export default function CalendarWidget({ title }) {
     let startDayOfWeek = firstDay.getDay();
     startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
     
+    // Сьогоднішня дата для порівняння
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
     const days = [];
     
     // Додаємо порожні клітинки для днів попереднього місяця
     for (let i = 0; i < startDayOfWeek; i++) {
-      days.push({ day: null, dateKey: null });
+      days.push({ day: null, dateKey: null, isToday: false });
     }
     
     // Додаємо дні поточного місяця
     for (let day = 1; day <= lastDay.getDate(); day++) {
       const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      days.push({ day, dateKey });
+      days.push({ day, dateKey, isToday: dateKey === todayKey });
     }
     
     return days;
@@ -68,42 +86,8 @@ export default function CalendarWidget({ title }) {
     });
   }, [currentMonth]);
 
-  // Сьогоднішня дата
-  const today = useMemo(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  }, []);
-
   // Дні тижня
   const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
-
-  // Визначаємо стиль клітинки
-  const getDayCellStyle = (dateKey) => {
-    if (!dateKey) return 'bg-transparent';
-    
-    const isSelected = selectedDate === dateKey;
-    const isToday = today === dateKey;
-    const stats = calendarStats[dateKey];
-    const hasEvents = stats && stats.count > 0;
-    const isHighlighted = stats?.isHighlighted;
-    
-    let classes = 'cursor-pointer transition-all duration-200 ';
-    
-    if (isSelected) {
-      classes += 'border-[#164A41] bg-[#164A41] text-white font-bold ';
-    } else if (isHighlighted && hasEvents) {
-      // Підсвітка для результатів пошуку
-      classes += 'border-blue-500 bg-blue-50 hover:bg-blue-100 ';
-    } else if (isToday) {
-      classes += 'border-[#F1B24A] bg-[#F1B24A]/20 font-bold hover:bg-[#F1B24A]/30 ';
-    } else if (hasEvents) {
-      classes += 'border-[#9DC88D] bg-[#9DC88D]/20 hover:bg-[#9DC88D]/30 ';
-    } else {
-      classes += 'border-[#9DC88D]/30 hover:bg-gray-50 ';
-    }
-    
-    return classes;
-  };
 
   // Кнопки навігації
   const NavigationButtons = () => (
@@ -115,6 +99,14 @@ export default function CalendarWidget({ title }) {
       >
         ←
       </button>
+      {shouldShowTodayButton && (
+        <button
+          onClick={goToToday}
+          className="px-3 h-8 flex items-center justify-center rounded-lg bg-[#164A41] text-white text-sm hover:bg-[#1f5c52] transition-colors"
+        >
+          Сьогодні
+        </button>
+      )}
       <button
         onClick={goToNextMonth}
         className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-[#9DC88D]/30 hover:bg-[#9DC88D]/20 transition-colors text-[#164A41]"
@@ -126,7 +118,22 @@ export default function CalendarWidget({ title }) {
   );
 
   // Генеруємо заголовок на основі viewMode
-  const cardTitle = title || `Календар — ${monthName.charAt(0).toUpperCase() + monthName.slice(1)}`;
+  const getViewModeLabel = () => {
+    switch (viewMode) {
+      case VIEW_MODES.MY_GAMES:
+        return 'Мої ігри';
+      case VIEW_MODES.SEARCH:
+        return 'Пошук';
+      default:
+        return '';
+    }
+  };
+  
+  const viewModeLabel = getViewModeLabel();
+  const cardTitle = title || (viewModeLabel 
+    ? `${viewModeLabel} — ${monthName.charAt(0).toUpperCase() + monthName.slice(1)}`
+    : `Календар — ${monthName.charAt(0).toUpperCase() + monthName.slice(1)}`
+  );
 
   return (
     <DashboardCard 
@@ -156,6 +163,7 @@ export default function CalendarWidget({ title }) {
             {calendarDays.map((item, index) => {
               const stats = item.dateKey ? calendarStats[item.dateKey] : null;
               const count = stats?.count || 0;
+              const sessions = stats?.sessions || [];
               
               if (!item.day) {
                 // Порожня клітинка
@@ -163,57 +171,18 @@ export default function CalendarWidget({ title }) {
               }
               
               return (
-                <button
+                <CalendarDayCell
                   key={item.dateKey}
+                  day={item.day}
+                  count={count}
+                  sessions={sessions}
+                  isSelected={selectedDate === item.dateKey}
+                  isToday={item.isToday}
+                  isHighlighted={stats?.isHighlighted || false}
                   onClick={() => selectDate(item.dateKey)}
-                  className={`
-                    aspect-square flex flex-col items-center justify-center rounded-lg border-2 
-                    ${getDayCellStyle(item.dateKey)}
-                    text-[#164A41] relative
-                  `}
-                >
-                  {/* Число дня */}
-                  <span className={`text-sm ${selectedDate === item.dateKey ? 'text-white' : ''}`}>
-                    {item.day}
-                  </span>
-                  
-                  {/* Бейдж з кількістю сесій */}
-                  {count > 0 && (
-                    <span 
-                      className={`
-                        text-xs font-bold mt-0.5 px-1.5 py-0.5 rounded-full
-                        ${selectedDate === item.dateKey 
-                          ? 'bg-white text-[#164A41]' 
-                          : stats?.isHighlighted 
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-[#164A41] text-white'
-                        }
-                      `}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
+                />
               );
             })}
-          </div>
-          
-          {/* Легенда */}
-          <div className="mt-4 pt-3 border-t border-[#9DC88D]/20 flex flex-wrap gap-4 text-xs text-[#4D774E]">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded border-2 border-[#F1B24A] bg-[#F1B24A]/20" />
-              <span>Сьогодні</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded border-2 border-[#9DC88D] bg-[#9DC88D]/20" />
-              <span>Є сесії</span>
-            </div>
-            {viewMode === 'search' && (
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded border-2 border-blue-500 bg-blue-50" />
-                <span>Результати пошуку</span>
-              </div>
-            )}
           </div>
         </div>
       )}

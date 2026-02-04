@@ -1,5 +1,5 @@
 import React from 'react';
-import { DASHBOARD_VIEWS } from '../config/DashboardViews';
+import { DASHBOARD_VIEWS } from '@/stores/useDashboardStore';
 import NavButton from '@/components/ui/NavButton';
 
 // Додаємо props: user та onLogout

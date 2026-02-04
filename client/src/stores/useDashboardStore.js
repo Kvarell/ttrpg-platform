@@ -5,6 +5,17 @@ import {
   createSession,
   joinSession,
 } from '@/features/sessions/api/sessionApi';
+import { searchCampaigns, searchSessions } from '@/features/search/api/searchApi';
+
+/**
+ * Dashboard Views (Navigation)
+ */
+export const DASHBOARD_VIEWS = {
+  HOME: 'home',
+  MY_GAMES: 'my-games',
+  PROFILE: 'profile',
+  SEARCH: 'search',
+};
 
 /**
  * Dashboard View Modes
@@ -41,7 +52,7 @@ export const PANEL_MODES = {
  * - Станом правої панелі
  * - Даними календаря (кількість сесій по датам)
  * - Даними сесій вибраного дня
- * - Фільтрами пошуку
+ * - Фільтрами та результатами пошуку (merged from useSearchStore)
  */
 const useDashboardStore = create((set, get) => ({
   // === VIEW STATE ===
@@ -77,24 +88,52 @@ const useDashboardStore = create((set, get) => ({
   /** Розгорнута сесія (для акордеона) */
   expandedSessionId: null,
   
-  // === SEARCH FILTERS ===
+  // === SEARCH STATE (merged from useSearchStore) ===
   
-  /** Фільтри пошуку */
+  /** Активна вкладка пошуку: 'sessions' | 'campaigns' */
+  searchActiveTab: 'sessions',
+  
+  /** Результати пошуку кампаній */
+  campaignResults: {
+    campaigns: [],
+    total: 0,
+    hasMore: false,
+  },
+  
+  /** Результати пошуку сесій */
+  sessionResults: {
+    sessions: [],
+    total: 0,
+    hasMore: false,
+  },
+  
+  /** Фільтри пошуку (розширені) */
   searchFilters: {
+    q: '',
     system: '',
     dateFrom: '',
     dateTo: '',
     searchQuery: '',
+    minPrice: null,
+    maxPrice: null,
+    hasAvailableSlots: false,
+    oneShot: false,
+    sortBy: 'date',
+    limit: 20,
+    offset: 0,
   },
   
   /** Чи був виконаний пошук */
   hasSearched: false,
   
+  /** Чи йде завантаження пошуку */
+  isSearchLoading: false,
+  
   // === ERROR STATE ===
   
   error: null,
   
-  // === ACTIONS ===
+  // === VIEW ACTIONS ===
   
   /**
    * Змінити режим відображення (Home / My Games / Search)
@@ -203,6 +242,19 @@ const useDashboardStore = create((set, get) => ({
   },
   
   /**
+   * Перейти до сьогоднішнього дня
+   */
+  goToToday: () => {
+    const today = new Date();
+    set({ currentMonth: today });
+    get().fetchCalendarStats();
+    
+    // Форматуємо сьогоднішню дату
+    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    get().selectDate(dateStr);
+  },
+  
+  /**
    * Розгорнути/згорнути сесію (акордеон)
    */
   toggleSessionExpanded: (sessionId) => {
@@ -212,11 +264,20 @@ const useDashboardStore = create((set, get) => ({
     });
   },
   
+  // === SEARCH ACTIONS (merged from useSearchStore) ===
+  
+  /**
+   * Встановити активну вкладку пошуку
+   */
+  setSearchActiveTab: (tab) => set({ searchActiveTab: tab }),
+  
   /**
    * Оновити фільтри пошуку
    */
   setSearchFilters: (filters) => {
-    set({ searchFilters: { ...get().searchFilters, ...filters } });
+    set((state) => ({ 
+      searchFilters: { ...state.searchFilters, ...filters, offset: 0 } 
+    }));
   },
   
   /**
@@ -225,25 +286,180 @@ const useDashboardStore = create((set, get) => ({
   resetSearchFilters: () => {
     set({ 
       searchFilters: {
+        q: '',
         system: '',
         dateFrom: '',
         dateTo: '',
         searchQuery: '',
+        minPrice: null,
+        maxPrice: null,
+        hasAvailableSlots: false,
+        oneShot: false,
+        sortBy: 'date',
+        limit: 20,
+        offset: 0,
       },
       hasSearched: false,
+      campaignResults: { campaigns: [], total: 0, hasMore: false },
+      sessionResults: { sessions: [], total: 0, hasMore: false },
     });
     get().fetchCalendarStats();
   },
   
   /**
-   * Виконати пошук
+   * Очистити результати пошуку
+   */
+  clearSearchResults: () => set({
+    campaignResults: { campaigns: [], total: 0, hasMore: false },
+    sessionResults: { sessions: [], total: 0, hasMore: false },
+  }),
+  
+  /**
+   * Виконати пошук (оновлює календар + результати)
    */
   executeSearch: async () => {
     set({ hasSearched: true });
+    const { searchActiveTab } = get();
+    
+    // Оновлюємо календар з фільтрами
     await get().fetchCalendarStats();
+    
+    // Виконуємо пошук залежно від активної вкладки
+    if (searchActiveTab === 'campaigns') {
+      await get().searchCampaignsAction();
+    } else {
+      await get().searchSessionsAction();
+    }
   },
   
-  // === API ACTIONS ===
+  /**
+   * Пошук кампаній
+   */
+  searchCampaignsAction: async (params = {}) => {
+    const { searchFilters } = get();
+    const searchParams = {
+      q: params.q ?? searchFilters.q,
+      system: params.system ?? searchFilters.system,
+      limit: params.limit ?? searchFilters.limit,
+      offset: params.offset ?? searchFilters.offset,
+      sortBy: params.sortBy ?? 'newest',
+    };
+
+    // Видаляємо пусті параметри
+    Object.keys(searchParams).forEach((key) => {
+      if (searchParams[key] === '' || searchParams[key] === null) {
+        delete searchParams[key];
+      }
+    });
+
+    set({ isSearchLoading: true, error: null });
+    try {
+      const response = await searchCampaigns(searchParams);
+      if (response.success) {
+        const data = response.data;
+        set({
+          campaignResults: {
+            campaigns:
+              searchParams.offset > 0
+                ? [...get().campaignResults.campaigns, ...data.campaigns]
+                : data.campaigns,
+            total: data.total,
+            hasMore: data.hasMore,
+          },
+        });
+        return data;
+      } else {
+        set({ error: response.message });
+        return null;
+      }
+    } catch (error) {
+      set({ error: error.message || 'Помилка при пошуку кампаній' });
+      return null;
+    } finally {
+      set({ isSearchLoading: false });
+    }
+  },
+
+  /**
+   * Пошук сесій
+   */
+  searchSessionsAction: async (params = {}) => {
+    const { searchFilters } = get();
+    const searchParams = {
+      q: params.q ?? searchFilters.q,
+      system: params.system ?? searchFilters.system,
+      dateFrom: params.dateFrom ?? searchFilters.dateFrom,
+      dateTo: params.dateTo ?? searchFilters.dateTo,
+      minPrice: params.minPrice ?? searchFilters.minPrice,
+      maxPrice: params.maxPrice ?? searchFilters.maxPrice,
+      hasAvailableSlots: params.hasAvailableSlots ?? searchFilters.hasAvailableSlots,
+      oneShot: params.oneShot ?? searchFilters.oneShot,
+      limit: params.limit ?? searchFilters.limit,
+      offset: params.offset ?? searchFilters.offset,
+      sortBy: params.sortBy ?? searchFilters.sortBy,
+    };
+
+    // Видаляємо пусті параметри та false значення для boolean
+    Object.keys(searchParams).forEach((key) => {
+      if (
+        searchParams[key] === '' ||
+        searchParams[key] === null ||
+        searchParams[key] === false
+      ) {
+        delete searchParams[key];
+      }
+    });
+
+    set({ isSearchLoading: true, error: null });
+    try {
+      const response = await searchSessions(searchParams);
+      if (response.success) {
+        const data = response.data;
+        set({
+          sessionResults: {
+            sessions:
+              searchParams.offset > 0
+                ? [...get().sessionResults.sessions, ...data.sessions]
+                : data.sessions,
+            total: data.total,
+            hasMore: data.hasMore,
+          },
+        });
+        return data;
+      } else {
+        set({ error: response.message });
+        return null;
+      }
+    } catch (error) {
+      set({ error: error.message || 'Помилка при пошуку сесій' });
+      return null;
+    } finally {
+      set({ isSearchLoading: false });
+    }
+  },
+
+  /**
+   * Завантажити більше результатів (пагінація)
+   */
+  loadMoreSearchResults: async () => {
+    const { searchActiveTab, searchFilters, campaignResults, sessionResults } = get();
+    const newOffset =
+      searchActiveTab === 'campaigns'
+        ? campaignResults.campaigns.length
+        : sessionResults.sessions.length;
+
+    set((state) => ({
+      searchFilters: { ...state.searchFilters, offset: newOffset },
+    }));
+
+    if (searchActiveTab === 'campaigns') {
+      return get().searchCampaignsAction({ offset: newOffset });
+    } else {
+      return get().searchSessionsAction({ offset: newOffset });
+    }
+  },
+  
+  // === CALENDAR API ACTIONS ===
   
   /**
    * Завантажити статистику календаря
@@ -273,6 +489,7 @@ const useDashboardStore = create((set, get) => ({
         if (searchFilters.system) activeFilters.system = searchFilters.system;
         if (searchFilters.dateFrom) activeFilters.dateFrom = searchFilters.dateFrom;
         if (searchFilters.dateTo) activeFilters.dateTo = searchFilters.dateTo;
+        if (searchFilters.q) activeFilters.searchQuery = searchFilters.q;
         if (searchFilters.searchQuery) activeFilters.searchQuery = searchFilters.searchQuery;
         
         if (Object.keys(activeFilters).length > 0) {
@@ -317,6 +534,7 @@ const useDashboardStore = create((set, get) => ({
       if (scope === 'search' && hasSearched) {
         filters = {};
         if (searchFilters.system) filters.system = searchFilters.system;
+        if (searchFilters.q) filters.searchQuery = searchFilters.q;
         if (searchFilters.searchQuery) filters.searchQuery = searchFilters.searchQuery;
       }
       
@@ -405,13 +623,25 @@ const useDashboardStore = create((set, get) => ({
       calendarStats: {},
       daySessions: [],
       expandedSessionId: null,
+      searchActiveTab: 'sessions',
+      campaignResults: { campaigns: [], total: 0, hasMore: false },
+      sessionResults: { sessions: [], total: 0, hasMore: false },
       searchFilters: {
+        q: '',
         system: '',
         dateFrom: '',
         dateTo: '',
         searchQuery: '',
+        minPrice: null,
+        maxPrice: null,
+        hasAvailableSlots: false,
+        oneShot: false,
+        sortBy: 'date',
+        limit: 20,
+        offset: 0,
       },
       hasSearched: false,
+      isSearchLoading: false,
       error: null,
     });
   },

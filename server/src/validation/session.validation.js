@@ -59,6 +59,16 @@ const validateCreateSession = [
     .trim()
     .isIn(['PUBLIC', 'PRIVATE', 'LINK_ONLY']).withMessage('Невірна видимість'),
 
+  body('system')
+    .optional()
+    .trim()
+    .isLength({ max: 100 }).withMessage('Назва системи не повинна перевищувати 100 символів'),
+
+  body('system')
+    .optional()
+    .trim()
+    .isLength({ max: 100 }).withMessage('Назва системи не повинна перевищувати 100 символів'),
+
   handleValidationErrors,
 ];
 
@@ -113,10 +123,10 @@ const validateUpdateSession = [
     .trim()
     .isIn(['PUBLIC', 'PRIVATE', 'LINK_ONLY']).withMessage('Невірна видимість'),
 
-  body('status')
+  body('system')
     .optional()
     .trim()
-    .isIn(['PLANNED', 'ACTIVE', 'FINISHED']).withMessage('Невірний статус сесії'),
+    .isLength({ max: 100 }).withMessage('Назва системи не повинна перевищувати 100 символів'),
 
   handleValidationErrors,
 ];

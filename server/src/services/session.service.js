@@ -33,7 +33,10 @@ class SessionService {
       campaignId,
       creatorId,
       visibility,
+      system,
     } = data;
+
+    let sessionSystem = system;
 
     // Якщо сесія в межах кампанії - перевіряємо права
     if (campaignId) {
@@ -59,6 +62,11 @@ class SessionService {
           'Ви не маєте права створювати сесії в цій кампанії'
         );
       }
+
+      // Якщо система не вказана, копіюємо з кампанії
+      if (!sessionSystem && campaign.system) {
+        sessionSystem = campaign.system;
+      }
     }
 
     const session = await prisma.session.create({
@@ -69,6 +77,7 @@ class SessionService {
         duration,
         maxPlayers,
         price,
+        system: sessionSystem || null,
         campaignId: campaignId ? parseInt(campaignId) : null,
         creatorId,
         visibility,
@@ -277,11 +286,17 @@ class SessionService {
 
     // Застосовуємо додаткові фільтри (для scope === 'search')
     if (filters) {
-      // Фільтр по системі (через campaign.system)
+      // Фільтр по системі (шукаємо або в session.system або в campaign.system)
       if (filters.system) {
-        whereCondition.campaign = {
-          system: { contains: filters.system, mode: 'insensitive' },
-        };
+        whereCondition.OR = whereCondition.OR || [];
+        whereCondition.OR.push(
+          { system: { contains: filters.system, mode: 'insensitive' } },
+          { 
+            campaign: {
+              system: { contains: filters.system, mode: 'insensitive' },
+            }
+          }
+        );
       }
 
       // Фільтр по діапазону дат (перезаписує стандартний діапазон місяця)
@@ -300,30 +315,53 @@ class SessionService {
 
       // Текстовий пошук по назві або опису
       if (filters.searchQuery) {
+        const existingOr = whereCondition.OR || [];
         whereCondition.OR = [
+          ...existingOr,
           { title: { contains: filters.searchQuery, mode: 'insensitive' } },
           { description: { contains: filters.searchQuery, mode: 'insensitive' } },
         ];
       }
     }
 
-    // Виконуємо запит
+    // Виконуємо запит з детальною інформацією
     const sessions = await prisma.session.findMany({
       where: whereCondition,
       select: {
         id: true,
         date: true,
+        system: true,
+        campaign: {
+          select: {
+            id: true,
+            title: true,
+            system: true,
+          },
+        },
       },
     });
 
-    // Агрегуємо результати
+    // Агрегуємо результати з детальною інформацією
     const stats = {};
     sessions.forEach(session => {
       const dateKey = session.date.toISOString().split('T')[0];
       if (!stats[dateKey]) {
-        stats[dateKey] = { count: 0, isHighlighted: scope === 'search' };
+        stats[dateKey] = { 
+          count: 0, 
+          isHighlighted: scope === 'search',
+          sessions: [] // Додаємо масив сесій для деталей
+        };
       }
       stats[dateKey].count += 1;
+      
+      // Додаємо інформацію про систему та кампанію
+      const sessionInfo = {
+        system: session.system || session.campaign?.system || null,
+        campaignTitle: session.campaign?.title || null,
+        campaignId: session.campaign?.id || null,
+      };
+      
+      stats[dateKey].sessions.push(sessionInfo);
     });
 
     return stats;
@@ -365,12 +403,20 @@ class SessionService {
     // Застосовуємо фільтри (для пошуку)
     if (filters) {
       if (filters.system) {
-        whereCondition.campaign = {
-          system: { contains: filters.system, mode: 'insensitive' },
-        };
+        whereCondition.OR = whereCondition.OR || [];
+        whereCondition.OR.push(
+          { system: { contains: filters.system, mode: 'insensitive' } },
+          { 
+            campaign: {
+              system: { contains: filters.system, mode: 'insensitive' },
+            }
+          }
+        );
       }
       if (filters.searchQuery) {
+        const existingOr = whereCondition.OR || [];
         whereCondition.OR = [
+          ...existingOr,
           { title: { contains: filters.searchQuery, mode: 'insensitive' } },
           { description: { contains: filters.searchQuery, mode: 'insensitive' } },
         ];
@@ -505,6 +551,7 @@ class SessionService {
         price: updateData.price || undefined,
         visibility: updateData.visibility || undefined,
         status: updateData.status || undefined,
+        system: updateData.system !== undefined ? updateData.system : undefined,
       },
       include: {
         creator: {

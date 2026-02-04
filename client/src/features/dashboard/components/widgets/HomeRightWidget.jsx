@@ -224,6 +224,11 @@ export default function HomeRightWidget() {
                         <span className="flex items-center gap-1">
                           👥 {session.currentPlayers}/{session.maxPlayers}
                         </span>
+                        {session.system && (
+                          <span className="flex items-center gap-1">
+                            🎲 {session.system}
+                          </span>
+                        )}
                       </div>
                       
                       {/* Індикатор розгортання */}
