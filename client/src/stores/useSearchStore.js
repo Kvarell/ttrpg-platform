@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { searchCampaigns, searchSessions } from '../features/search/api/searchApi';
+import { searchCampaigns, searchSessions } from '@/features/search/api/searchApi';
 
 /**
  * Zustand store для пошуку

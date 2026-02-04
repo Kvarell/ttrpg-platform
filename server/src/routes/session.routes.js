@@ -8,6 +8,8 @@ const {
   validateSessionId,
   validateGetMySessions,
   validateGetCalendar,
+  validateGetCalendarStats,
+  validateGetSessionsByDayFiltered,
   validateJoinSession,
   validateUpdateParticipantStatus,
   validateRemoveParticipant,
@@ -38,12 +40,28 @@ router.get(
   (req, res, next) => sessionController.getCalendar(req, res, next)
 );
 
+// GET /api/sessions/calendar-stats - Отримати статистику календаря з фільтрами
+// Використовується для Dashboard views (Home, MyGames, Search)
+router.get(
+  '/calendar-stats',
+  [optionalAuthenticateToken, ...validateGetCalendarStats],
+  (req, res, next) => sessionController.getCalendarStats(req, res, next)
+);
+
 // GET /api/sessions/day/:date - Отримати сесії конкретного дня
 // Optional auth: працює для анонімів (PUBLIC) та авторизованих (MY/ALL)
 router.get(
   '/day/:date',
   [optionalAuthenticateToken, ...validateGetSessionsByDay],
   (req, res, next) => sessionController.getSessionsByDay(req, res, next)
+);
+
+// GET /api/sessions/day-filtered/:date - Отримати сесії дня з фільтрами
+// Використовується для Dashboard Search view
+router.get(
+  '/day-filtered/:date',
+  [optionalAuthenticateToken, ...validateGetSessionsByDayFiltered],
+  (req, res, next) => sessionController.getSessionsByDayFiltered(req, res, next)
 );
 
 // GET /api/sessions/:id - Отримати деталі сесії

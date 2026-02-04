@@ -132,6 +132,109 @@ class SessionController {
       next(error);
     }
   }
+
+  /**
+   * Отримати статистику календаря з підтримкою фільтрів
+   * GET /api/sessions/calendar-stats
+   * 
+   * Повертає: { "2026-02-03": { count: 3, isHighlighted: false }, ... }
+   * 
+   * Query params:
+   * @param {string} month - ISO дата місяця (напр. "2026-02-01")
+   * @param {string} scope - 'global' | 'user' | 'search'
+   * @param {string} filters - JSON об'єкт з фільтрами (для scope='search')
+   * 
+   * Фільтри:
+   * - system: string - Система гри (D&D, Pathfinder)
+   * - dateFrom: string - Початок діапазону дат
+   * - dateTo: string - Кінець діапазону дат
+   * - searchQuery: string - Текстовий пошук
+   */
+  async getCalendarStats(req, res, next) {
+    try {
+      const userId = req.user?.id;
+      let { month, scope = 'global', filters } = req.query;
+
+      // Якщо не передано місяць - беремо поточний
+      if (!month) {
+        const now = new Date();
+        month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      }
+
+      // Якщо scope='user', але немає авторизації - змінюємо на 'global'
+      if (scope === 'user' && !userId) {
+        scope = 'global';
+      }
+
+      // Парсимо фільтри, якщо передані
+      let parsedFilters = {};
+      if (filters) {
+        try {
+          parsedFilters = typeof filters === 'string' ? JSON.parse(filters) : filters;
+        } catch (e) {
+          parsedFilters = {};
+        }
+      }
+
+      const stats = await sessionService.getCalendarStats(userId, {
+        month,
+        scope,
+        filters: parsedFilters,
+      });
+
+      res.json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Отримати сесії конкретного дня з фільтрами
+   * GET /api/sessions/day-filtered/:date
+   * 
+   * Query params:
+   * @param {string} scope - 'global' | 'user' | 'search'
+   * @param {string} filters - JSON об'єкт з фільтрами
+   */
+  async getSessionsByDayFiltered(req, res, next) {
+    try {
+      const { date } = req.params;
+      const userId = req.user?.id;
+      let { scope = 'global', filters } = req.query;
+
+      // Примусово global для гостей, якщо просять user
+      if (scope === 'user' && !userId) {
+        scope = 'global';
+      }
+
+      // Парсимо фільтри
+      let parsedFilters = {};
+      if (filters) {
+        try {
+          parsedFilters = typeof filters === 'string' ? JSON.parse(filters) : filters;
+        } catch (e) {
+          parsedFilters = {};
+        }
+      }
+
+      const sessions = await sessionService.getSessionsByDayFiltered(
+        userId, 
+        date, 
+        scope, 
+        parsedFilters
+      );
+
+      res.json({
+        success: true,
+        data: sessions,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
   /**
    * Отримати деталі сесії
    * GET /api/sessions/:id

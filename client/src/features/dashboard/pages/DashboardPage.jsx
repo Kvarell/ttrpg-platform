@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../../stores/useAuthStore';
+import useDashboardStore, { VIEW_MODES } from '../../../stores/useDashboardStore';
 import { logoutUser } from '../../auth/api/authApi';
 import { getMyProfile } from '../../profile/api/profileApi';
 
@@ -14,8 +15,9 @@ import {
 } from '../components/widgets/ProfilePageWidget';
 
 // Нові віджети для MY_GAMES та SEARCH
+import CalendarWidget from '../components/widgets/CalendarWidget';
+import HomeRightWidget from '../components/widgets/HomeRightWidget';
 import MyGamesCalendarWidget from '../components/widgets/MyGamesCalendarWidget';
-import DaySessionsWidget from '../components/widgets/DaySessionsWidget';
 import MyCampaignsWidget from '../components/widgets/MyCampaignsWidget';
 import { SearchFiltersWidget, SearchResultsWidget } from '../components/widgets/SearchWidgets';
 
@@ -28,14 +30,29 @@ export default function DashboardPage() {
   const clearUser = useAuthStore((state) => state.clearUser);
   const [loading, setLoading] = useState(true);
   
-  // 2. Стан інтерфейсу (View Logic)
+  // Dashboard store
+  const viewMode = useDashboardStore((state) => state.viewMode);
+  const setViewMode = useDashboardStore((state) => state.setViewMode);
+  
+  // 2. Стан інтерфейсу (View Logic) — тепер синхронізуємо з dashboard store
   const [currentView, setCurrentView] = useState(DASHBOARD_VIEWS.HOME);
   
   // 3. Стан секції профілю (для внутрішньої навігації)
   const [profileSection, setProfileSection] = useState(PROFILE_SECTIONS.INFO);
 
-  // 4. Стан для MY_GAMES view (вибрана дата в календарі)
-  const [selectedDate, setSelectedDate] = useState(null);
+  // Синхронізація currentView з viewMode з dashboard store
+  useEffect(() => {
+    // Мапінг DASHBOARD_VIEWS на VIEW_MODES
+    const viewModeMap = {
+      [DASHBOARD_VIEWS.HOME]: VIEW_MODES.HOME,
+      [DASHBOARD_VIEWS.MY_GAMES]: VIEW_MODES.MY_GAMES,
+      [DASHBOARD_VIEWS.SEARCH]: VIEW_MODES.SEARCH,
+    };
+    
+    if (viewModeMap[currentView]) {
+      setViewMode(viewModeMap[currentView]);
+    }
+  }, [currentView, setViewMode]);
 
   // Перевірка авторизації та завантаження актуального профілю
   useEffect(() => {
@@ -132,28 +149,23 @@ export default function DashboardPage() {
       />
     );
   } else if (currentView === DASHBOARD_VIEWS.MY_GAMES) {
-    // Мої ігри: Календар + Сесії дня / Кампанії
-    leftPanel = (
-      <div className="flex flex-col gap-4 h-full">
-        <div className="flex-1 min-h-0">
-          <MyGamesCalendarWidget onDateSelect={setSelectedDate} />
-        </div>
-        <div className="flex-1 min-h-0">
-          <DaySessionsWidget selectedDate={selectedDate} />
-        </div>
-      </div>
-    );
+    // Мої ігри: Календар + Кампанії
+    leftPanel = <MyGamesCalendarWidget />;
     rightPanel = <MyCampaignsWidget />;
   } else if (currentView === DASHBOARD_VIEWS.SEARCH) {
     // Пошук: Фільтри + Результати
     leftPanel = <SearchResultsWidget />;
     rightPanel = <SearchFiltersWidget />;
+  } else if (currentView === DASHBOARD_VIEWS.HOME) {
+    // Головна: Календар + Сесії дня (нові віджети з useDashboardStore)
+    leftPanel = <CalendarWidget />;
+    rightPanel = <HomeRightWidget />;
   } else {
-    // Для інших в'юх (HOME) використовуємо конфігурацію
+    // Fallback для інших в'юх
     const viewConfig = getViewConfig(user, handleProfileUpdate);
     const currentConfig = viewConfig[currentView];
-    leftPanel = currentConfig.left;
-    rightPanel = currentConfig.right;
+    leftPanel = currentConfig?.left;
+    rightPanel = currentConfig?.right;
   }
 
   return (

@@ -15,7 +15,7 @@ import {
   getJoinRequests,
   approveJoinRequest,
   rejectJoinRequest,
-} from '../features/campaigns/api/campaignApi';
+} from '@/features/campaigns/api/campaignApi';
 
 /**
  * Zustand store для управління кампаніями

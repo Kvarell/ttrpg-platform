@@ -13,7 +13,7 @@ import {
   leaveSession,
   updateParticipantStatus,
   removeParticipant,
-} from '../features/sessions/api/sessionApi';
+} from '@/features/sessions/api/sessionApi';
 
 /**
  * Zustand store для управління сесіями
