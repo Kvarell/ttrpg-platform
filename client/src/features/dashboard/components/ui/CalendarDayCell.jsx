@@ -1,0 +1,137 @@
+import React from 'react';
+
+/**
+ * Компонент для відображення дня календаря з детальною інформацією
+ * 
+ * @param {Object} props
+ * @param {number} props.day - Номер дня (1-31)
+ * @param {number} props.count - Загальна кількість сесій
+ * @param {Array} props.sessions - Масив сесій з інформацією про системи/кампанії
+ * @param {boolean} props.isSelected - Чи вибраний цей день
+ * @param {boolean} props.isToday - Чи це сьогодні
+ * @param {boolean} props.isHighlighted - Чи підсвічений (напр. результати пошуку)
+ * @param {Function} props.onClick - Обробник кліку
+ */
+export default function CalendarDayCell({
+  day,
+  count = 0,
+  sessions = [],
+  isSelected = false,
+  isToday = false,
+  isHighlighted = false,
+  onClick,
+}) {
+  // Агрегуємо сесії за системами та кампаніями
+  const aggregateData = React.useMemo(() => {
+    const systemCounts = {};
+    const campaignCounts = {};
+    
+    sessions.forEach(session => {
+      // Підраховуємо по системах
+      if (session.system) {
+        systemCounts[session.system] = (systemCounts[session.system] || 0) + 1;
+      }
+      
+      // Підраховуємо по кампаніях
+      if (session.campaignTitle) {
+        campaignCounts[session.campaignTitle] = (campaignCounts[session.campaignTitle] || 0) + 1;
+      }
+    });
+    
+    return { systemCounts, campaignCounts };
+  }, [sessions]);
+
+  // Кольори для різних систем
+  const getSystemColor = (system) => {
+    const colors = {
+      'D&D 5e': 'bg-red-500',
+      'Pathfinder 2e': 'bg-blue-500',
+      'Call of Cthulhu': 'bg-purple-500',
+      'Cyberpunk RED': 'bg-pink-500',
+      'Warhammer': 'bg-yellow-500',
+      'Інша': 'bg-gray-500',
+    };
+    return colors[system] || 'bg-green-500';
+  };
+
+  // Визначаємо стилі
+  const getBorderColor = () => {
+    if (isSelected) return 'border-[#164A41]';
+    if (isToday) return 'border-[#F1B24A]';
+    if (isHighlighted && count > 0) return 'border-blue-500';
+    return 'border-gray-200';
+  };
+
+  const getBackgroundColor = () => {
+    if (isSelected) return 'bg-[#9DC88D]/10';
+    if (isToday) return 'bg-[#F1B24A]/5';
+    return 'bg-white';
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        aspect-square w-full
+        flex flex-col items-start justify-between
+        rounded-lg border-2 
+        ${getBorderColor()}
+        ${getBackgroundColor()}
+        hover:shadow-md hover:border-[#164A41]
+        transition-all duration-200
+        p-2 relative
+      `}
+    >
+      {/* Верхній рядок: номер дня та загальна кількість */}
+      <div className="w-full flex items-start justify-between">
+        <div className={`
+          text-sm font-medium
+          ${isSelected ? 'text-[#164A41] font-bold' : 'text-gray-600'}
+        `}>
+          {day}
+        </div>
+        
+        {count > 0 && (
+          <div className={`
+            flex items-center gap-1
+            text-xl font-bold
+            ${isSelected ? 'text-[#164A41]' : 'text-gray-900'}
+          `}>
+            <span className="text-sm">👥</span>
+            {count}
+          </div>
+        )}
+      </div>
+
+      {/* Список сесій за системами/кампаніями */}
+      {count > 0 && (
+        <div className="w-full flex flex-col gap-1 mt-1">
+          {/* Показуємо системи */}
+          {Object.entries(aggregateData.systemCounts).slice(0, 3).map(([system, sysCount]) => (
+            <div key={system} className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getSystemColor(system)}`} />
+                <span className="text-gray-700 truncate text-[11px] font-medium">{system}</span>
+              </div>
+              <span className="text-gray-600 font-bold text-[11px] ml-2">{sysCount}</span>
+            </div>
+          ))}
+          
+          {/* Якщо більше 3 систем, показуємо три крапки */}
+          {Object.keys(aggregateData.systemCounts).length > 3 && (
+            <div className="text-[11px] text-gray-500 font-medium text-center">
+              ...
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Індикатор сьогодні (маленька крапка) */}
+      {isToday && (
+        <div className="absolute top-1 right-1">
+          <div className="w-2 h-2 rounded-full bg-[#F1B24A]"></div>
+        </div>
+      )}
+    </button>
+  );
+}

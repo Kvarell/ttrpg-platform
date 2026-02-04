@@ -39,6 +39,7 @@ class SessionController {
         price = 0,
         campaignId,
         visibility = 'PRIVATE',
+        system,
       } = req.body;
       const creatorId = req.user.id;
 
@@ -52,6 +53,7 @@ class SessionController {
         campaignId: campaignId || null,
         creatorId,
         visibility,
+        system: system || null,
       });
 
       res.status(201).json({

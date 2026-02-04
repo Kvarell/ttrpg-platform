@@ -135,6 +135,10 @@ model Session {
   price       Float     @default(0.0)         // Ціна за гру
   maxPlayers  Int       @default(4)
   
+  system      String?                         // D&D 5e, Pathfinder 2e, тощо
+                                              // Копіюється з кампанії при створенні
+                                              // або задається вручну для one-shot
+  
   campaignId  Int?                            // Nullable для one-shots
   campaign    Campaign? @relation(fields: [campaignId], references: [id])
   
@@ -147,7 +151,7 @@ model Session {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   
-  @@index([date])                             // Індекс для швидкого пошуку по даті
+  @@index([date, system])                     // Композитний індекс для фільтрації по даті ТА системі
 }
 
 // Таблиця зв'язку: Хто є хто в сесії 

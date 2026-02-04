@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import useDashboardStore from '@/stores/useDashboardStore';
+import { GAME_SYSTEMS } from '@/constants/gameSystems';
 
 /**
  * Форма створення нової сесії
@@ -37,6 +38,7 @@ export default function CreateSessionForm({ initialDate, onSuccess, onCancel }) 
     maxPlayers: 4,
     price: 0,
     visibility: 'PUBLIC',
+    system: '',
   });
 
   const [errors, setErrors] = useState({});
@@ -168,6 +170,26 @@ export default function CreateSessionForm({ initialDate, onSuccess, onCancel }) 
           className={inputClass('description')}
           maxLength={2000}
         />
+      </div>
+      
+      {/* Система */}
+      <div>
+        <label className="block text-sm font-medium text-[#164A41] mb-1">
+          🎲 Ігрова система
+        </label>
+        <select
+          name="system"
+          value={formData.system}
+          onChange={handleChange}
+          className={inputClass('system')}
+        >
+          <option value="">-- Оберіть систему --</option>
+          {GAME_SYSTEMS.map(system => (
+            <option key={system.value} value={system.value}>
+              {system.icon} {system.label}
+            </option>
+          ))}
+        </select>
       </div>
       
       {/* Дата та час */}

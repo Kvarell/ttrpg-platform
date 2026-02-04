@@ -7,7 +7,7 @@ import { getMyProfile } from '../../profile/api/profileApi';
 
 import DashboardLayout from '../components/layout/DashboardLayout';
 import DashboardNavigation from '../components/DashboardNavigation';
-import { DASHBOARD_VIEWS, getViewConfig } from '../config/DashboardViews';
+import { DASHBOARD_VIEWS } from '@/stores/useDashboardStore';
 import { 
   ProfileMenuWidget, 
   ProfileContentWidget, 
@@ -17,7 +17,6 @@ import {
 // Нові віджети для MY_GAMES та SEARCH
 import CalendarWidget from '../components/widgets/CalendarWidget';
 import HomeRightWidget from '../components/widgets/HomeRightWidget';
-import MyGamesCalendarWidget from '../components/widgets/MyGamesCalendarWidget';
 import MyCampaignsWidget from '../components/widgets/MyCampaignsWidget';
 import { SearchFiltersWidget, SearchResultsWidget } from '../components/widgets/SearchWidgets';
 
@@ -149,8 +148,8 @@ export default function DashboardPage() {
       />
     );
   } else if (currentView === DASHBOARD_VIEWS.MY_GAMES) {
-    // Мої ігри: Календар + Кампанії
-    leftPanel = <MyGamesCalendarWidget />;
+    // Мої ігри: Календар (універсальний) + Кампанії
+    leftPanel = <CalendarWidget />;
     rightPanel = <MyCampaignsWidget />;
   } else if (currentView === DASHBOARD_VIEWS.SEARCH) {
     // Пошук: Фільтри + Результати
@@ -160,12 +159,6 @@ export default function DashboardPage() {
     // Головна: Календар + Сесії дня (нові віджети з useDashboardStore)
     leftPanel = <CalendarWidget />;
     rightPanel = <HomeRightWidget />;
-  } else {
-    // Fallback для інших в'юх
-    const viewConfig = getViewConfig(user, handleProfileUpdate);
-    const currentConfig = viewConfig[currentView];
-    leftPanel = currentConfig?.left;
-    rightPanel = currentConfig?.right;
   }
 
   return (
