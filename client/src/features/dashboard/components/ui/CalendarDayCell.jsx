@@ -72,20 +72,20 @@ export default function CalendarDayCell({
     <button
       onClick={onClick}
       className={`
-        aspect-square w-full
+        w-full min-h-[70px]
         flex flex-col items-start justify-between
-        rounded-lg border-2 
+        rounded-md border 
         ${getBorderColor()}
         ${getBackgroundColor()}
-        hover:shadow-md hover:border-[#164A41]
+        hover:shadow-sm hover:border-[#164A41]
         transition-all duration-200
-        p-2 relative
+        p-1.5 relative
       `}
     >
       {/* Верхній рядок: номер дня та загальна кількість */}
-      <div className="w-full flex items-start justify-between">
+      <div className="w-full flex items-center justify-between">
         <div className={`
-          text-sm font-medium
+          text-xs font-medium
           ${isSelected ? 'text-[#164A41] font-bold' : 'text-gray-600'}
         `}>
           {day}
@@ -93,34 +93,34 @@ export default function CalendarDayCell({
         
         {count > 0 && (
           <div className={`
-            flex items-center gap-1
-            text-xl font-bold
+            flex items-center gap-0.5
+            text-xs font-bold
             ${isSelected ? 'text-[#164A41]' : 'text-gray-900'}
           `}>
-            <span className="text-sm">👥</span>
+            <span className="text-[10px]">👥</span>
             {count}
           </div>
         )}
       </div>
 
-      {/* Список сесій за системами/кампаніями */}
+      {/* Список сесій за системами/кампаніями - внизу */}
       {count > 0 && (
-        <div className="w-full flex flex-col gap-1 mt-1">
+        <div className="w-full flex flex-col gap-0.5 mt-auto">
           {/* Показуємо системи */}
-          {Object.entries(aggregateData.systemCounts).slice(0, 3).map(([system, sysCount]) => (
+          {Object.entries(aggregateData.systemCounts).slice(0, 2).map(([system, sysCount]) => (
             <div key={system} className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 overflow-hidden flex-1">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getSystemColor(system)}`} />
-                <span className="text-gray-700 truncate text-[11px] font-medium">{system}</span>
+              <div className="flex items-center gap-1 overflow-hidden flex-1">
+                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getSystemColor(system)}`} />
+                <span className="text-gray-700 truncate text-[9px] font-medium">{system}</span>
               </div>
-              <span className="text-gray-600 font-bold text-[11px] ml-2">{sysCount}</span>
+              <span className="text-gray-600 font-bold text-[9px] ml-1">{sysCount}</span>
             </div>
           ))}
           
-          {/* Якщо більше 3 систем, показуємо три крапки */}
-          {Object.keys(aggregateData.systemCounts).length > 3 && (
-            <div className="text-[11px] text-gray-500 font-medium text-center">
-              ...
+          {/* Якщо більше 2 систем, показуємо +N */}
+          {Object.keys(aggregateData.systemCounts).length > 2 && (
+            <div className="text-[9px] text-gray-500 font-medium">
+              +{Object.keys(aggregateData.systemCounts).length - 2}
             </div>
           )}
         </div>
@@ -128,8 +128,8 @@ export default function CalendarDayCell({
 
       {/* Індикатор сьогодні (маленька крапка) */}
       {isToday && (
-        <div className="absolute top-1 right-1">
-          <div className="w-2 h-2 rounded-full bg-[#F1B24A]"></div>
+        <div className="absolute top-0.5 right-0.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#F1B24A]"></div>
         </div>
       )}
     </button>
