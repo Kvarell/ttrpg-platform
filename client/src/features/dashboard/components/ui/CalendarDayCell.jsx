@@ -107,7 +107,10 @@ export default function CalendarDayCell({
       {count > 0 && (
         <div className="w-full flex flex-col gap-0.5 mt-auto">
           {/* Показуємо системи */}
-          {Object.entries(aggregateData.systemCounts).slice(0, 2).map(([system, sysCount]) => (
+          {Object.entries(aggregateData.systemCounts)
+            .sort((a, b) => b[1] - a[1]) // Сортуємо за кількістю (від більшого до меншого)
+            .slice(0, 2)
+            .map(([system, sysCount]) => (
             <div key={system} className="flex items-center justify-between">
               <div className="flex items-center gap-1 overflow-hidden flex-1">
                 <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getSystemColor(system)}`} />

@@ -4,6 +4,7 @@ import useCampaignStore from '@/stores/useCampaignStore';
 import useAuthStore from '@/stores/useAuthStore';
 import DashboardCard from '@/features/dashboard/ui/DashboardCard';
 import Snowfall from 'react-snowfall';
+import Dropdown from '@/components/ui/Dropdown';
 
 /**
  * Сторінка деталей кампанії
@@ -337,15 +338,17 @@ export default function CampaignDetailsPage() {
                         
                         {/* Дії для власника */}
                         {isOwner && member.role !== 'OWNER' && (
-                          <div className="flex gap-2">
-                            <select
-                              value={member.role}
-                              onChange={(e) => handleChangeRole(member.id, e.target.value)}
-                              className="px-2 py-1 border rounded text-sm"
-                            >
-                              <option value="GM">GM</option>
-                              <option value="PLAYER">Гравець</option>
-                            </select>
+                          <div className="flex gap-2 items-center">
+                            <div className="min-w-[120px]">
+                              <Dropdown
+                                options={[
+                                  { value: 'GM', label: 'GM' },
+                                  { value: 'PLAYER', label: 'Гравець' },
+                                ]}
+                                value={member.role}
+                                onChange={(option) => handleChangeRole(member.id, option.value)}
+                              />
+                            </div>
                             <button
                               onClick={() => handleRemoveMember(member.id)}
                               className="px-2 py-1 text-red-600 hover:bg-red-50 rounded text-sm"

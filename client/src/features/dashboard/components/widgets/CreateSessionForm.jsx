@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import useDashboardStore from '@/stores/useDashboardStore';
 import { GAME_SYSTEMS } from '@/constants/gameSystems';
+import Dropdown from '@/components/ui/Dropdown';
+import Button from '@/components/ui/Button';
 
 /**
  * Форма створення нової сесії
@@ -174,22 +176,19 @@ export default function CreateSessionForm({ initialDate, onSuccess, onCancel }) 
       
       {/* Система */}
       <div>
-        <label className="block text-sm font-medium text-[#164A41] mb-1">
-          🎲 Ігрова система
-        </label>
-        <select
-          name="system"
+        <Dropdown
+          label="Ігрова система"
+          options={GAME_SYSTEMS}
           value={formData.system}
-          onChange={handleChange}
-          className={inputClass('system')}
-        >
-          <option value="">-- Оберіть систему --</option>
-          {GAME_SYSTEMS.map(system => (
-            <option key={system.value} value={system.value}>
-              {system.icon} {system.label}
-            </option>
-          ))}
-        </select>
+          onChange={(option) => {
+            setFormData(prev => ({ ...prev, system: option.value }));
+            if (errors.system) {
+              setErrors(prev => ({ ...prev, system: null }));
+            }
+          }}
+          placeholder="Оберіть систему"
+          error={errors.system}
+        />
       </div>
       
       {/* Дата та час */}
@@ -202,7 +201,10 @@ export default function CreateSessionForm({ initialDate, onSuccess, onCancel }) 
           name="date"
           value={formData.date}
           onChange={handleChange}
-          className={inputClass('date')}
+          // 👇 ЗМІНА ТУТ:
+          // accent-[#164A41] -> фарбує синій квадратик у календарі в твій зелений
+          // cursor-pointer -> робить курсор "рукою" при наведенні
+          className={`${inputClass('date')} accent-[#164A41] cursor-pointer`}
         />
         {errors.date && (
           <p className="text-red-500 text-xs mt-1">{errors.date}</p>
@@ -212,26 +214,29 @@ export default function CreateSessionForm({ initialDate, onSuccess, onCancel }) 
       {/* Тривалість та Гравці в одному рядку */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-[#164A41] mb-1">
-            Тривалість (хв)
-          </label>
-          <select
-            name="duration"
+          <Dropdown
+            label="Тривалість"
+            options={[
+              { value: 60, label: '1 година' },
+              { value: 90, label: '1.5 години' },
+              { value: 120, label: '2 години' },
+              { value: 150, label: '2.5 години' },
+              { value: 180, label: '3 години' },
+              { value: 210, label: '3.5 години' },
+              { value: 240, label: '4 години' },
+              { value: 300, label: '5 годин' },
+              { value: 360, label: '6 годин' },
+              { value: 480, label: '8 годин' },
+            ]}
             value={formData.duration}
-            onChange={handleChange}
-            className={inputClass('duration')}
-          >
-            <option value={60}>1 година</option>
-            <option value={90}>1.5 години</option>
-            <option value={120}>2 години</option>
-            <option value={150}>2.5 години</option>
-            <option value={180}>3 години</option>
-            <option value={210}>3.5 години</option>
-            <option value={240}>4 години</option>
-            <option value={300}>5 годин</option>
-            <option value={360}>6 годин</option>
-            <option value={480}>8 годин</option>
-          </select>
+            onChange={(option) => {
+              setFormData(prev => ({ ...prev, duration: option.value }));
+              if (errors.duration) {
+                setErrors(prev => ({ ...prev, duration: null }));
+              }
+            }}
+            error={errors.duration}
+          />
         </div>
         
         <div>
@@ -275,39 +280,46 @@ export default function CreateSessionForm({ initialDate, onSuccess, onCancel }) 
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-[#164A41] mb-1">
-            Видимість
-          </label>
-          <select
-            name="visibility"
+          <Dropdown
+            label="Видимість"
+            options={[
+              { value: 'PUBLIC', label: 'Публічна' },
+              { value: 'LINK_ONLY', label: 'За посиланням' },
+              { value: 'PRIVATE', label: 'Приватна' },
+            ]}
             value={formData.visibility}
-            onChange={handleChange}
-            className={inputClass('visibility')}
-          >
-            <option value="PUBLIC">🌍 Публічна</option>
-            <option value="LINK_ONLY">🔗 За посиланням</option>
-            <option value="PRIVATE">🔒 Приватна</option>
-          </select>
+            onChange={(option) => {
+              setFormData(prev => ({ ...prev, visibility: option.value }));
+              if (errors.visibility) {
+                setErrors(prev => ({ ...prev, visibility: null }));
+              }
+            }}
+            error={errors.visibility}
+          />
         </div>
       </div>
       
       {/* Кнопки */}
       <div className="flex gap-3 mt-4">
-        <button
+        <Button
           type="button"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="flex-1 py-2 px-4 border-2 border-[#9DC88D]/30 text-[#164A41] rounded-lg font-medium hover:bg-[#9DC88D]/10 transition-colors disabled:opacity-50"
+          variant="outline"
+          className="flex-1"
         >
           Скасувати
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
           disabled={isSubmitting}
-          className="flex-1 py-2 px-4 bg-[#164A41] text-white rounded-lg font-bold hover:bg-[#1a5a4f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          isLoading={isSubmitting}
+          loadingText="Створення..."
+          variant="primary"
+          className="flex-1"
         >
-          {isSubmitting ? 'Створення...' : '🎲 Створити'}
-        </button>
+          Створити
+        </Button>
       </div>
     </form>
   );

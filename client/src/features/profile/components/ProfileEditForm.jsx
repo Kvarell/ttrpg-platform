@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getMyProfile, updateProfile } from '../api/profileApi';
 import AlertMessage from '@/components/ui/AlertMessage';
 import Button from '@/components/ui/Button';
+import Dropdown from '@/components/ui/Dropdown';
 
 // Список часових поясів для вибору
 const TIMEZONES = [
@@ -156,22 +157,16 @@ export default function ProfileEditForm({ onSuccess }) {
 
         {/* Timezone */}
         <div>
-          <label className="block text-sm font-medium text-[#164A41] mb-2">
-            Часовий пояс
-          </label>
-          <select
-            name="timezone"
+          <Dropdown
+            label="Часовий пояс"
+            options={[{ value: '', label: 'Не вказано' }, ...TIMEZONES]}
             value={formData.timezone}
-            onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl border-2 border-[#9DC88D]/30 focus:border-[#164A41] focus:outline-none transition-colors bg-white"
-          >
-            <option value="">Не вказано</option>
-            {TIMEZONES.map(tz => (
-              <option key={tz.value} value={tz.value}>
-                {tz.label}
-              </option>
-            ))}
-          </select>
+            onChange={(option) => {
+              setFormData(prev => ({ ...prev, timezone: option.value }));
+              setError('');
+              setSuccess('');
+            }}
+          />
           <p className="text-xs text-[#4D774E] mt-1">
             Для правильного планування сесій
           </p>
@@ -179,21 +174,16 @@ export default function ProfileEditForm({ onSuccess }) {
 
         {/* Language */}
         <div>
-          <label className="block text-sm font-medium text-[#164A41] mb-2">
-            Мова інтерфейсу
-          </label>
-          <select
-            name="language"
+          <Dropdown
+            label="Мова інтерфейсу"
+            options={LANGUAGES}
             value={formData.language}
-            onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl border-2 border-[#9DC88D]/30 focus:border-[#164A41] focus:outline-none transition-colors bg-white"
-          >
-            {LANGUAGES.map(lang => (
-              <option key={lang.value} value={lang.value}>
-                {lang.label}
-              </option>
-            ))}
-          </select>
+            onChange={(option) => {
+              setFormData(prev => ({ ...prev, language: option.value }));
+              setError('');
+              setSuccess('');
+            }}
+          />
         </div>
       </section>
 
