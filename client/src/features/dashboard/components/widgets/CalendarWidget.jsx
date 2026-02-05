@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import DashboardCard from '../../ui/DashboardCard';
 import CalendarDayCell from '../ui/CalendarDayCell';
 import useDashboardStore, { VIEW_MODES } from '@/stores/useDashboardStore';
+import Button from '@/components/ui/Button';
 
 /**
  * Універсальний CalendarWidget для всіх режимів Dashboard
@@ -37,7 +38,7 @@ export default function CalendarWidget({ title, showTodayButton }) {
   } = useDashboardStore();
   
   // Визначаємо чи показувати кнопку "Сьогодні"
-  const shouldShowTodayButton = showTodayButton ?? (viewMode === VIEW_MODES.MY_GAMES);
+  const shouldShowTodayButton = showTodayButton ?? (viewMode === VIEW_MODES.MY_GAMES || viewMode === VIEW_MODES.HOME);
 
   // Завантажуємо статистику при першому рендері
   useEffect(() => {
@@ -100,12 +101,16 @@ export default function CalendarWidget({ title, showTodayButton }) {
         ←
       </button>
       {shouldShowTodayButton && (
-        <button
-          onClick={goToToday}
-          className="px-3 h-8 flex items-center justify-center rounded-lg bg-[#164A41] text-white text-sm hover:bg-[#1f5c52] transition-colors"
-        >
-          Сьогодні
-        </button>
+        <div className="flex-shrink-0">
+          <Button
+            onClick={goToToday}
+            variant="primary"
+            fullWidth={false}
+            className="!py-1 !px-3 h-8 text-sm !font-semibold"
+          >
+            Сьогодні
+          </Button>
+        </div>
       )}
       <button
         onClick={goToNextMonth}

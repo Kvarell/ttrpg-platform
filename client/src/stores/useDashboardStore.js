@@ -54,18 +54,19 @@ export const PANEL_MODES = {
  * - Даними сесій вибраного дня
  * - Фільтрами та результатами пошуку (merged from useSearchStore)
  */
+//const today = new Date();
+//const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+const todayStr = new Date().toISOString().split('T')[0];
+
 const useDashboardStore = create((set, get) => ({
   // === VIEW STATE ===
-  
+  selectedDate: todayStr,
   /** Поточний режим відображення */
   viewMode: VIEW_MODES.HOME,
   
   /** Режим правої панелі */
   rightPanelMode: PANEL_MODES.LIST,
-  
-  /** Вибрана дата в календарі (YYYY-MM-DD) */
-  selectedDate: null,
-  
+    
   /** Поточний місяць для календаря (Date object) */
   currentMonth: new Date(),
   
@@ -83,7 +84,7 @@ const useDashboardStore = create((set, get) => ({
   daySessions: [],
   
   /** Чи завантажуються сесії дня */
-  isDaySessionsLoading: false,
+  isDaySessionsLoading: true,
   
   /** Розгорнута сесія (для акордеона) */
   expandedSessionId: null,
@@ -144,11 +145,11 @@ const useDashboardStore = create((set, get) => ({
       [VIEW_MODES.MY_GAMES]: PANEL_MODES.CAMPAIGNS,
       [VIEW_MODES.SEARCH]: PANEL_MODES.FILTER,
     };
-    
+    const initialDate = mode === VIEW_MODES.HOME ? todayStr : null;
     set({ 
       viewMode: mode, 
       rightPanelMode: defaultPanelModes[mode] || PANEL_MODES.LIST,
-      selectedDate: null,
+      selectedDate: initialDate,
       daySessions: [],
       expandedSessionId: null,
       hasSearched: false,
@@ -618,7 +619,7 @@ const useDashboardStore = create((set, get) => ({
     set({
       viewMode: VIEW_MODES.HOME,
       rightPanelMode: PANEL_MODES.LIST,
-      selectedDate: null,
+      selectedDate: todayStr,
       currentMonth: new Date(),
       calendarStats: {},
       daySessions: [],

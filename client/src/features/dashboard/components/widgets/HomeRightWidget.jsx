@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardCard from '../../ui/DashboardCard';
 import useDashboardStore, { PANEL_MODES } from '@/stores/useDashboardStore';
 import CreateSessionForm from './CreateSessionForm';
+import Button from '@/components/ui/Button';
 
 /**
  * HomeRightWidget — Права панель для режиму "Головна"
@@ -14,6 +15,7 @@ import CreateSessionForm from './CreateSessionForm';
  * - Sticky footer з кнопкою "Створити сесію"
  * - Акордеон для розгортання деталей сесії
  * - Кнопка "Приєднатися" в розгорнутих деталях
+ * - Автоматично показує сесії на сьогодні при першому завантаженні
  */
 export default function HomeRightWidget() {
   const {
@@ -25,11 +27,20 @@ export default function HomeRightWidget() {
     setRightPanelMode,
     toggleSessionExpanded,
     joinSessionAction,
+    selectDate,
+    fetchDaySessions,
   } = useDashboardStore();
 
   const [joiningSessionId, setJoiningSessionId] = useState(null);
   const [joinError, setJoinError] = useState(null);
 
+  // Автоматично встановлюємо сьогоднішню дату при першому завантаженні
+  useEffect(() => {
+    // Завантажуємо дані тільки якщо дата вибрана
+    if (selectedDate) {
+      fetchDaySessions(selectedDate);
+    }
+  }, [selectedDate, fetchDaySessions]);
   // Форматування дати для відображення
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Оберіть день';
@@ -130,43 +141,14 @@ export default function HomeRightWidget() {
     : 'Сесії на сьогодні';
 
   // Якщо дата не вибрана — показуємо підказку
-  if (!selectedDate) {
-    return (
-      <DashboardCard title={title}>
-        <div className="flex flex-col h-full">
-          {/* Контент */}
-          <div className="flex-1 flex flex-col items-center justify-center text-[#4D774E]">
-            <div className="text-5xl mb-4">📅</div>
-            <p className="text-lg font-medium">Оберіть день у календарі</p>
-            <p className="text-sm mt-2 text-center">
-              щоб побачити заплановані сесії<br />
-              або створити нову
-            </p>
-          </div>
-          
-          {/* Sticky Footer */}
-          <div className="pt-4 border-t border-[#9DC88D]/20 mt-auto">
-            <button
-              onClick={handleCreateClick}
-              className="w-full py-3 px-4 bg-[#164A41] text-white rounded-xl font-bold hover:bg-[#1a5a4f] transition-colors flex items-center justify-center gap-2"
-            >
-              <span>➕</span>
-              Створити сесію
-            </button>
-          </div>
-        </div>
-      </DashboardCard>
-    );
-  }
-
-  return (
+const showLoader = isDaySessionsLoading || (selectedDate && daySessions.length === 0 && !isDaySessionsLoading &&  /* Тут можна додати перевірку "чи був ініційований запит", але поки спростимо */ false);
+return (
     <DashboardCard title={title}>
       <div className="flex flex-col h-full">
-        {/* Контент — список сесій */}
         <div className="flex-1 overflow-y-auto min-h-0">
-          {isDaySessionsLoading ? (
+          {isDaySessionsLoading ? ( 
             <div className="flex items-center justify-center h-full">
-              <div className="animate-pulse text-[#164A41]">Завантаження...</div>
+              <div className="animate-pulse text-[#164A41] font-medium">Завантаження сесій...</div>
             </div>
           ) : daySessions.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-[#4D774E]">
@@ -179,125 +161,46 @@ export default function HomeRightWidget() {
               {daySessions.map((session) => {
                 const isExpanded = expandedSessionId === session.id;
                 const isJoining = joiningSessionId === session.id;
-                const canJoin = session.status === 'PLANNED' && 
-                                !session.myRole && 
-                                session.currentPlayers < session.maxPlayers;
+                const canJoin = session.status === 'PLANNED' && !session.myRole && session.currentPlayers < session.maxPlayers;
                 
                 return (
-                  <div 
-                    key={session.id}
-                    className={`
-                      border-2 rounded-xl transition-all duration-200
-                      ${isExpanded 
-                        ? 'border-[#164A41] shadow-md' 
-                        : 'border-[#9DC88D]/30 hover:border-[#164A41]/30'
-                      }
-                    `}
-                  >
-                    {/* Заголовок сесії (клікабельний) */}
-                    <button
-                      onClick={() => toggleSessionExpanded(session.id)}
-                      className="w-full p-4 text-left"
-                    >
+                  <div key={session.id} className={`border-2 rounded-xl transition-all duration-200 ${isExpanded ? 'border-[#164A41] shadow-md' : 'border-[#9DC88D]/30 hover:border-[#164A41]/30'}`}>
+                    <button onClick={() => toggleSessionExpanded(session.id)} className="w-full p-4 text-left">
                       <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-bold text-[#164A41] flex-1 pr-2">
-                          {session.title}
-                        </h4>
+                        <h4 className="font-bold text-[#164A41] flex-1 pr-2">{session.title}</h4>
                         <div className="flex items-center gap-2">
-                          {session.myRole && (
-                            <span className="px-2 py-1 text-xs rounded-full bg-[#F1B24A] text-[#164A41] font-bold">
-                              {session.myRole}
-                            </span>
-                          )}
+                          {session.myRole && <span className="px-2 py-1 text-xs rounded-full bg-[#F1B24A] text-[#164A41] font-bold">{session.myRole}</span>}
                           {getStatusBadge(session.status)}
                         </div>
                       </div>
-                      
-                      {/* Мета-інформація */}
                       <div className="flex items-center gap-4 text-sm text-[#4D774E]">
-                        <span className="flex items-center gap-1">
-                          🕐 {formatTime(session.date)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          ⏱️ {formatDuration(session.duration)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          👥 {session.currentPlayers}/{session.maxPlayers}
-                        </span>
-                        {session.system && (
-                          <span className="flex items-center gap-1">
-                            🎲 {session.system}
-                          </span>
-                        )}
+                        <span className="flex items-center gap-1">🕐 {formatTime(session.date)}</span>
+                        <span className="flex items-center gap-1">⏱️ {formatDuration(session.duration)}</span>
+                        <span className="flex items-center gap-1">👥 {session.currentPlayers}/{session.maxPlayers}</span>
+                        {session.system && <span className="flex items-center gap-1">🎲 {session.system}</span>}
                       </div>
-                      
-                      {/* Індикатор розгортання */}
                       <div className="flex justify-center mt-2">
-                        <span className={`text-[#9DC88D] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
-                          ▼
-                        </span>
+                        <span className={`text-[#9DC88D] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
                       </div>
                     </button>
-                    
-                    {/* Розгорнутий контент */}
                     {isExpanded && (
                       <div className="px-4 pb-4 border-t border-[#9DC88D]/20">
-                        {/* Опис */}
-                        {session.description && (
-                          <p className="text-sm text-[#4D774E] mt-3 mb-4">
-                            {session.description}
-                          </p>
-                        )}
-                        
-                        {/* Кампанія */}
+                        {session.description && <p className="text-sm text-[#4D774E] mt-3 mb-4">{session.description}</p>}
                         {session.campaign && (
                           <div className="text-sm text-[#4D774E] mb-3">
-                            <span className="font-medium">📚 Кампанія:</span>{' '}
-                            {session.campaign.title}
-                            {session.campaign.system && (
-                              <span className="text-xs ml-2 px-2 py-0.5 bg-[#9DC88D]/20 rounded">
-                                {session.campaign.system}
-                              </span>
-                            )}
+                            <span className="font-medium">📚 Кампанія:</span> {session.campaign.title}
+                            {session.campaign.system && <span className="text-xs ml-2 px-2 py-0.5 bg-[#9DC88D]/20 rounded">{session.campaign.system}</span>}
                           </div>
                         )}
-                        
-                        {/* GM */}
-                        <div className="text-sm text-[#4D774E] mb-4">
-                          <span className="font-medium">🎭 GM:</span>{' '}
-                          {session.creator?.displayName || session.creator?.username}
-                        </div>
-                        
-                        {/* Ціна */}
-                        {session.price > 0 && (
-                          <div className="text-sm font-bold text-[#164A41] mb-4">
-                            💰 {session.price} грн
-                          </div>
-                        )}
-                        
-                        {/* Помилка приєднання */}
-                        {joinError && isExpanded && (
-                          <div className="text-sm text-red-600 mb-3 p-2 bg-red-50 rounded-lg">
-                            {joinError}
-                          </div>
-                        )}
-                        
-                        {/* Кнопка дії */}
+                        <div className="text-sm text-[#4D774E] mb-4"><span className="font-medium">🎭 GM:</span> {session.creator?.displayName || session.creator?.username}</div>
+                        {session.price > 0 && <div className="text-sm font-bold text-[#164A41] mb-4">💰 {session.price} грн</div>}
+                        {joinError && <div className="text-sm text-red-600 mb-3 p-2 bg-red-50 rounded-lg">{joinError}</div>}
                         {canJoin && (
-                          <button
-                            onClick={() => handleJoinSession(session.id)}
-                            disabled={isJoining}
-                            className="w-full py-2 px-4 bg-[#9DC88D] text-[#164A41] rounded-lg font-bold hover:bg-[#8ab87a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
+                          <button onClick={() => handleJoinSession(session.id)} disabled={isJoining} className="w-full py-2 px-4 bg-[#9DC88D] text-[#164A41] rounded-lg font-bold hover:bg-[#8ab87a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                             {isJoining ? 'Приєднання...' : '🎲 Приєднатися'}
                           </button>
                         )}
-                        
-                        {session.myRole && (
-                          <div className="text-center text-sm text-[#4D774E] py-2">
-                            Ви вже є учасником цієї сесії
-                          </div>
-                        )}
+                        {session.myRole && <div className="text-center text-sm text-[#4D774E] py-2">Ви вже є учасником цієї сесії</div>}
                       </div>
                     )}
                   </div>
@@ -309,15 +212,10 @@ export default function HomeRightWidget() {
         
         {/* Sticky Footer */}
         <div className="pt-4 border-t border-[#9DC88D]/20 mt-auto flex-shrink-0">
-          <button
-            onClick={handleCreateClick}
-            className="w-full py-3 px-4 bg-[#164A41] text-white rounded-xl font-bold hover:bg-[#1a5a4f] transition-colors flex items-center justify-center gap-2"
-          >
-            <span>➕</span>
+          <Button onClick={handleCreateClick} variant="primary" className="flex items-center justify-center gap-2">
             Створити сесію
-          </button>
+          </Button>
         </div>
       </div>
     </DashboardCard>
-  );
-}
+  );}
