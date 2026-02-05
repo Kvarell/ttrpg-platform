@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import useCampaignStore from '../../../../stores/useCampaignStore';
-import DashboardCard from '../../ui/DashboardCard';
+import DashboardCard from '@/components/ui/DashboardCard';
 
 /**
  * Віджет списку моїх кампаній

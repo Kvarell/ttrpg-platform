@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import DashboardCard from '../../ui/DashboardCard';
+import DashboardCard from '@/components/ui/DashboardCard';
 import CalendarDayCell from '../ui/CalendarDayCell';
 import useDashboardStore, { VIEW_MODES } from '@/stores/useDashboardStore';
 import Button from '@/components/ui/Button';

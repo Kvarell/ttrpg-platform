@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getProfileByUsername } from '../api/profileApi';
-import DashboardCard from '@/features/dashboard/ui/DashboardCard';
+import DashboardCard from '@/components/ui/DashboardCard';
 
 export default function PublicProfilePage() {
   const { username } = useParams();

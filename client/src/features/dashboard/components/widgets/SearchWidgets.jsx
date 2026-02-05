@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useDashboardStore from '@/stores/useDashboardStore';
-import DashboardCard from '../../ui/DashboardCard';
+import DashboardCard from '@/components/ui/DashboardCard';
 
 /**
  * Віджет фільтрів пошуку

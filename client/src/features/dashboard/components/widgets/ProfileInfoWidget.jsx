@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import DashboardCard from '../../ui/DashboardCard';
+import DashboardCard from '@/components/ui/DashboardCard';
 import { getMyProfile } from '@/features/profile/api/profileApi';
 import useAuthStore from '@/stores/useAuthStore';
 
