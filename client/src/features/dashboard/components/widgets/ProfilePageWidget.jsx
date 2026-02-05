@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import DashboardCard from '../../ui/DashboardCard';
+import DashboardCard from '@/components/ui/DashboardCard';
 import MenuButton from '@/components/ui/MenuButton';
 import ProfileInfoWidget from './ProfileInfoWidget';
 import ProfileEditForm from '@/features/profile/components/ProfileEditForm';
