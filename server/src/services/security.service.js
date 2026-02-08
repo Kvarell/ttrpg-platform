@@ -228,49 +228,101 @@ async function deleteAccount(userId, password) {
     throw createError.passwordInvalid();
   }
 
-  // Видаляємо всі пов'язані дані в транзакції
+  // Виконуємо глибоке очищення в транзакції
   await prisma.$transaction(async (tx) => {
-    // Видаляємо токени
+    // 1. Видаляємо токени безпеки
     await tx.refreshToken.deleteMany({ where: { userId } });
     await tx.emailVerificationToken.deleteMany({ where: { userId } });
     await tx.emailChangeToken.deleteMany({ where: { userId } });
     
-    // Видаляємо участь у сесіях
-    await tx.sessionParticipant.deleteMany({ where: { userId } });
+    // 2. Очищаємо посилання де користувач є "рев'ювером" (щоб не ламати історію заявок)
+    await tx.joinRequest.updateMany({
+      where: { reviewedBy: userId },
+      data: { reviewedBy: null }
+    });
+
+    // 3. Видаляємо пряму активність користувача
+    await tx.chatMessage.deleteMany({ where: { userId } }); // Повідомлення в чатах
+    await tx.sessionParticipant.deleteMany({ where: { userId } }); // Участь у сесіях
+    await tx.campaignMember.deleteMany({ where: { userId } }); // Членство в кампаніях (в т.ч. чужих)
+    await tx.joinRequest.deleteMany({ where: { userId } }); // Власні заявки на вступ
+    await tx.userStats.deleteMany({ where: { userId } }); // Статистика
     
-    // Видаляємо повідомлення
-    await tx.chatMessage.deleteMany({ where: { userId } });
-    
-    // Видаляємо статистику
-    await tx.userStats.deleteMany({ where: { userId } });
-    
-    // Видаляємо гаманець і транзакції
+    // 4. Видаляємо гаманець
     const wallet = await tx.wallet.findUnique({ where: { userId } });
     if (wallet) {
       await tx.transaction.deleteMany({ where: { walletId: wallet.id } });
       await tx.wallet.delete({ where: { userId } });
     }
     
-    // Видаляємо кампанії (і пов'язані сесії)
-    const campaigns = await tx.campaign.findMany({ where: { ownerId: userId } });
-    for (const campaign of campaigns) {
-      // Видаляємо сесії кампанії
-      const sessions = await tx.session.findMany({ where: { campaignId: campaign.id } });
-      for (const session of sessions) {
-        await tx.sessionParticipant.deleteMany({ where: { sessionId: session.id } });
-      }
-      await tx.session.deleteMany({ where: { campaignId: campaign.id } });
-    }
-    await tx.campaign.deleteMany({ where: { ownerId: userId } });
+    // 5. Видаляємо контент, яким володіє користувач (Кампанії та Сесії)
     
-    // Нарешті видаляємо самого користувача
+    // Знаходимо ID кампаній власника
+    const ownedCampaigns = await tx.campaign.findMany({ 
+      where: { ownerId: userId },
+      select: { id: true }
+    });
+    const ownedCampaignIds = ownedCampaigns.map(c => c.id);
+
+    // Знаходимо сесії, які треба видалити:
+    // а) Створені цим юзером (наприклад, One-Shots)
+    // б) Сесії, що належать кампаніям цього юзера
+    const sessionsToDelete = await tx.session.findMany({
+      where: {
+        OR: [
+          { creatorId: userId },
+          { campaignId: { in: ownedCampaignIds } }
+        ]
+      },
+      select: { id: true }
+    });
+    const sessionIdsToDelete = sessionsToDelete.map(s => s.id);
+
+    // Якщо є сесії для видалення -> чистимо залежності сесій
+    if (sessionIdsToDelete.length > 0) {
+      // Видаляємо учасників цих сесій
+      await tx.sessionParticipant.deleteMany({ 
+        where: { sessionId: { in: sessionIdsToDelete } } 
+      });
+      // Видаляємо повідомлення в цих сесіях
+      await tx.chatMessage.deleteMany({ 
+        where: { sessionId: { in: sessionIdsToDelete } } 
+      });
+      // Видаляємо самі сесії
+      await tx.session.deleteMany({ 
+        where: { id: { in: sessionIdsToDelete } } 
+      });
+    }
+
+    // Якщо є кампанії -> чистимо залежності кампаній
+    if (ownedCampaignIds.length > 0) {
+      // Видаляємо членів кампаній
+      await tx.campaignMember.deleteMany({ 
+        where: { campaignId: { in: ownedCampaignIds } } 
+      });
+      // Видаляємо заявки до цих кампаній
+      await tx.joinRequest.deleteMany({ 
+        where: { campaignId: { in: ownedCampaignIds } } 
+      });
+      // Видаляємо самі кампанії
+      await tx.campaign.deleteMany({ 
+        where: { id: { in: ownedCampaignIds } } 
+      });
+    }
+    
+    // 6. Нарешті видаляємо самого користувача
     await tx.user.delete({ where: { id: userId } });
   });
 
   // Видаляємо аватар файл якщо є
   if (user.avatarUrl && user.avatarUrl.startsWith('/uploads/')) {
-    const { deleteOldAvatar } = require('./upload.service');
-    deleteOldAvatar(user.avatarUrl);
+    try {
+      const { deleteOldAvatar } = require('./upload.service');
+      await deleteOldAvatar(user.avatarUrl);
+    } catch (e) {
+      console.error("Помилка видалення аватара:", e);
+      // Не кидаємо помилку, бо акаунт вже видалено в БД
+    }
   }
 
   console.log(`[Security] Акаунт видалено: ${user.username} (${user.email})`);
