@@ -1,5 +1,5 @@
 import React from 'react';
-
+import GameSessionCount from '../../../../components/ui/icons/GameSessionCount';
 /**
  * Компонент для відображення дня календаря з детальною інформацією
  * 
@@ -72,57 +72,72 @@ export default function CalendarDayCell({
     <button
       onClick={onClick}
       className={`
-        w-full min-h-[70px]
+        w-full min-h-[82px]
         flex flex-col items-start justify-between
         rounded-md border 
         ${getBorderColor()}
         ${getBackgroundColor()}
         hover:shadow-sm hover:border-[#164A41]
         transition-all duration-200
-        p-1.5 relative
+        p-2 relative
       `}
     >
       {/* Верхній рядок: номер дня та загальна кількість */}
+      
       <div className="w-full flex items-center justify-between">
         <div className={`
-          text-xs font-medium
+          text-sm font-medium
           ${isSelected ? 'text-[#164A41] font-bold' : 'text-gray-600'}
         `}>
           {day}
         </div>
         
-        {count > 0 && (
-          <div className={`
-            flex items-center gap-0.5
-            text-xs font-bold
-            ${isSelected ? 'text-[#164A41]' : 'text-gray-900'}
-          `}>
-            <span className="text-[10px]">👥</span>
-            {count}
-          </div>
-        )}
+          {count > 0 && (
+            <div className={`
+              relative group  
+              cursor-help     
+              flex items-center gap-1
+              text-sm font-bold
+              ${isSelected ? 'text-[#164A41]' : 'text-gray-900'}
+            `}>
+                <GameSessionCount className="w-3.5 h-3.5" /> {count}
+
+                {/* 3. Сама підказка */}
+                <div className="
+                  absolute bottom-full left-1/2 -translate-x-1/2 mb-1
+                  px-2 py-1
+                  bg-gray-800 text-white text-xs rounded shadow-lg
+                  opacity-0 group-hover:opacity-100 transition-opacity duration-200
+                  pointer-events-none whitespace-nowrap z-10
+                ">
+                  Активні сесії: {count}
+                  {/* Маленький трикутник знизу */}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                </div>
+            </div>
+          )}
       </div>
 
       {/* Список сесій за системами/кампаніями - внизу */}
       {count > 0 && (
-        <div className="w-full flex flex-col gap-0.5 mt-auto">
+        <div className="w-full flex flex-col gap-1 mt-auto">
           {/* Показуємо системи */}
           {Object.entries(aggregateData.systemCounts)
             .sort((a, b) => b[1] - a[1]) // Сортуємо за кількістю (від більшого до меншого)
             .slice(0, 2)
             .map(([system, sysCount]) => (
             <div key={system} className="flex items-center justify-between">
-              <div className="flex items-center gap-1 overflow-hidden flex-1">
-                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getSystemColor(system)}`} />
-                <span className="text-gray-700 truncate text-[9px] font-medium">{system}</span>
+              <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getSystemColor(system)}`} />
+                <span className="text-gray-700 truncate text-[10px] font-medium">{system}</span>
               </div>
-              <span className="text-gray-600 font-bold text-[9px] ml-1">{sysCount}</span>
+              <span className="text-gray-600 font-bold text-[10px] ml-1">{sysCount}</span>
             </div>
           ))}
           
           {/* Якщо більше 2 систем, показуємо +N */}
           {Object.keys(aggregateData.systemCounts).length > 2 && (
-            <div className="text-[9px] text-gray-500 font-medium">
+            <div className="text-[10px] text-gray-500 font-medium">
               +{Object.keys(aggregateData.systemCounts).length - 2}
             </div>
           )}
@@ -132,7 +147,7 @@ export default function CalendarDayCell({
       {/* Індикатор сьогодні (маленька крапка) */}
       {isToday && (
         <div className="absolute top-0.5 right-0.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#F1B24A]"></div>
+          <div className="w-2 h-2 rounded-full bg-[#F1B24A]"></div>
         </div>
       )}
     </button>
