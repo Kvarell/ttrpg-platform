@@ -14,7 +14,6 @@ import Button from '@/components/ui/Button';
  * 
  * Функції:
  * - Відображення кількості сесій на кожен день
- * - Підсвітка днів з результатами пошуку
  * - Навігація по місяцям
  * - Кнопка "Сьогодні" для швидкої навігації
  * - Інтеграція з useDashboardStore
@@ -164,7 +163,7 @@ export default function CalendarWidget({ title, showTodayButton }) {
           </div>
           
           {/* Сітка днів */}
-          <div className="grid grid-cols-7 gap-1 flex-1">
+          <div className="grid grid-cols-7 gap-1 flex-1 overflow-visible">
             {calendarDays.map((item, index) => {
               const stats = item.dateKey ? calendarStats[item.dateKey] : null;
               const count = stats?.count || 0;
@@ -172,7 +171,7 @@ export default function CalendarWidget({ title, showTodayButton }) {
               
               if (!item.day) {
                 // Порожня клітинка
-                return <div key={`empty-${index}`} className="min-h-[70px]" />;
+                return <div key={`empty-${index}`} className="min-h-[82px]" />;
               }
               
               return (
@@ -183,7 +182,6 @@ export default function CalendarWidget({ title, showTodayButton }) {
                   sessions={sessions}
                   isSelected={selectedDate === item.dateKey}
                   isToday={item.isToday}
-                  isHighlighted={stats?.isHighlighted || false}
                   onClick={() => selectDate(item.dateKey)}
                 />
               );

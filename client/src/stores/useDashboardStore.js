@@ -72,7 +72,7 @@ const useDashboardStore = create((set, get) => ({
   
   // === CALENDAR DATA ===
   
-  /** Дані календаря { "2026-02-15": { count: 5, isHighlighted: false }, ... } */
+  /** Дані календаря { "2026-02-15": { count: 5, sessions: [...] }, ... } */
   calendarStats: {},
   
   /** Чи завантажується календар */
