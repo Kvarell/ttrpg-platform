@@ -141,13 +141,13 @@ export default function CampaignDetailsPage() {
     alert('Посилання скопійовано!');
   };
 
-  if (isLoading && !currentCampaign) {
-    return (
-      <div className="min-h-screen bg-[#164A41] flex items-center justify-center text-white font-bold text-xl animate-pulse">
-        Завантаження кампанії...
-      </div>
-    );
-  }
+  // if (isLoading && !currentCampaign) {
+  //   return (
+  //     <div className="min-h-screen bg-[#164A41] flex items-center justify-center text-white font-bold text-xl animate-pulse">
+  //       Завантаження кампанії...
+  //     </div>
+  //   );
+  // }
 
   if (error) {
     return (

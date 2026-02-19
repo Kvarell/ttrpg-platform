@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../../stores/useAuthStore';
 import useDashboardStore, { VIEW_MODES } from '../../../stores/useDashboardStore';
 import { logoutUser } from '../../auth/api/authApi';
-import { getMyProfile } from '../../profile/api/profileApi';
 
 import DashboardLayout from '../components/layout/DashboardLayout';
 import DashboardNavigation from '../components/DashboardNavigation';
@@ -27,7 +26,6 @@ export default function DashboardPage() {
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const clearUser = useAuthStore((state) => state.clearUser);
-  const [loading, setLoading] = useState(true);
   
   // Dashboard store
   const viewMode = useDashboardStore((state) => state.viewMode);
@@ -52,48 +50,6 @@ export default function DashboardPage() {
       setViewMode(viewModeMap[currentView]);
     }
   }, [currentView, setViewMode]);
-
-  // Перевірка авторизації та завантаження актуального профілю
-  useEffect(() => {
-    let isMounted = true;
-    
-    const loadUserData = async () => {
-      // Отримуємо актуальний стан через getState() щоб уникнути циклу
-      const currentUser = useAuthStore.getState().user;
-      
-      if (!currentUser) {
-        navigate("/login");
-        return;
-      }
-      
-      try {
-        // Завантажуємо актуальний профіль з API
-        const { profile } = await getMyProfile();
-        
-        // Оновлюємо store актуальними даними
-        if (isMounted) {
-          useAuthStore.getState().updateUser(profile);
-        }
-      } catch (error) {
-        console.error("Failed to fetch profile:", error);
-        // Якщо помилка авторизації - редіректимо на логін
-        if (error.response?.status === 401) {
-          useAuthStore.getState().clearUser();
-          navigate("/login");
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-    
-    loadUserData();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [navigate]); // Тільки navigate в залежностях
 
   // Скидаємо секцію профілю при переході на іншу в'юху
   useEffect(() => {

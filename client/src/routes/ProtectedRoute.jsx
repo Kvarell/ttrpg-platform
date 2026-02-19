@@ -22,9 +22,11 @@ function ProtectedRoute({ children }) {
     try {
       const userDataFromApi = await getCurrentUser();
       
-      if (userDataFromApi) {
+      if (userDataFromApi?.id) {
         // Оновлюємо store - Zustand сам порівняє і не оновить, якщо дані однакові
         setUser(userDataFromApi);
+      } else {
+        clearUser();
       }
     } catch (error) {
       // Очищаємо store при помилці автентифікації
@@ -59,15 +61,15 @@ function ProtectedRoute({ children }) {
   }, [checkAuth]);
 
   // Показуємо завантаження
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#164A41] flex items-center justify-center">
-        <div className="text-center text-[#FFFFFF]">
-          <div className="text-xl">Завантаження...</div>
-        </div>
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div className="min-h-screen bg-[#164A41] flex items-center justify-center">
+  //       <div className="text-center text-[#FFFFFF]">
+  //         <div className="text-xl">Завантаження...</div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   // Якщо не авторизований - редірект на логін
   if (!isAuthenticated) {

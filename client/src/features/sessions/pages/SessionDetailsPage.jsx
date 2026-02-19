@@ -142,13 +142,13 @@ export default function SessionDetailsPage() {
     return isCampaignMember;
   };
 
-  if (isLoading && !currentSession) {
-    return (
-      <div className="min-h-screen bg-[#164A41] flex items-center justify-center text-white font-bold text-xl animate-pulse">
-        Завантаження сесії...
-      </div>
-    );
-  }
+  // if (isLoading && !currentSession) {
+  //   return (
+  //     <div className="min-h-screen bg-[#164A41] flex items-center justify-center text-white font-bold text-xl animate-pulse">
+  //       Завантаження сесії...
+  //     </div>
+  //   );
+  // }
 
   if (error) {
     return (

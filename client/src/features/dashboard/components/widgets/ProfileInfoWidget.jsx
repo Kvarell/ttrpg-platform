@@ -1,36 +1,83 @@
 import React, { useState, useEffect } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
-import { getMyProfile } from '@/features/profile/api/profileApi';
+import { getProfileByUsername } from '@/features/profile/api/profileApi';
 import useAuthStore from '@/stores/useAuthStore';
 
 // Базовий URL для API (для аватарів)
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
-export default function ProfileInfoWidget() {
-  // Підписуємось на Zustand store для реактивного оновлення
-  const user = useAuthStore((state) => state.user);
-  const updateUser = useAuthStore((state) => state.updateUser);
-  
-  const [loading, setLoading] = useState(true);
+export default function ProfileInfoWidget({
+  mode = 'me',
+  username,
+  profile: profileProp = null,
+  title = 'Інформація про гравця',
+}) {
+  const authUser = useAuthStore((state) => state.user);
+  const [profile, setProfile] = useState(profileProp || (mode === 'me' ? authUser : null));
+  const [isInitialLoading, setIsInitialLoading] = useState(mode === 'username' && !profileProp);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(Boolean(profileProp));
   const [error, setError] = useState('');
 
-  // Завантажуємо повний профіль з API при першому рендері
   useEffect(() => {
-    const loadProfile = async () => {
+    if (profileProp) {
+      setProfile(profileProp);
+      setHasLoadedOnce(true);
+      setError('');
+    }
+  }, [profileProp]);
+
+  useEffect(() => {
+    if (mode !== 'me') return;
+    setProfile(profileProp || authUser || null);
+  }, [mode, authUser, profileProp]);
+
+  useEffect(() => {
+    if (mode !== 'username' || profileProp) return;
+    if (!username) {
+      setError('Не вказано username');
+      setIsInitialLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadPublicProfile = async () => {
+      if (!hasLoadedOnce) {
+        setIsInitialLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+
       try {
-        const { profile: data } = await getMyProfile();
-        // Оновлюємо store повними даними профілю
-        updateUser(data);
+        const { profile: data } = await getProfileByUsername(username);
+        if (!isCancelled) {
+          setProfile(data);
+          setError('');
+          setHasLoadedOnce(true);
+        }
       } catch (err) {
-        setError('Не вдалося завантажити профіль');
-        console.error(err);
+        if (!isCancelled) {
+          if (err.response?.status === 404) {
+            setError('Користувача не знайдено');
+          } else {
+            setError('Не вдалося завантажити профіль');
+          }
+        }
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setIsInitialLoading(false);
+          setIsRefreshing(false);
+        }
       }
     };
 
-    loadProfile();
-  }, [updateUser]);
+    loadPublicProfile();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [mode, username, profileProp, hasLoadedOnce]);
 
   // Генеруємо ініціали для дефолтного аватара
   const getInitials = (name) => {
@@ -51,9 +98,9 @@ export default function ProfileInfoWidget() {
     return url;
   };
 
-  if (loading) {
+  if (isInitialLoading && !profile) {
     return (
-      <DashboardCard title="Інформація про гравця">
+      <DashboardCard title={title}>
         <div className="animate-pulse">
           <div className="flex items-center gap-6">
             <div className="w-24 h-24 bg-gray-200 rounded-full"></div>
@@ -69,25 +116,27 @@ export default function ProfileInfoWidget() {
 
   if (error) {
     return (
-      <DashboardCard title="Інформація про гравця">
+      <DashboardCard title={title}>
         <p className="text-red-500">{error}</p>
       </DashboardCard>
     );
   }
 
-  // Якщо user ще не завантажений
-  if (!user) {
+  if (!profile) {
     return (
-      <DashboardCard title="Інформація про гравця">
-        <p className="text-gray-500">Завантаження...</p>
+      <DashboardCard title={title}>
+        <p className="text-gray-500">Профіль недоступний</p>
       </DashboardCard>
     );
   }
 
-  const avatarUrl = getAvatarUrl(user.avatarUrl);
+  const avatarUrl = getAvatarUrl(profile.avatarUrl);
 
   return (
-    <DashboardCard title="Інформація про гравця">
+    <DashboardCard title={title}>
+      {isRefreshing && (
+        <div className="mb-3 text-xs text-[#4D774E]">Оновлюємо профіль...</div>
+      )}
       <div className="flex items-center gap-6">
         {/* Аватар */}
         {avatarUrl ? (
@@ -98,33 +147,33 @@ export default function ProfileInfoWidget() {
           />
         ) : (
           <div className="w-24 h-24 bg-[#164A41] rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-[#9DC88D]">
-            {getInitials(user.displayName || user.username)}
+            {getInitials(profile.displayName || profile.username)}
           </div>
         )}
         
         {/* Інформація */}
         <div className="flex-1">
           <h2 className="text-2xl font-bold text-[#164A41]">
-            {user.displayName || user.username}
+            {profile.displayName || profile.username}
           </h2>
-          <p className="text-[#4D774E]">@{user.username}</p>
+          <p className="text-[#4D774E]">@{profile.username}</p>
           
           {/* Статистика */}
           <div className="mt-3 flex gap-4 text-sm">
             <div className="bg-[#9DC88D]/20 px-3 py-1 rounded-full text-[#164A41]">
-              🎮 {user.stats?.sessionsPlayed || 0} сесій
+              🎮 {profile.stats?.sessionsPlayed || 0} сесій
             </div>
             <div className="bg-[#9DC88D]/20 px-3 py-1 rounded-full text-[#164A41]">
-              ⏱️ {user.stats?.hoursPlayed || 0} годин
+              ⏱️ {profile.stats?.hoursPlayed || 0} годин
             </div>
           </div>
         </div>
       </div>
 
       {/* Біо */}
-      {user.bio && (
+      {profile.bio && (
         <div className="mt-4 pt-4 border-t border-[#9DC88D]/20">
-          <p className="text-[#164A41] text-sm">{user.bio}</p>
+          <p className="text-[#164A41] text-sm">{profile.bio}</p>
         </div>
       )}
     </DashboardCard>

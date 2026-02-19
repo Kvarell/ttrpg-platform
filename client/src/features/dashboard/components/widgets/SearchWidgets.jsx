@@ -300,11 +300,12 @@ export function SearchResultsWidget() {
     <DashboardCard 
       title={`Результати (${results.total || 0})`}
     >
-      {isSearchLoading && items.length === 0 ? (
+      {/* {isSearchLoading && items.length === 0 ? (
         <div className="flex items-center justify-center h-full">
           <div className="animate-pulse text-[#164A41]">Шукаємо...</div>
         </div>
-      ) : error ? (
+      ) : */}
+      {error ? (
         <div className="flex flex-col items-center justify-center h-full text-red-500">
           <p>{error}</p>
         </div>
