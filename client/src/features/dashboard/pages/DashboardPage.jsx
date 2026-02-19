@@ -16,7 +16,6 @@ import {
 // Нові віджети для MY_GAMES та SEARCH
 import CalendarWidget from '../components/widgets/CalendarWidget';
 import HomeRightWidget from '../components/widgets/HomeRightWidget';
-import MyCampaignsWidget from '../components/widgets/MyCampaignsWidget';
 import { SearchFiltersWidget, SearchResultsWidget } from '../components/widgets/SearchWidgets';
 
 export default function DashboardPage() {
@@ -104,13 +103,13 @@ export default function DashboardPage() {
       />
     );
   } else if (currentView === DASHBOARD_VIEWS.MY_GAMES) {
-    // Мої ігри: Календар (універсальний) + Кампанії
-    leftPanel = <CalendarWidget />;
-    rightPanel = <MyCampaignsWidget />;
+    // Мої ігри: тимчасово без контенту
+    leftPanel = null;
+    rightPanel = null;
   } else if (currentView === DASHBOARD_VIEWS.SEARCH) {
     // Пошук: Фільтри + Результати
-    leftPanel = <SearchResultsWidget />;
-    rightPanel = <SearchFiltersWidget />;
+    leftPanel = null;
+    rightPanel = null;
   } else if (currentView === DASHBOARD_VIEWS.HOME) {
     // Головна: Календар + Сесії дня (нові віджети з useDashboardStore)
     leftPanel = <CalendarWidget />;

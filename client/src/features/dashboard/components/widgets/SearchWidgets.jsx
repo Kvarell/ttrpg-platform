@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useDashboardStore from '@/stores/useDashboardStore';
 import DashboardCard from '@/components/ui/DashboardCard';
+import SessionCard from '../ui/SessionCard';
 
 /**
  * Віджет фільтрів пошуку
@@ -267,9 +268,13 @@ export function SearchResultsWidget() {
     loadMoreSearchResults,
     isSearchLoading,
     error,
-    searchFilters,
     hasSearched,
+    joinSessionAction,
   } = useDashboardStore();
+
+  const [expandedSessionId, setExpandedSessionId] = useState(null);
+  const [joiningSessionId, setJoiningSessionId] = useState(null);
+  const [joinError, setJoinError] = useState(null);
 
   // Виконуємо пошук при зміні вкладки (тільки якщо вже був пошук)
   useEffect(() => {
@@ -285,15 +290,21 @@ export function SearchResultsWidget() {
   const results = searchActiveTab === 'campaigns' ? campaignResults : sessionResults;
   const items = searchActiveTab === 'campaigns' ? results.campaigns : results.sessions;
 
-  // Форматування часу
-  const formatDateTime = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('uk-UA', { 
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+  const handleToggleSession = (sessionId) => {
+    setExpandedSessionId(prev => (prev === sessionId ? null : sessionId));
+  };
+
+  const handleJoinSession = async (sessionId) => {
+    setJoiningSessionId(sessionId);
+    setJoinError(null);
+
+    const result = await joinSessionAction(sessionId);
+
+    if (!result.success) {
+      setJoinError(result.error);
+    }
+
+    setJoiningSessionId(null);
   };
 
   return (
@@ -325,37 +336,15 @@ export function SearchResultsWidget() {
         <div className="flex flex-col gap-3">
           {/* Сесії */}
           {searchActiveTab === 'sessions' && items.map((session) => (
-            <div 
+            <SessionCard
               key={session.id}
-              className="p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/30 transition-colors cursor-pointer"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <h4 className="font-bold text-[#164A41] flex-1">{session.title}</h4>
-                {session.isOneShot && (
-                  <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
-                    One-shot
-                  </span>
-                )}
-              </div>
-              
-              {session.description && (
-                <p className="text-sm text-[#4D774E] mb-2 line-clamp-2">{session.description}</p>
-              )}
-              
-              <div className="flex flex-wrap gap-3 text-sm text-[#4D774E]">
-                <span>📅 {formatDateTime(session.date)}</span>
-                <span>👥 {session.currentPlayers}/{session.maxPlayers}</span>
-                {session.system && <span>🎲 {session.system}</span>}
-                {session.price > 0 && <span className="font-bold text-[#164A41]">💰 {session.price} грн</span>}
-                {session.price === 0 && <span className="text-green-600">Безкоштовно</span>}
-              </div>
-              
-              {session.campaign && (
-                <div className="mt-2 text-sm text-[#4D774E]">
-                  📚 {session.campaign.title}
-                </div>
-              )}
-            </div>
+              session={{ ...session, creator: session.creator || session.owner }}
+              isExpanded={expandedSessionId === session.id}
+              onToggle={() => handleToggleSession(session.id)}
+              onJoin={handleJoinSession}
+              isJoining={joiningSessionId === session.id}
+              joinError={expandedSessionId === session.id ? joinError : null}
+            />
           ))}
 
           {/* Кампанії */}
