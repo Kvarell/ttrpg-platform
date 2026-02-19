@@ -139,7 +139,7 @@ class SessionController {
    * Отримати статистику календаря з підтримкою фільтрів
    * GET /api/sessions/calendar-stats
    * 
-   * Повертає: { "2026-02-03": { count: 3, isHighlighted: false }, ... }
+  * Повертає: { "2026-02-03": { count: 3, sessions: [...] }, ... }
    * 
    * Query params:
    * @param {string} month - ISO дата місяця (напр. "2026-02-01")

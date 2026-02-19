@@ -242,7 +242,7 @@ class SessionService {
    * @param {string[]} options.filters.tags - Теги для пошуку
    * @param {string} options.filters.searchQuery - Текстовий пошук
    * 
-   * @returns {Object} { "2026-02-15": { count: 5, isHighlighted: true }, ... }
+  * @returns {Object} { "2026-02-15": { count: 5, sessions: [...] }, ... }
    */
   async getCalendarStats(userId, options = {}) {
     const { month, scope = 'global', filters = {} } = options;
@@ -348,7 +348,6 @@ class SessionService {
       if (!stats[dateKey]) {
         stats[dateKey] = { 
           count: 0, 
-          isHighlighted: scope === 'search',
           sessions: [] // Додаємо масив сесій для деталей
         };
       }

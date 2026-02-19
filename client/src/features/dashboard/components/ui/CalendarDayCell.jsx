@@ -9,7 +9,6 @@ import GameSessionCount from '../../../../components/ui/icons/GameSessionCount';
  * @param {Array} props.sessions - Масив сесій з інформацією про системи/кампанії
  * @param {boolean} props.isSelected - Чи вибраний цей день
  * @param {boolean} props.isToday - Чи це сьогодні
- * @param {boolean} props.isHighlighted - Чи підсвічений (напр. результати пошуку)
  * @param {Function} props.onClick - Обробник кліку
  */
 export default function CalendarDayCell({
@@ -18,7 +17,6 @@ export default function CalendarDayCell({
   sessions = [],
   isSelected = false,
   isToday = false,
-  isHighlighted = false,
   onClick,
 }) {
   // Агрегуємо сесії за системами та кампаніями
@@ -58,7 +56,6 @@ export default function CalendarDayCell({
   const getBorderColor = () => {
     if (isSelected) return 'border-[#164A41]';
     if (isToday) return 'border-[#F1B24A]';
-    if (isHighlighted && count > 0) return 'border-blue-500';
     return 'border-gray-200';
   };
 
@@ -108,9 +105,9 @@ export default function CalendarDayCell({
                   px-2 py-1
                   bg-gray-800 text-white text-xs rounded shadow-lg
                   opacity-0 group-hover:opacity-100 transition-opacity duration-200
-                  pointer-events-none whitespace-nowrap z-10
+                  pointer-events-none whitespace-nowrap z-50
                 ">
-                  Активні сесії: {count}
+                  Активні сесії
                   {/* Маленький трикутник знизу */}
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
                 </div>
