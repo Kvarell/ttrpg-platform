@@ -113,11 +113,12 @@ return (
     <DashboardCard title={title}>
       <div className="flex flex-col h-full">
         <div className="flex-1 overflow-y-auto min-h-0">
-          {isDaySessionsLoading ? ( 
+          {/* {isDaySessionsLoading ? ( 
             <div className="flex items-center justify-center h-full">
               <div className="animate-pulse text-[#164A41] font-medium">Завантаження сесій...</div>
             </div>
-          ) : daySessions.length === 0 ? (
+          ) : */}
+          {daySessions.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-[#4D774E]">
               <div className="text-5xl mb-4">🎲</div>
               <p className="text-lg font-medium">Немає запланованих сесій</p>

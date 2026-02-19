@@ -144,11 +144,12 @@ export default function CalendarWidget({ title, showTodayButton }) {
       title={cardTitle}
       actions={<NavigationButtons />}
     >
-      {isCalendarLoading ? (
+      {/* {isCalendarLoading ? (
         <div className="flex items-center justify-center h-full">
           <div className="animate-pulse text-[#164A41]">Завантаження...</div>
         </div>
-      ) : (
+      ) : ( */}
+      {
         <div className="flex flex-col h-full">
           {/* Заголовки днів тижня */}
           <div className="grid grid-cols-7 gap-1 mb-1">
@@ -188,7 +189,7 @@ export default function CalendarWidget({ title, showTodayButton }) {
             })}
           </div>
         </div>
-      )}
+      }
     </DashboardCard>
   );
 }

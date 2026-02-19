@@ -82,11 +82,12 @@ export default function MyCampaignsWidget() {
         </div>
       }
     >
-      {isLoading ? (
+      {/* {isLoading ? (
         <div className="flex items-center justify-center h-full">
           <div className="animate-pulse text-[#164A41]">Завантаження...</div>
         </div>
-      ) : error ? (
+      ) : */}
+      {error ? (
         <div className="flex flex-col items-center justify-center h-full text-red-500">
           <p>{error}</p>
         </div>
