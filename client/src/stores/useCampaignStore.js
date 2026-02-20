@@ -20,7 +20,7 @@ import {
 /**
  * Zustand store для управління кампаніями
  */
-const useCampaignStore = create((set, get) => ({
+const useCampaignStore = create((set) => ({
   // === STATE ===
   
   // Список кампаній користувача
@@ -50,11 +50,15 @@ const useCampaignStore = create((set, get) => ({
       const response = await getMyCampaigns(role);
       if (response.success) {
         set({ campaigns: response.data });
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при отриманні кампаній' });
+      const message = error.message || 'Помилка при отриманні кампаній';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -66,15 +70,16 @@ const useCampaignStore = create((set, get) => ({
     try {
       const response = await getCampaignById(campaignId);
       if (response.success) {
-        set({ currentCampaign: response.data });
-        return response.data;
+        set({ currentCampaign: response.data, campaignMembers: [], joinRequests: [] });
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при отриманні деталей кампанії' });
-      return null;
+      const message = error.message || 'Помилка при отриманні деталей кампанії';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -90,14 +95,15 @@ const useCampaignStore = create((set, get) => ({
         set((state) => ({
           campaigns: [...state.campaigns, response.data],
         }));
-        return response.data;
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при створенні кампанії' });
-      return null;
+      const message = error.message || 'Помилка при створенні кампанії';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -119,14 +125,15 @@ const useCampaignStore = create((set, get) => ({
             ? response.data
             : state.currentCampaign,
         }));
-        return response.data;
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при оновленні кампанії' });
-      return null;
+      const message = error.message || 'Помилка при оновленні кампанії';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -144,14 +151,15 @@ const useCampaignStore = create((set, get) => ({
             ? null
             : state.currentCampaign,
         }));
-        return true;
+        return { success: true };
       } else {
         set({ error: response.message });
-        return false;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при видаленні кампанії' });
-      return false;
+      const message = error.message || 'Помилка при видаленні кампанії';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -166,11 +174,15 @@ const useCampaignStore = create((set, get) => ({
       const response = await getCampaignMembers(campaignId);
       if (response.success) {
         set({ campaignMembers: response.data });
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при отриманні членів кампанії' });
+      const message = error.message || 'Помилка при отриманні членів кампанії';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -185,14 +197,15 @@ const useCampaignStore = create((set, get) => ({
         set((state) => ({
           campaignMembers: [...state.campaignMembers, response.data],
         }));
-        return response.data;
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при додаванні члена' });
-      return null;
+      const message = error.message || 'Помилка при додаванні члена';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -209,14 +222,15 @@ const useCampaignStore = create((set, get) => ({
             (m) => m.id !== memberId
           ),
         }));
-        return true;
+        return { success: true };
       } else {
         set({ error: response.message });
-        return false;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при видаленні члена' });
-      return false;
+      const message = error.message || 'Помилка при видаленні члена';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -233,14 +247,15 @@ const useCampaignStore = create((set, get) => ({
             m.id === memberId ? response.data : m
           ),
         }));
-        return response.data;
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при зміні ролі члена' });
-      return null;
+      const message = error.message || 'Помилка при зміні ролі члена';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -266,14 +281,15 @@ const useCampaignStore = create((set, get) => ({
               : c
           ),
         }));
-        return response.data.inviteCode;
+        return { success: true, data: response.data.inviteCode };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при регенерації коду запрошення' });
-      return null;
+      const message = error.message || 'Помилка при регенерації коду запрошення';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -285,14 +301,15 @@ const useCampaignStore = create((set, get) => ({
     try {
       const response = await joinByInviteCode(inviteCode);
       if (response.success) {
-        return response.data;
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при приєднанні за кодом' });
-      return null;
+      const message = error.message || 'Помилка при приєднанні за кодом';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -307,11 +324,15 @@ const useCampaignStore = create((set, get) => ({
       const response = await getJoinRequests(campaignId);
       if (response.success) {
         set({ joinRequests: response.data });
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при отриманні запитів на приєднання' });
+      const message = error.message || 'Помилка при отриманні запитів на приєднання';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -323,14 +344,15 @@ const useCampaignStore = create((set, get) => ({
     try {
       const response = await submitJoinRequest(campaignId, message);
       if (response.success) {
-        return response.data.requestId;
+        return { success: true, data: response.data.requestId };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при надіслані запиту' });
-      return null;
+      const message = error.message || 'Помилка при надіслані запиту';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -345,14 +367,15 @@ const useCampaignStore = create((set, get) => ({
         set((state) => ({
           joinRequests: state.joinRequests.filter((r) => r.id !== requestId),
         }));
-        return true;
+        return { success: true };
       } else {
         set({ error: response.message });
-        return false;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при схвалюванні запиту' });
-      return false;
+      const message = error.message || 'Помилка при схвалюванні запиту';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -367,14 +390,15 @@ const useCampaignStore = create((set, get) => ({
         set((state) => ({
           joinRequests: state.joinRequests.filter((r) => r.id !== requestId),
         }));
-        return true;
+        return { success: true };
       } else {
         set({ error: response.message });
-        return false;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при відхиленні запиту' });
-      return false;
+      const message = error.message || 'Помилка при відхиленні запиту';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }

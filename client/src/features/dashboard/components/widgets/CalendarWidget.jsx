@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
 import CalendarDayCell from '../ui/CalendarDayCell';
 import useDashboardStore, { VIEW_MODES } from '@/stores/useDashboardStore';
+import useCalendarStore from '@/stores/useCalendarStore';
 import Button from '@/components/ui/Button';
 import { formatDate } from '@/components/shared';
 
@@ -24,24 +25,33 @@ import { formatDate } from '@/components/shared';
 export default function CalendarWidget({ title, showTodayButton }) {
   const {
     currentMonth,
-    calendarStats,
     selectedDate,
-    isCalendarLoading,
     viewMode,
+    searchFilters,
+    hasSearched,
     goToNextMonth,
     goToPrevMonth,
     goToToday,
     selectDate,
-    fetchCalendarStats,
   } = useDashboardStore();
+
+  const {
+    calendarStats,
+    fetchCalendarStats,
+  } = useCalendarStore();
   
   // Визначаємо чи показувати кнопку "Сьогодні"
   const shouldShowTodayButton = showTodayButton ?? (viewMode === VIEW_MODES.MY_GAMES || viewMode === VIEW_MODES.HOME);
 
   // Завантажуємо статистику при першому рендері
   useEffect(() => {
-    fetchCalendarStats();
-  }, [fetchCalendarStats]);
+    fetchCalendarStats({
+      currentMonth,
+      viewMode,
+      searchFilters,
+      hasSearched,
+    });
+  }, [fetchCalendarStats, currentMonth, viewMode, searchFilters, hasSearched]);
 
   // Генеруємо дні для календаря
   const calendarDays = useMemo(() => {
@@ -85,8 +95,7 @@ export default function CalendarWidget({ title, showTodayButton }) {
   // Дні тижня
   const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 
-  // Кнопки навігації
-  const NavigationButtons = () => (
+  const navigationActions = (
     <div className="flex gap-2">
       <button
         onClick={goToPrevMonth}
@@ -138,7 +147,7 @@ export default function CalendarWidget({ title, showTodayButton }) {
   return (
     <DashboardCard 
       title={cardTitle}
-      actions={<NavigationButtons />}
+      actions={navigationActions}
     >
       {/* {isCalendarLoading ? (
         <div className="flex items-center justify-center h-full">

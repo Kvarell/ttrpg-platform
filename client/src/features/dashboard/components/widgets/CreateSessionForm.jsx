@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import useDashboardStore from '@/stores/useDashboardStore';
+import useSessionStore from '@/stores/useSessionStore';
 import { GAME_SYSTEMS } from '@/constants/gameSystems';
 import Dropdown from '@/components/ui/Dropdown';
 import Button from '@/components/ui/Button';
@@ -13,7 +13,7 @@ import Button from '@/components/ui/Button';
  * @param {Function} props.onCancel - Callback при скасуванні
  */
 export default function CreateSessionForm({ initialDate, onSuccess, onCancel }) {
-  const { createNewSession } = useDashboardStore();
+  const { createNewSession } = useSessionStore();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);

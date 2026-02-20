@@ -6,6 +6,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import useDashboardStore from './useDashboardStore';
+import useCalendarStore from './useCalendarStore';
+import useSessionStore from './useSessionStore';
+import useCampaignStore from './useCampaignStore';
 
 // Константа ключа для localStorage (така ж як була в storage.js)
 const STORAGE_KEY = 'ttrpg_app_user';
@@ -58,6 +61,9 @@ const useAuthStore = create(
 
         if (currentUserId && currentUserId !== user?.id) {
           useDashboardStore.getState().reset();
+          useCalendarStore.getState().reset();
+          useSessionStore.getState().reset();
+          useCampaignStore.getState().reset();
         }
 
         set({ 
@@ -85,6 +91,9 @@ const useAuthStore = create(
        */
       clearUser: () => {
         useDashboardStore.getState().reset();
+        useCalendarStore.getState().reset();
+        useSessionStore.getState().reset();
+        useCampaignStore.getState().reset();
 
         set({ 
           user: null, 
