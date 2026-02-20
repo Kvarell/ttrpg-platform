@@ -37,13 +37,25 @@ export default function CampaignDetailsPage() {
     removeMemberAction,
     updateMemberRoleAction,
     regenerateInviteCodeAction,
-    isLoading, 
     error,
     clearCurrentCampaign,
   } = useCampaignStore();
 
   const [activeTab, setActiveTab] = useState('info'); // info, members, sessions, requests
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null, variant: 'primary' });
+
+  // Визначаємо роль поточного користувача
+  const getMyRole = useCallback(() => {
+    if (!currentCampaign || !user) return null;
+    if (currentCampaign.ownerId === user.id) return 'OWNER';
+    const member = currentCampaign.members?.find((campaignMember) => campaignMember.userId === user.id);
+    return member?.role || null;
+  }, [currentCampaign, user]);
+
+  const myRole = getMyRole();
+  const isOwner = myRole === 'OWNER';
+  const isGM = myRole === 'GM';
+  const canManage = isOwner || isGM;
 
   useEffect(() => {
     if (id) {
@@ -55,26 +67,10 @@ export default function CampaignDetailsPage() {
 
   // Завантажуємо заявки якщо є права
   useEffect(() => {
-    if (currentCampaign && user) {
-      const myRole = getMyRole();
-      if (myRole === 'OWNER' || myRole === 'GM') {
-        fetchJoinRequests(id);
-      }
+    if ((myRole === 'OWNER' || myRole === 'GM') && id) {
+      fetchJoinRequests(id);
     }
-  }, [currentCampaign, user, id, fetchJoinRequests]);
-
-  // Визначаємо роль поточного користувача
-  const getMyRole = () => {
-    if (!currentCampaign || !user) return null;
-    if (currentCampaign.ownerId === user.id) return 'OWNER';
-    const member = currentCampaign.members?.find(m => m.userId === user.id);
-    return member?.role || null;
-  };
-
-  const myRole = getMyRole();
-  const isOwner = myRole === 'OWNER';
-  const isGM = myRole === 'GM';
-  const canManage = isOwner || isGM;
+  }, [myRole, id, fetchJoinRequests]);
 
   const closeConfirmModal = useCallback(() => {
     setConfirmModal(prev => ({ ...prev, isOpen: false }));

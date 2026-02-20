@@ -4,6 +4,19 @@ import useSessionStore from '@/stores/useSessionStore';
 import DashboardCard from '@/components/ui/DashboardCard';
 import SessionCard from '../ui/SessionCard';
 
+function mapSearchFiltersToLocal(searchFilters) {
+  return {
+    q: searchFilters.q || '',
+    system: searchFilters.system || '',
+    dateFrom: searchFilters.dateFrom || '',
+    dateTo: searchFilters.dateTo || '',
+    minPrice: searchFilters.minPrice ?? '',
+    maxPrice: searchFilters.maxPrice ?? '',
+    hasAvailableSlots: searchFilters.hasAvailableSlots || false,
+    oneShot: searchFilters.oneShot || false,
+  };
+}
+
 /**
  * Віджет фільтрів пошуку
  * Використовує useDashboardStore для централізованого управління станом
@@ -18,30 +31,7 @@ export function SearchFiltersWidget({ onSearch }) {
     executeSearch,
   } = useDashboardStore();
   
-  const [localFilters, setLocalFilters] = useState({
-    q: '',
-    system: '',
-    dateFrom: '',
-    dateTo: '',
-    minPrice: '',
-    maxPrice: '',
-    hasAvailableSlots: false,
-    oneShot: false,
-  });
-
-  // Синхронізуємо локальний стан зі store
-  useEffect(() => {
-    setLocalFilters({
-      q: searchFilters.q || '',
-      system: searchFilters.system || '',
-      dateFrom: searchFilters.dateFrom || '',
-      dateTo: searchFilters.dateTo || '',
-      minPrice: searchFilters.minPrice ?? '',
-      maxPrice: searchFilters.maxPrice ?? '',
-      hasAvailableSlots: searchFilters.hasAvailableSlots || false,
-      oneShot: searchFilters.oneShot || false,
-    });
-  }, [searchFilters]);
+  const [localFilters, setLocalFilters] = useState(() => mapSearchFiltersToLocal(searchFilters));
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -69,16 +59,7 @@ export function SearchFiltersWidget({ onSearch }) {
 
   const handleClear = () => {
     resetSearchFilters();
-    setLocalFilters({
-      q: '',
-      system: '',
-      dateFrom: '',
-      dateTo: '',
-      minPrice: '',
-      maxPrice: '',
-      hasAvailableSlots: false,
-      oneShot: false,
-    });
+    setLocalFilters(mapSearchFiltersToLocal({}));
   };
 
   const handleKeyPress = (e) => {
@@ -286,7 +267,12 @@ export function SearchResultsWidget() {
         searchSessionsAction();
       }
     }
-  }, [searchActiveTab]);
+  }, [
+    hasSearched,
+    searchActiveTab,
+    searchCampaignsAction,
+    searchSessionsAction,
+  ]);
 
   const results = searchActiveTab === 'campaigns' ? campaignResults : sessionResults;
   const items = searchActiveTab === 'campaigns' ? results.campaigns : results.sessions;

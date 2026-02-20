@@ -18,6 +18,7 @@ export const DASHBOARD_VIEWS = {
 export const VIEW_MODES = {
   HOME: 'home',
   MY_GAMES: 'my-games',
+  PROFILE: 'profile',
   SEARCH: 'search',
 };
 
@@ -134,6 +135,7 @@ const useDashboardStore = create((set, get) => ({
     const defaultPanelModes = {
       [VIEW_MODES.HOME]: PANEL_MODES.LIST,
       [VIEW_MODES.MY_GAMES]: PANEL_MODES.CAMPAIGNS,
+      [VIEW_MODES.PROFILE]: PANEL_MODES.LIST,
       [VIEW_MODES.SEARCH]: PANEL_MODES.FILTER,
     };
     const initialDate = mode === VIEW_MODES.HOME ? todayStr : null;

@@ -10,16 +10,12 @@ export default function ConfirmEmailChangePage() {
   const navigate = useNavigate();
   const token = searchParams.get('token');
 
-  const [status, setStatus] = useState('loading'); // loading, success, error
-  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState(token ? 'loading' : 'error'); // loading, success, error
+  const [message, setMessage] = useState(token ? '' : 'Токен не знайдено. Перевірте посилання.');
   const [newEmail, setNewEmail] = useState('');
 
   useEffect(() => {
-    if (!token) {
-      setStatus('error');
-      setMessage('Токен не знайдено. Перевірте посилання.');
-      return;
-    }
+    if (!token) return;
 
     const confirm = async () => {
       try {

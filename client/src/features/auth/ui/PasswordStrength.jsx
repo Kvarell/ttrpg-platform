@@ -1,3 +1,11 @@
+function Item({ isValid, label }) {
+  return (
+    <div className={`flex items-center gap-1 ${isValid ? 'text-[#4D774E] font-bold' : 'text-gray-400'}`}>
+      <span>{isValid ? '✓' : '○'}</span> {label}
+    </div>
+  );
+}
+
 export default function PasswordStrength({ password }) {
     if (!password) return null;
   
@@ -7,12 +15,6 @@ export default function PasswordStrength({ password }) {
       upper: /[A-ZА-ЯІЇЄҐ]/.test(password),
       number: /\d/.test(password),
     };
-  
-    const Item = ({ isValid, label }) => (
-      <div className={`flex items-center gap-1 ${isValid ? 'text-[#4D774E] font-bold' : 'text-gray-400'}`}>
-        <span>{isValid ? '✓' : '○'}</span> {label}
-      </div>
-    );
   
     return (
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">

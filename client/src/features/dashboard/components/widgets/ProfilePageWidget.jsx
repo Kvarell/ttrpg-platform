@@ -7,17 +7,7 @@ import AvatarUpload from '@/features/profile/components/AvatarUpload';
 import PasswordChangeForm from '@/features/security/components/PasswordChangeForm';
 import EmailChangeForm from '@/features/security/components/EmailChangeForm';
 import DeleteAccountForm from '@/features/security/components/DeleteAccountForm';
-
-// Визначаємо опції меню профілю
-export const PROFILE_SECTIONS = {
-  INFO: 'info',           // Головна інформація (дефолт)
-  EDIT: 'edit',           // Редагування профілю
-  SECURITY: 'security',   // Безпека (зміна пароля, email, видалення)
-  BALANCE: 'balance',     // Поповнення балансу
-  CHARACTERS: 'characters', // Створення персонажа
-  INTEGRATIONS: 'integrations', // Інтеграції
-  STATS: 'stats',         // Статистика + досягнення
-};
+import { PROFILE_SECTIONS } from './profileSections';
 
 // Конфігурація меню
 const MENU_ITEMS = [
@@ -33,7 +23,7 @@ const MENU_ITEMS = [
 /**
  * Меню профілю (права панель)
  */
-export function ProfileMenuWidget({ currentSection, onSelectSection, user }) {
+export function ProfileMenuWidget({ currentSection, onSelectSection }) {
   return (
     <DashboardCard title="Меню профілю">
       <nav className="space-y-2">

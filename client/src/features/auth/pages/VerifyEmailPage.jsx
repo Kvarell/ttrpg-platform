@@ -11,19 +11,14 @@ function useQuery() {
 export default function VerifyEmailPage() {
   const query = useQuery();
   const navigate = useNavigate();
-  const [status, setStatus] = useState("loading");
-  const [message, setMessage] = useState("");
+  const token = query.get("token");
+  const [status, setStatus] = useState(token ? "loading" : "error");
+  const [message, setMessage] = useState(token ? "" : "Токен підтвердження не вказано.");
   
   const verifyCalled = useRef(false);
 
   useEffect(() => {
-    const token = query.get("token");
-    
-    if (!token) {
-      setStatus("error");
-      setMessage("Токен підтвердження не вказано.");
-      return;
-    }
+    if (!token) return;
 
     if (verifyCalled.current) return;
     verifyCalled.current = true;
@@ -38,7 +33,7 @@ export default function VerifyEmailPage() {
         setStatus("error");
         setMessage(err.response?.data?.error || err.response?.data?.message || "Помилка під час підтвердження email.");
       });
-  }, [query, navigate]);
+  }, [token, navigate]);
   
   return (
     <AuthLayout title="Підтвердження email">
