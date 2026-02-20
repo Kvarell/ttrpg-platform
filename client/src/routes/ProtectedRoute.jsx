@@ -3,18 +3,17 @@ import { useEffect, useRef, useCallback } from "react";
 import { getCurrentUser } from "../features/auth/api/authApi"; 
 import useAuthStore from '../stores/useAuthStore';
 
+const MIN_CHECK_INTERVAL = 30 * 1000;
+
 function ProtectedRoute({ children }) {
   // Використовуємо Zustand store
-  const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isLoading = useAuthStore((state) => state.isLoading);
   const setUser = useAuthStore((state) => state.setUser);
   const clearUser = useAuthStore((state) => state.clearUser);
   const setLoading = useAuthStore((state) => state.setLoading);
 
   const lastCheckRef = useRef(0);
   const hasCheckedRef = useRef(false);
-  const MIN_CHECK_INTERVAL = 30 * 1000;
 
   const checkAuth = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true);
@@ -28,7 +27,7 @@ function ProtectedRoute({ children }) {
       } else {
         clearUser();
       }
-    } catch (error) {
+    } catch {
       // Очищаємо store при помилці автентифікації
       clearUser();
     } finally {

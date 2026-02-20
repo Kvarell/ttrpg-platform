@@ -1,5 +1,5 @@
 import React from 'react';
-import { DASHBOARD_VIEWS } from '@/stores/useDashboardStore';
+import { VIEW_MODES } from '@/stores/useDashboardStore';
 import NavButton from '@/components/ui/NavButton';
 
 // Додаємо props: user та onLogout
@@ -18,23 +18,23 @@ export default function DashboardNavigation({ currentView, onNavigate, user, onL
 
         <NavButton 
           label="Головна" 
-          isActive={currentView === DASHBOARD_VIEWS.HOME}
-          onClick={() => onNavigate(DASHBOARD_VIEWS.HOME)}
+          isActive={currentView === VIEW_MODES.HOME}
+          onClick={() => onNavigate(VIEW_MODES.HOME)}
         />
         <NavButton 
           label="Мої ігри" 
-          isActive={currentView === DASHBOARD_VIEWS.MY_GAMES}
-          onClick={() => onNavigate(DASHBOARD_VIEWS.MY_GAMES)}
+          isActive={currentView === VIEW_MODES.MY_GAMES}
+          onClick={() => onNavigate(VIEW_MODES.MY_GAMES)}
         />
         <NavButton 
           label="Пошук" 
-          isActive={currentView === DASHBOARD_VIEWS.SEARCH}
-          onClick={() => onNavigate(DASHBOARD_VIEWS.SEARCH)}
+          isActive={currentView === VIEW_MODES.SEARCH}
+          onClick={() => onNavigate(VIEW_MODES.SEARCH)}
         />
         <NavButton 
           label="Профіль" 
-          isActive={currentView === DASHBOARD_VIEWS.PROFILE}
-          onClick={() => onNavigate(DASHBOARD_VIEWS.PROFILE)}
+          isActive={currentView === VIEW_MODES.PROFILE}
+          onClick={() => onNavigate(VIEW_MODES.PROFILE)}
         />
       </div>
 

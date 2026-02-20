@@ -7,7 +7,7 @@ import { RoleBadge, VisibilityBadge, EmptyState } from '@/components/shared';
  * Віджет списку моїх кампаній
  */
 export default function MyCampaignsWidget() {
-  const { campaigns, fetchMyCampaigns, isLoading, error } = useCampaignStore();
+  const { campaigns, fetchMyCampaigns, error } = useCampaignStore();
   const [filter, setFilter] = useState('all'); // all, owner, member
 
   useEffect(() => {

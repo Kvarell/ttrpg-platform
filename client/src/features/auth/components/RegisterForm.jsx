@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { registerUser } from "../api/authApi";
@@ -15,14 +15,14 @@ function RegisterForm({ onSuccess }) {
     register, 
     handleSubmit, 
     setError, 
-    watch, 
+    control,
     formState: { isSubmitting, errors } // errors тут є
   } = useForm({ mode: 'onChange' });
   
   const [serverError, setServerError] = useState(null);
   
   // Стежимо за паролем для шкали сили пароля
-  const password = watch('password', '');
+  const password = useWatch({ control, name: 'password', defaultValue: '' });
 
   const onSubmit = async (data) => {
     setServerError(null);

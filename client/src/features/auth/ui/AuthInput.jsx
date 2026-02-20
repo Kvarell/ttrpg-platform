@@ -9,7 +9,6 @@ export default function AuthInput({
   error, 
   disabled,
   className,
-  children, 
   ...rest 
 }) {
   const baseClasses = "w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-colors disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed";

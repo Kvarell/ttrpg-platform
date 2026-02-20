@@ -1,28 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
-
-/**
- * Отримує ініціали з імені (1-2 літери).
- */
-function getInitials(name) {
-  if (!name) return '??';
-  const words = name.trim().split(' ').filter((w) => w.length > 0);
-  if (words.length === 0) return '??';
-  if (words.length === 1) return words[0][0].toUpperCase();
-  return words
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-/**
- * Нормалізує URL аватарки — додає базовий URL для відносних шляхів.
- */
-function resolveAvatarUrl(url) {
-  if (!url || typeof url !== 'string') return null;
-  if (url.startsWith('/uploads')) return `${API_BASE_URL}${url}`;
-  return url;
-}
+import { getInitials, resolveAvatarUrl } from './userAvatar.utils';
 
 /**
  * Аватарка юзера з fallback на ініціали.
@@ -77,6 +53,3 @@ export default function UserAvatar({
     </div>
   );
 }
-
-// Реекспорт утиліт для зворотної сумісності
-export { getInitials, resolveAvatarUrl };

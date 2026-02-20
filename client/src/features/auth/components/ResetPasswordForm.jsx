@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { resetPassword } from '../api/authApi';
 
 import AuthInput from "../ui/AuthInput";
@@ -12,28 +12,19 @@ import { VALIDATION_RULES } from "../../../utils/validationRules";
 export default function ResetPasswordForm() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [resetToken, setResetToken] = useState('');
-  const [tokenError, setTokenError] = useState('');
+  const resetToken = searchParams.get('token') || '';
+  const tokenError = resetToken ? '' : 'Невалідне посилання для скидання. Токен не знайдений.';
   const [success, setSuccess] = useState(false);
   const [serverError, setServerError] = useState('');
 
   const { 
     register, 
     handleSubmit, 
-    watch, 
+    control,
     formState: { errors, isSubmitting } 
   } = useForm({ mode: 'onChange' });
 
-  const password = watch('password', '');
-
-  useEffect(() => {
-    const token = searchParams.get('token');
-    if (!token) {
-      setTokenError('Невалідне посилання для скидання. Токен не знайдений.');
-    } else {
-      setResetToken(token);
-    }
-  }, [searchParams]);
+  const password = useWatch({ control, name: 'password', defaultValue: '' });
 
   const onSubmit = async (data) => {
     setServerError('');
@@ -105,9 +96,10 @@ export default function ResetPasswordForm() {
         rules={{
           required: "Підтвердіть пароль",
           validate: (val) => {
-            if (watch('password') !== val) {
+            if (password !== val) {
               return "Паролі не збігаються";
             }
+            return true;
           }
         }}
       />

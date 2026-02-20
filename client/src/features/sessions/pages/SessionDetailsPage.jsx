@@ -29,7 +29,6 @@ export default function SessionDetailsPage() {
     leaveSessionAction,
     updateSessionStatusAction,
     removeParticipantAction,
-    isLoading,
     error,
     clearCurrentSession,
   } = useSessionStore();
