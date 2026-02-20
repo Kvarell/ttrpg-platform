@@ -134,7 +134,7 @@ export const getSessionParticipants = async (sessionId) => {
  * @param {number} sessionId
  */
 export const joinSession = async (sessionId) => {
-  const response = await api.post(`/sessions/${sessionId}/join`);
+  const response = await api.post(`/sessions/${sessionId}/join`, {});
   return response.data;
 };
 
@@ -143,7 +143,7 @@ export const joinSession = async (sessionId) => {
  * @param {number} sessionId
  */
 export const leaveSession = async (sessionId) => {
-  const response = await api.post(`/sessions/${sessionId}/leave`);
+  const response = await api.post(`/sessions/${sessionId}/leave`, {});
   return response.data;
 };
 

@@ -603,7 +603,8 @@ const useDashboardStore = create((set, get) => ({
       return { success: false, error: response.message };
     } catch (error) {
       console.error('Error joining session:', error);
-      return { success: false, error: error.message || 'Помилка приєднання до сесії' };
+      const message = error.response?.data?.error || error.message || 'Помилка приєднання до сесії';
+      return { success: false, error: message };
     }
   },
   

@@ -103,7 +103,7 @@ export const updateMemberRole = async (campaignId, memberId, role) => {
  * @param {number} campaignId
  */
 export const regenerateInviteCode = async (campaignId) => {
-  const response = await api.post(`/campaigns/${campaignId}/invite`);
+  const response = await api.post(`/campaigns/${campaignId}/invite`, {});
   return response.data;
 };
 
@@ -112,7 +112,7 @@ export const regenerateInviteCode = async (campaignId) => {
  * @param {string} inviteCode
  */
 export const joinByInviteCode = async (inviteCode) => {
-  const response = await api.post(`/campaigns/invite/${inviteCode}`);
+  const response = await api.post(`/campaigns/invite/${inviteCode}`, {});
   return response.data;
 };
 
@@ -156,6 +156,6 @@ export const approveJoinRequest = async (requestId, role = 'PLAYER') => {
  * @param {number} requestId
  */
 export const rejectJoinRequest = async (requestId) => {
-  const response = await api.post(`/campaigns/requests/${requestId}/reject`);
+  const response = await api.post(`/campaigns/requests/${requestId}/reject`, {});
   return response.data;
 };

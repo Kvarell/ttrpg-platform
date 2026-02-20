@@ -294,7 +294,8 @@ const useSessionStore = create((set, get) => ({
         return null;
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при приєднанні до сесії' });
+      const message = error.response?.data?.error || error.message || 'Помилка при приєднанні до сесії';
+      set({ error: message });
       return null;
     } finally {
       set({ isLoading: false });

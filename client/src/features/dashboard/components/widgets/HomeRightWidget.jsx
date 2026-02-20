@@ -33,7 +33,7 @@ export default function HomeRightWidget() {
   } = useDashboardStore();
 
   const [joiningSessionId, setJoiningSessionId] = useState(null);
-  const [joinError, setJoinError] = useState(null);
+  const [joinErrors, setJoinErrors] = useState({});
 
   // Автоматично встановлюємо сьогоднішню дату при першому завантаженні
   useEffect(() => {
@@ -56,12 +56,12 @@ export default function HomeRightWidget() {
   // Обробник приєднання до сесії
   const handleJoinSession = async (sessionId) => {
     setJoiningSessionId(sessionId);
-    setJoinError(null);
+    setJoinErrors(prev => ({ ...prev, [sessionId]: null }));
     
     const result = await joinSessionAction(sessionId);
     
     if (!result.success) {
-      setJoinError(result.error);
+      setJoinErrors(prev => ({ ...prev, [sessionId]: result.error }));
     }
     
     setJoiningSessionId(null);
@@ -138,7 +138,7 @@ return (
                     onToggle={() => toggleSessionExpanded(session.id)}
                     onJoin={handleJoinSession}
                     isJoining={isJoining}
-                    joinError={joinError}
+                    joinError={joinErrors[session.id] || null}
                   />
                 );
               })}

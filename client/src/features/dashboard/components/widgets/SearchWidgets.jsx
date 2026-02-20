@@ -274,7 +274,7 @@ export function SearchResultsWidget() {
 
   const [expandedSessionId, setExpandedSessionId] = useState(null);
   const [joiningSessionId, setJoiningSessionId] = useState(null);
-  const [joinError, setJoinError] = useState(null);
+  const [joinErrors, setJoinErrors] = useState({});
 
   // Виконуємо пошук при зміні вкладки (тільки якщо вже був пошук)
   useEffect(() => {
@@ -296,12 +296,12 @@ export function SearchResultsWidget() {
 
   const handleJoinSession = async (sessionId) => {
     setJoiningSessionId(sessionId);
-    setJoinError(null);
+    setJoinErrors(prev => ({ ...prev, [sessionId]: null }));
 
     const result = await joinSessionAction(sessionId);
 
     if (!result.success) {
-      setJoinError(result.error);
+      setJoinErrors(prev => ({ ...prev, [sessionId]: result.error }));
     }
 
     setJoiningSessionId(null);
@@ -343,7 +343,7 @@ export function SearchResultsWidget() {
               onToggle={() => handleToggleSession(session.id)}
               onJoin={handleJoinSession}
               isJoining={joiningSessionId === session.id}
-              joinError={expandedSessionId === session.id ? joinError : null}
+              joinError={joinErrors[session.id] || null}
             />
           ))}
 
