@@ -350,7 +350,7 @@ class SessionController {
     try {
       const { id: sessionId } = req.params;
       const userId = req.user.id;
-      const { isGuest = false } = req.body;
+      const { isGuest = false } = req.body || {};
 
       const participant = await sessionService.joinSession(
         sessionId,

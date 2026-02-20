@@ -233,7 +233,7 @@ class CampaignController {
     try {
       const { campaignId } = req.params;
       const userId = req.user.id;
-      const { message } = req.body;
+      const { message } = req.body || {};
 
       const joinRequest = await campaignService.submitJoinRequest(
         campaignId,
@@ -273,7 +273,7 @@ class CampaignController {
     try {
       const { requestId } = req.params;
       const userId = req.user.id;
-      const { role = 'PLAYER' } = req.body;
+      const { role = 'PLAYER' } = req.body || {};
 
       const member = await campaignService.approveJoinRequest(
         requestId,
