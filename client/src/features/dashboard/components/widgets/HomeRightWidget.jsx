@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
 import useDashboardStore, { PANEL_MODES } from '@/stores/useDashboardStore';
+import useCalendarStore from '@/stores/useCalendarStore';
+import useSessionStore from '@/stores/useSessionStore';
 import CreateSessionForm from './CreateSessionForm';
 import SessionCard from '../ui/SessionCard';
 import Button from '@/components/ui/Button';
@@ -22,16 +24,23 @@ import { BackButton, EmptyState, formatDate } from '@/components/shared';
 export default function HomeRightWidget() {
   const {
     selectedDate,
-    daySessions,
-    isDaySessionsLoading,
+    currentMonth,
+    viewMode,
+    searchFilters,
+    hasSearched,
     rightPanelMode,
     expandedSessionId,
     setRightPanelMode,
     toggleSessionExpanded,
-    joinSessionAction,
-    selectDate,
-    fetchDaySessions,
   } = useDashboardStore();
+
+  const {
+    daySessions,
+    fetchDaySessions,
+    fetchCalendarStats,
+  } = useCalendarStore();
+
+  const { joinSessionAction } = useSessionStore();
 
   const [joiningSessionId, setJoiningSessionId] = useState(null);
   const [joinErrors, setJoinErrors] = useState({});
@@ -40,9 +49,9 @@ export default function HomeRightWidget() {
   useEffect(() => {
     // Завантажуємо дані тільки якщо дата вибрана
     if (selectedDate) {
-      fetchDaySessions(selectedDate);
+      fetchDaySessions(selectedDate, { viewMode, searchFilters, hasSearched });
     }
-  }, [selectedDate, fetchDaySessions]);
+  }, [selectedDate, fetchDaySessions, viewMode, searchFilters, hasSearched]);
 
   // Форматування дати для відображення
   const getDateTitle = (dateStr) => {
@@ -57,8 +66,10 @@ export default function HomeRightWidget() {
     
     const result = await joinSessionAction(sessionId);
     
-    if (!result.success) {
+    if (!result?.success) {
       setJoinErrors(prev => ({ ...prev, [sessionId]: result.error }));
+    } else if (selectedDate) {
+      await fetchDaySessions(selectedDate, { viewMode, searchFilters, hasSearched });
     }
     
     setJoiningSessionId(null);
@@ -74,6 +85,14 @@ export default function HomeRightWidget() {
     setRightPanelMode(PANEL_MODES.LIST);
   };
 
+  const handleCreateSuccess = async () => {
+    await fetchCalendarStats({ currentMonth, viewMode, searchFilters, hasSearched });
+    if (selectedDate) {
+      await fetchDaySessions(selectedDate, { viewMode, searchFilters, hasSearched });
+    }
+    handleBackToList();
+  };
+
   // ===== РЕЖИМ СТВОРЕННЯ СЕСІЇ =====
   if (rightPanelMode === PANEL_MODES.CREATE) {
     return (
@@ -85,7 +104,7 @@ export default function HomeRightWidget() {
       >
         <CreateSessionForm 
           initialDate={selectedDate}
-          onSuccess={handleBackToList}
+          onSuccess={handleCreateSuccess}
           onCancel={handleBackToList}
         />
       </DashboardCard>
@@ -100,7 +119,6 @@ export default function HomeRightWidget() {
     : 'Сесії на сьогодні';
 
   // Якщо дата не вибрана — показуємо підказку
-const showLoader = isDaySessionsLoading || (selectedDate && daySessions.length === 0 && !isDaySessionsLoading &&  /* Тут можна додати перевірку "чи був ініційований запит", але поки спростимо */ false);
 return (
     <DashboardCard title={title}>
       <div className="flex flex-col h-full">

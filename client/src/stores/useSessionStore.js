@@ -5,8 +5,6 @@ import {
   getSessionById,
   updateSession,
   deleteSession,
-  getCalendar,
-  getSessionsByDay,
   getCampaignSessions,
   getSessionParticipants,
   joinSession,
@@ -29,15 +27,6 @@ const useSessionStore = create((set, get) => ({
 
   // Учасники поточної сесії
   participants: [],
-
-  // Дані календаря { "2026-02-03": 3, ... }
-  calendarData: {},
-
-  // Сесії вибраного дня
-  daySessions: [],
-
-  // Вибрана дата в календарі
-  selectedDate: null,
 
   // Стан завантаження
   isLoading: false,
@@ -64,14 +53,15 @@ const useSessionStore = create((set, get) => ({
       const response = await getMySessions(params);
       if (response.success) {
         set({ sessions: response.data });
-        return response.data;
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при отриманні сесій' });
-      return null;
+      const message = error.message || 'Помилка при отриманні сесій';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -86,14 +76,15 @@ const useSessionStore = create((set, get) => ({
       const response = await getSessionById(sessionId);
       if (response.success) {
         set({ currentSession: response.data });
-        return response.data;
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при отриманні деталей сесії' });
-      return null;
+      const message = error.message || 'Помилка при отриманні деталей сесії';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -110,14 +101,15 @@ const useSessionStore = create((set, get) => ({
         set((state) => ({
           sessions: [...state.sessions, response.data],
         }));
-        return response.data;
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при створенні сесії' });
-      return null;
+      const message = error.message || 'Помилка при створенні сесії';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -141,14 +133,15 @@ const useSessionStore = create((set, get) => ({
               ? response.data
               : state.currentSession,
         }));
-        return response.data;
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при оновленні сесії' });
-      return null;
+      const message = error.message || 'Помилка при оновленні сесії';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -167,69 +160,19 @@ const useSessionStore = create((set, get) => ({
           currentSession:
             state.currentSession?.id === sessionId ? null : state.currentSession,
         }));
-        return true;
+        return { success: true };
       } else {
         set({ error: response.message });
-        return false;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при видаленні сесії' });
-      return false;
+      const message = error.message || 'Помилка при видаленні сесії';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
   },
-
-  // === Календар ===
-
-  /**
-   * Отримати дані для календаря
-   */
-  fetchCalendar: async (year, month, type = 'MY') => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await getCalendar({ year, month, type });
-      if (response.success) {
-        set({ calendarData: response.data });
-        return response.data;
-      } else {
-        set({ error: response.message });
-        return null;
-      }
-    } catch (error) {
-      set({ error: error.message || 'Помилка при отриманні календаря' });
-      return null;
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
-  /**
-   * Отримати сесії конкретного дня
-   */
-  fetchSessionsByDay: async (date, params = {}) => {
-    set({ isLoading: true, error: null, selectedDate: date });
-    try {
-      const response = await getSessionsByDay(date, params);
-      if (response.success) {
-        set({ daySessions: response.data });
-        return response.data;
-      } else {
-        set({ error: response.message });
-        return null;
-      }
-    } catch (error) {
-      set({ error: error.message || 'Помилка при отриманні сесій дня' });
-      return null;
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
-  /**
-   * Встановити вибрану дату
-   */
-  setSelectedDate: (date) => set({ selectedDate: date }),
 
   /**
    * Отримати сесії кампанії
@@ -239,14 +182,15 @@ const useSessionStore = create((set, get) => ({
     try {
       const response = await getCampaignSessions(campaignId, params);
       if (response.success) {
-        return response.data;
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при отриманні сесій кампанії' });
-      return null;
+      const message = error.message || 'Помилка при отриманні сесій кампанії';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -263,14 +207,15 @@ const useSessionStore = create((set, get) => ({
       const response = await getSessionParticipants(sessionId);
       if (response.success) {
         set({ participants: response.data });
-        return response.data;
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при отриманні учасників' });
-      return null;
+      const message = error.message || 'Помилка при отриманні учасників';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -288,15 +233,15 @@ const useSessionStore = create((set, get) => ({
         if (get().currentSession?.id === sessionId) {
           await get().fetchSessionById(sessionId);
         }
-        return response.data;
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
       const message = error.response?.data?.error || error.message || 'Помилка при приєднанні до сесії';
       set({ error: message });
-      return null;
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -314,14 +259,15 @@ const useSessionStore = create((set, get) => ({
         if (get().currentSession?.id === sessionId) {
           await get().fetchSessionById(sessionId);
         }
-        return true;
+        return { success: true };
       } else {
         set({ error: response.message });
-        return false;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при виході з сесії' });
-      return false;
+      const message = error.message || 'Помилка при виході з сесії';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -341,14 +287,15 @@ const useSessionStore = create((set, get) => ({
             p.id === participantId ? { ...p, status } : p
           ),
         }));
-        return response.data;
+        return { success: true, data: response.data };
       } else {
         set({ error: response.message });
-        return null;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при оновленні статусу' });
-      return null;
+      const message = error.message || 'Помилка при оновленні статусу';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
@@ -365,18 +312,28 @@ const useSessionStore = create((set, get) => ({
         set((state) => ({
           participants: state.participants.filter((p) => p.id !== participantId),
         }));
-        return true;
+        return { success: true };
       } else {
         set({ error: response.message });
-        return false;
+        return { success: false, error: response.message };
       }
     } catch (error) {
-      set({ error: error.message || 'Помилка при видаленні учасника' });
-      return false;
+      const message = error.message || 'Помилка при видаленні учасника';
+      set({ error: message });
+      return { success: false, error: message };
     } finally {
       set({ isLoading: false });
     }
   },
+
+  reset: () =>
+    set({
+      sessions: [],
+      currentSession: null,
+      participants: [],
+      isLoading: false,
+      error: null,
+    }),
 }));
 
 export default useSessionStore;

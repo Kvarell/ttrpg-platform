@@ -1,11 +1,6 @@
 import { create } from 'zustand';
-import { 
-  getCalendarStats, 
-  getSessionsByDayFiltered,
-  createSession,
-  joinSession,
-} from '@/features/sessions/api/sessionApi';
 import { searchCampaigns, searchSessions } from '@/features/search/api/searchApi';
+import useCalendarStore from './useCalendarStore';
 
 /**
  * Dashboard Views (Navigation)
@@ -41,6 +36,13 @@ export const PANEL_MODES = {
   // Search view
   FILTER: 'filter',       // Filter form (default)
   RESULTS: 'results',     // Search results
+  PARTICIPANTS: 'participants',
+};
+
+export const LEFT_PANEL_MODES = {
+  CALENDAR: 'calendar',
+  SESSION_PREVIEW: 'session-preview',
+  USER_PROFILE: 'user-profile',
 };
 
 /**
@@ -50,12 +52,8 @@ export const PANEL_MODES = {
  * - Вибраним режимом відображення (Home, My Games, Search)
  * - Вибраною датою в календарі
  * - Станом правої панелі
- * - Даними календаря (кількість сесій по датам)
- * - Даними сесій вибраного дня
  * - Фільтрами та результатами пошуку (merged from useSearchStore)
  */
-//const today = new Date();
-//const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 const todayStr = new Date().toISOString().split('T')[0];
 
 const useDashboardStore = create((set, get) => ({
@@ -66,25 +64,18 @@ const useDashboardStore = create((set, get) => ({
   
   /** Режим правої панелі */
   rightPanelMode: PANEL_MODES.LIST,
+
+  /** Режим лівої панелі */
+  leftPanelMode: LEFT_PANEL_MODES.CALENDAR,
+
+  /** Обрана сесія для preview */
+  selectedSessionId: null,
+
+  /** Обраний юзер для preview */
+  previewUserId: null,
     
   /** Поточний місяць для календаря (Date object) */
   currentMonth: new Date(),
-  
-  // === CALENDAR DATA ===
-  
-  /** Дані календаря { "2026-02-15": { count: 5, sessions: [...] }, ... } */
-  calendarStats: {},
-  
-  /** Чи завантажується календар */
-  isCalendarLoading: false,
-  
-  // === SESSIONS DATA ===
-  
-  /** Сесії вибраного дня */
-  daySessions: [],
-  
-  /** Чи завантажуються сесії дня */
-  isDaySessionsLoading: true,
   
   /** Розгорнута сесія (для акордеона) */
   expandedSessionId: null,
@@ -149,14 +140,15 @@ const useDashboardStore = create((set, get) => ({
     set({ 
       viewMode: mode, 
       rightPanelMode: defaultPanelModes[mode] || PANEL_MODES.LIST,
+      leftPanelMode: LEFT_PANEL_MODES.CALENDAR,
+      selectedSessionId: null,
+      previewUserId: null,
       selectedDate: initialDate,
-      daySessions: [],
       expandedSessionId: null,
       hasSearched: false,
     });
-    
-    // Перезавантажуємо календар для нового режиму
-    get().fetchCalendarStats();
+
+    useCalendarStore.getState().clearDaySessions();
   },
   
   /**
@@ -170,7 +162,7 @@ const useDashboardStore = create((set, get) => ({
    * Вибрати дату в календарі
    */
   selectDate: (date) => {
-    const { viewMode, fetchDaySessions } = get();
+    const { viewMode } = get();
     
     set({ 
       selectedDate: date,
@@ -188,7 +180,11 @@ const useDashboardStore = create((set, get) => ({
     
     // Завантажуємо сесії для вибраного дня
     if (date) {
-      fetchDaySessions(date);
+      useCalendarStore.getState().fetchDaySessions(date, {
+        viewMode,
+        searchFilters: get().searchFilters,
+        hasSearched: get().hasSearched,
+      });
     }
   },
   
@@ -206,10 +202,11 @@ const useDashboardStore = create((set, get) => ({
     
     set({ 
       selectedDate: null,
-      daySessions: [],
       rightPanelMode: defaultPanelModes[viewMode],
       expandedSessionId: null,
     });
+
+    useCalendarStore.getState().clearDaySessions();
   },
   
   /**
@@ -217,7 +214,6 @@ const useDashboardStore = create((set, get) => ({
    */
   setCurrentMonth: (date) => {
     set({ currentMonth: date });
-    get().fetchCalendarStats();
   },
   
   /**
@@ -228,7 +224,6 @@ const useDashboardStore = create((set, get) => ({
     const nextMonth = new Date(currentMonth);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
     set({ currentMonth: nextMonth });
-    get().fetchCalendarStats();
   },
   
   /**
@@ -239,7 +234,6 @@ const useDashboardStore = create((set, get) => ({
     const prevMonth = new Date(currentMonth);
     prevMonth.setMonth(prevMonth.getMonth() - 1);
     set({ currentMonth: prevMonth });
-    get().fetchCalendarStats();
   },
   
   /**
@@ -248,11 +242,35 @@ const useDashboardStore = create((set, get) => ({
   goToToday: () => {
     const today = new Date();
     set({ currentMonth: today });
-    get().fetchCalendarStats();
     
     // Форматуємо сьогоднішню дату
     const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     get().selectDate(dateStr);
+  },
+
+  openSessionPreview: (sessionId) => {
+    set({
+      selectedSessionId: sessionId,
+      previewUserId: null,
+      leftPanelMode: LEFT_PANEL_MODES.SESSION_PREVIEW,
+      rightPanelMode: PANEL_MODES.PARTICIPANTS,
+    });
+  },
+
+  openUserProfile: (userId) => {
+    set({
+      previewUserId: userId,
+      leftPanelMode: LEFT_PANEL_MODES.USER_PROFILE,
+    });
+  },
+
+  closePreview: () => {
+    set({
+      leftPanelMode: LEFT_PANEL_MODES.CALENDAR,
+      rightPanelMode: PANEL_MODES.LIST,
+      selectedSessionId: null,
+      previewUserId: null,
+    });
   },
   
   /**
@@ -304,7 +322,12 @@ const useDashboardStore = create((set, get) => ({
       campaignResults: { campaigns: [], total: 0, hasMore: false },
       sessionResults: { sessions: [], total: 0, hasMore: false },
     });
-    get().fetchCalendarStats();
+    useCalendarStore.getState().fetchCalendarStats({
+      currentMonth: get().currentMonth,
+      viewMode: get().viewMode,
+      searchFilters: get().searchFilters,
+      hasSearched: false,
+    });
   },
   
   /**
@@ -323,7 +346,12 @@ const useDashboardStore = create((set, get) => ({
     const { searchActiveTab } = get();
     
     // Оновлюємо календар з фільтрами
-    await get().fetchCalendarStats();
+    await useCalendarStore.getState().fetchCalendarStats({
+      currentMonth: get().currentMonth,
+      viewMode: get().viewMode,
+      searchFilters: get().searchFilters,
+      hasSearched: true,
+    });
     
     // Виконуємо пошук залежно від активної вкладки
     if (searchActiveTab === 'campaigns') {
@@ -443,7 +471,7 @@ const useDashboardStore = create((set, get) => ({
    * Завантажити більше результатів (пагінація)
    */
   loadMoreSearchResults: async () => {
-    const { searchActiveTab, searchFilters, campaignResults, sessionResults } = get();
+    const { searchActiveTab, campaignResults, sessionResults } = get();
     const newOffset =
       searchActiveTab === 'campaigns'
         ? campaignResults.campaigns.length
@@ -460,154 +488,6 @@ const useDashboardStore = create((set, get) => ({
     }
   },
   
-  // === CALENDAR API ACTIONS ===
-  
-  /**
-   * Завантажити статистику календаря
-   */
-  fetchCalendarStats: async () => {
-    const { viewMode, currentMonth, searchFilters, hasSearched } = get();
-    
-    set({ isCalendarLoading: true, error: null });
-    
-    try {
-      // Визначаємо scope залежно від view mode
-      let scope = 'global';
-      if (viewMode === VIEW_MODES.MY_GAMES) {
-        scope = 'user';
-      } else if (viewMode === VIEW_MODES.SEARCH && hasSearched) {
-        scope = 'search';
-      }
-      
-      // Формуємо параметри запиту
-      const month = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-01`;
-      
-      const params = { month, scope };
-      
-      // Додаємо фільтри для пошуку
-      if (scope === 'search' && hasSearched) {
-        const activeFilters = {};
-        if (searchFilters.system) activeFilters.system = searchFilters.system;
-        if (searchFilters.dateFrom) activeFilters.dateFrom = searchFilters.dateFrom;
-        if (searchFilters.dateTo) activeFilters.dateTo = searchFilters.dateTo;
-        if (searchFilters.q) activeFilters.searchQuery = searchFilters.q;
-        if (searchFilters.searchQuery) activeFilters.searchQuery = searchFilters.searchQuery;
-        
-        if (Object.keys(activeFilters).length > 0) {
-          params.filters = activeFilters;
-        }
-      }
-      
-      const response = await getCalendarStats(params);
-      
-      if (response.success) {
-        set({ calendarStats: response.data });
-      } else {
-        set({ error: response.message || 'Помилка завантаження календаря' });
-      }
-    } catch (error) {
-      console.error('Error fetching calendar stats:', error);
-      set({ error: error.message || 'Помилка завантаження календаря' });
-    } finally {
-      set({ isCalendarLoading: false });
-    }
-  },
-  
-  /**
-   * Завантажити сесії для вибраного дня
-   */
-  fetchDaySessions: async (date) => {
-    const { viewMode, searchFilters, hasSearched } = get();
-    
-    set({ isDaySessionsLoading: true, error: null });
-    
-    try {
-      // Визначаємо scope
-      let scope = 'global';
-      if (viewMode === VIEW_MODES.MY_GAMES) {
-        scope = 'user';
-      } else if (viewMode === VIEW_MODES.SEARCH && hasSearched) {
-        scope = 'search';
-      }
-      
-      // Формуємо фільтри
-      let filters = null;
-      if (scope === 'search' && hasSearched) {
-        filters = {};
-        if (searchFilters.system) filters.system = searchFilters.system;
-        if (searchFilters.q) filters.searchQuery = searchFilters.q;
-        if (searchFilters.searchQuery) filters.searchQuery = searchFilters.searchQuery;
-      }
-      
-      const response = await getSessionsByDayFiltered(date, scope, filters);
-      
-      if (response.success) {
-        set({ daySessions: response.data });
-      } else {
-        set({ error: response.message || 'Помилка завантаження сесій' });
-      }
-    } catch (error) {
-      console.error('Error fetching day sessions:', error);
-      set({ error: error.message || 'Помилка завантаження сесій' });
-    } finally {
-      set({ isDaySessionsLoading: false });
-    }
-  },
-  
-  /**
-   * Створити нову сесію
-   */
-  createNewSession: async (sessionData) => {
-    try {
-      const response = await createSession(sessionData);
-      
-      if (response.success) {
-        // Оновлюємо календар та список сесій
-        get().fetchCalendarStats();
-        
-        const { selectedDate } = get();
-        if (selectedDate) {
-          get().fetchDaySessions(selectedDate);
-        }
-        
-        // Повертаємось до списку
-        set({ rightPanelMode: PANEL_MODES.LIST });
-        
-        return { success: true, data: response.data };
-      }
-      
-      return { success: false, error: response.message };
-    } catch (error) {
-      console.error('Error creating session:', error);
-      return { success: false, error: error.message || 'Помилка створення сесії' };
-    }
-  },
-  
-  /**
-   * Приєднатися до сесії
-   */
-  joinSessionAction: async (sessionId) => {
-    try {
-      const response = await joinSession(sessionId);
-      
-      if (response.success) {
-        // Оновлюємо список сесій дня
-        const { selectedDate } = get();
-        if (selectedDate) {
-          get().fetchDaySessions(selectedDate);
-        }
-        
-        return { success: true };
-      }
-      
-      return { success: false, error: response.message };
-    } catch (error) {
-      console.error('Error joining session:', error);
-      const message = error.response?.data?.error || error.message || 'Помилка приєднання до сесії';
-      return { success: false, error: message };
-    }
-  },
-  
   /**
    * Очистити помилки
    */
@@ -620,10 +500,11 @@ const useDashboardStore = create((set, get) => ({
     set({
       viewMode: VIEW_MODES.HOME,
       rightPanelMode: PANEL_MODES.LIST,
+      leftPanelMode: LEFT_PANEL_MODES.CALENDAR,
+      selectedSessionId: null,
+      previewUserId: null,
       selectedDate: todayStr,
       currentMonth: new Date(),
-      calendarStats: {},
-      daySessions: [],
       expandedSessionId: null,
       searchActiveTab: 'sessions',
       campaignResults: { campaigns: [], total: 0, hasMore: false },
@@ -646,6 +527,8 @@ const useDashboardStore = create((set, get) => ({
       isSearchLoading: false,
       error: null,
     });
+
+    useCalendarStore.getState().reset();
   },
 }));
 

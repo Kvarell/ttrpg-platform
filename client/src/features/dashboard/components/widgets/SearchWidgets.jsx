@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useDashboardStore from '@/stores/useDashboardStore';
+import useSessionStore from '@/stores/useSessionStore';
 import DashboardCard from '@/components/ui/DashboardCard';
 import SessionCard from '../ui/SessionCard';
 
@@ -269,8 +270,8 @@ export function SearchResultsWidget() {
     isSearchLoading,
     error,
     hasSearched,
-    joinSessionAction,
   } = useDashboardStore();
+  const { joinSessionAction } = useSessionStore();
 
   const [expandedSessionId, setExpandedSessionId] = useState(null);
   const [joiningSessionId, setJoiningSessionId] = useState(null);
@@ -300,7 +301,7 @@ export function SearchResultsWidget() {
 
     const result = await joinSessionAction(sessionId);
 
-    if (!result.success) {
+    if (!result?.success) {
       setJoinErrors(prev => ({ ...prev, [sessionId]: result.error }));
     }
 
