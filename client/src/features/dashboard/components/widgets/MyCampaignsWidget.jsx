@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import useCampaignStore from '../../../../stores/useCampaignStore';
 import DashboardCard from '@/components/ui/DashboardCard';
+import { RoleBadge, VisibilityBadge, EmptyState } from '@/components/shared';
 
 /**
  * Віджет списку моїх кампаній
@@ -13,35 +14,10 @@ export default function MyCampaignsWidget() {
     fetchMyCampaigns(filter);
   }, [filter, fetchMyCampaigns]);
 
-  // Роль бейдж
-  const getRoleBadge = (campaign, userId) => {
-    // Визначаємо роль через members масив
+  // Визначення ролі користувача в кампанії
+  const getUserRole = (campaign, userId) => {
     const myMembership = campaign.members?.find(m => m.userId === userId);
-    const role = myMembership?.role || (campaign.ownerId === userId ? 'OWNER' : null);
-    
-    const badges = {
-      OWNER: { text: 'Власник', class: 'bg-[#F1B24A] text-[#164A41]' },
-      GM: { text: 'GM', class: 'bg-[#164A41] text-white' },
-      PLAYER: { text: 'Гравець', class: 'bg-[#9DC88D] text-[#164A41]' },
-    };
-    const badge = badges[role];
-    if (!badge) return null;
-    
-    return (
-      <span className={`px-2 py-1 text-xs rounded-full font-bold ${badge.class}`}>
-        {badge.text}
-      </span>
-    );
-  };
-
-  // Видимість бейдж
-  const getVisibilityIcon = (visibility) => {
-    const icons = {
-      PUBLIC: '🌐',
-      PRIVATE: '🔒',
-      LINK_ONLY: '🔗',
-    };
-    return icons[visibility] || '🔒';
+    return myMembership?.role || (campaign.ownerId === userId ? 'OWNER' : null);
   };
 
   return (
@@ -92,14 +68,13 @@ export default function MyCampaignsWidget() {
           <p>{error}</p>
         </div>
       ) : campaigns.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-full text-[#4D774E]">
-          <div className="text-4xl mb-4">📚</div>
-          <p>Немає кампаній</p>
-          <p className="text-sm mt-2">Створіть нову або приєднайтесь до існуючої</p>
-          <button className="mt-4 px-4 py-2 bg-[#164A41] text-white rounded-xl hover:bg-[#1f5c52] transition-colors">
-            + Створити кампанію
-          </button>
-        </div>
+        <EmptyState
+          icon="📚"
+          title="Немає кампаній"
+          description="Створіть нову або приєднайтесь до існуючої"
+          action={{ label: '+ Створити кампанію', onClick: () => {} }}
+          className="h-full"
+        />
       ) : (
         <div className="flex flex-col gap-3">
           {campaigns.map((campaign) => (
@@ -107,13 +82,12 @@ export default function MyCampaignsWidget() {
               key={campaign.id}
               className="p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/30 transition-colors cursor-pointer"
             >
-              {/* Заголовок та роль */}
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2 flex-1">
-                  <span className="text-lg">{getVisibilityIcon(campaign.visibility)}</span>
+                  <VisibilityBadge visibility={campaign.visibility} iconOnly />
                   <h4 className="font-bold text-[#164A41]">{campaign.title}</h4>
                 </div>
-                {getRoleBadge(campaign)}
+                <RoleBadge role={getUserRole(campaign)} />
               </div>
 
               {/* Опис */}

@@ -3,6 +3,7 @@ import DashboardCard from '@/components/ui/DashboardCard';
 import CalendarDayCell from '../ui/CalendarDayCell';
 import useDashboardStore, { VIEW_MODES } from '@/stores/useDashboardStore';
 import Button from '@/components/ui/Button';
+import { formatDate } from '@/components/shared';
 
 /**
  * Універсальний CalendarWidget для всіх режимів Dashboard
@@ -78,10 +79,7 @@ export default function CalendarWidget({ title, showTodayButton }) {
 
   // Форматуємо назву місяця
   const monthName = useMemo(() => {
-    return currentMonth.toLocaleDateString('uk-UA', { 
-      month: 'long', 
-      year: 'numeric' 
-    });
+    return formatDate(currentMonth, 'monthYear');
   }, [currentMonth]);
 
   // Дні тижня

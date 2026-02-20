@@ -4,6 +4,7 @@ import useDashboardStore, { PANEL_MODES } from '@/stores/useDashboardStore';
 import CreateSessionForm from './CreateSessionForm';
 import SessionCard from '../ui/SessionCard';
 import Button from '@/components/ui/Button';
+import { BackButton, EmptyState, formatDate } from '@/components/shared';
 
 /**
  * HomeRightWidget — Права панель для режиму "Головна"
@@ -42,15 +43,11 @@ export default function HomeRightWidget() {
       fetchDaySessions(selectedDate);
     }
   }, [selectedDate, fetchDaySessions]);
+
   // Форматування дати для відображення
-  const formatDate = (dateStr) => {
+  const getDateTitle = (dateStr) => {
     if (!dateStr) return 'Оберіть день';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('uk-UA', { 
-      weekday: 'long', 
-      day: 'numeric', 
-      month: 'long' 
-    });
+    return formatDate(dateStr, 'dayMonth');
   };
 
   // Обробник приєднання до сесії
@@ -83,12 +80,7 @@ export default function HomeRightWidget() {
       <DashboardCard 
         title="Створити сесію"
         actions={
-          <button
-            onClick={handleBackToList}
-            className="px-3 py-1 text-sm rounded-lg border-2 border-[#9DC88D]/30 hover:bg-[#9DC88D]/20 transition-colors text-[#164A41]"
-          >
-            ← Назад
-          </button>
+          <BackButton label="Назад" onClick={handleBackToList} variant="dark" />
         }
       >
         <CreateSessionForm 
@@ -104,7 +96,7 @@ export default function HomeRightWidget() {
   
   // Заголовок залежить від того, чи вибрана дата
   const title = selectedDate 
-    ? formatDate(selectedDate) 
+    ? getDateTitle(selectedDate) 
     : 'Сесії на сьогодні';
 
   // Якщо дата не вибрана — показуємо підказку
@@ -119,11 +111,12 @@ return (
             </div>
           ) : */}
           {daySessions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-[#4D774E]">
-              <div className="text-5xl mb-4">🎲</div>
-              <p className="text-lg font-medium">Немає запланованих сесій</p>
-              <p className="text-sm mt-2">на цей день</p>
-            </div>
+            <EmptyState
+              icon="🎲"
+              title="Немає запланованих сесій"
+              description="на цей день"
+              className="h-full"
+            />
           ) : (
             <div className="flex flex-col gap-3">
               {daySessions.map((session) => {

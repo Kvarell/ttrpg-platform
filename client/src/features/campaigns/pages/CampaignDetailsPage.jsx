@@ -1,10 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import useCampaignStore from '@/stores/useCampaignStore';
 import useAuthStore from '@/stores/useAuthStore';
 import DashboardCard from '@/components/ui/DashboardCard';
 import Snowfall from 'react-snowfall';
 import Dropdown from '@/components/ui/Dropdown';
+import {
+  StatusBadge,
+  RoleBadge,
+  VisibilityBadge,
+  DateTimeDisplay,
+  UserAvatar,
+  ConfirmModal,
+  BackButton,
+  EmptyState,
+} from '@/components/shared';
 
 /**
  * Сторінка деталей кампанії
@@ -33,6 +43,7 @@ export default function CampaignDetailsPage() {
   } = useCampaignStore();
 
   const [activeTab, setActiveTab] = useState('info'); // info, members, sessions, requests
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null, variant: 'primary' });
 
   useEffect(() => {
     if (id) {
@@ -65,44 +76,9 @@ export default function CampaignDetailsPage() {
   const isGM = myRole === 'GM';
   const canManage = isOwner || isGM;
 
-  // Форматування дати
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('uk-UA', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  };
-
-  // Бейдж видимості
-  const getVisibilityBadge = (visibility) => {
-    const badges = {
-      PUBLIC: { text: 'Публічна', icon: '🌐', class: 'bg-green-100 text-green-800' },
-      PRIVATE: { text: 'Приватна', icon: '🔒', class: 'bg-gray-100 text-gray-800' },
-      LINK_ONLY: { text: 'За посиланням', icon: '🔗', class: 'bg-blue-100 text-blue-800' },
-    };
-    const badge = badges[visibility] || badges.PRIVATE;
-    return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${badge.class}`}>
-        {badge.icon} {badge.text}
-      </span>
-    );
-  };
-
-  // Бейдж ролі
-  const getRoleBadge = (role) => {
-    const badges = {
-      OWNER: { text: 'Власник', class: 'bg-[#F1B24A] text-[#164A41]' },
-      GM: { text: 'GM', class: 'bg-[#164A41] text-white' },
-      PLAYER: { text: 'Гравець', class: 'bg-[#9DC88D] text-[#164A41]' },
-    };
-    const badge = badges[role] || badges.PLAYER;
-    return (
-      <span className={`px-2 py-1 text-xs rounded-full font-bold ${badge.class}`}>
-        {badge.text}
-      </span>
-    );
-  };
+  const closeConfirmModal = useCallback(() => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+  }, []);
 
   // Обробники
   const handleApproveRequest = async (requestId, role = 'PLAYER') => {
@@ -116,11 +92,18 @@ export default function CampaignDetailsPage() {
     fetchJoinRequests(id);
   };
 
-  const handleRemoveMember = async (memberId) => {
-    if (window.confirm('Ви впевнені, що хочете видалити цього учасника?')) {
-      await removeMemberAction(id, memberId);
-      fetchCampaignMembers(id);
-    }
+  const handleRemoveMember = (memberId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Видалити учасника?',
+      message: 'Ви впевнені, що хочете видалити цього учасника?',
+      variant: 'danger',
+      onConfirm: async () => {
+        closeConfirmModal();
+        await removeMemberAction(id, memberId);
+        fetchCampaignMembers(id);
+      },
+    });
   };
 
   const handleChangeRole = async (memberId, newRole) => {
@@ -128,11 +111,18 @@ export default function CampaignDetailsPage() {
     fetchCampaignMembers(id);
   };
 
-  const handleRegenerateCode = async () => {
-    if (window.confirm('Старий код запрошення стане недійсним. Продовжити?')) {
-      await regenerateInviteCodeAction(id);
-      fetchCampaignById(id);
-    }
+  const handleRegenerateCode = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Оновити код запрошення?',
+      message: 'Старий код запрошення стане недійсним. Продовжити?',
+      variant: 'danger',
+      onConfirm: async () => {
+        closeConfirmModal();
+        await regenerateInviteCodeAction(id);
+        fetchCampaignById(id);
+      },
+    });
   };
 
   const copyInviteLink = () => {
@@ -179,12 +169,7 @@ export default function CampaignDetailsPage() {
       <div className="relative z-10 max-w-6xl mx-auto">
         {/* Навігація назад */}
         <div className="mb-6">
-          <button
-            onClick={() => navigate('/')}
-            className="text-white hover:text-[#F1B24A] transition-colors flex items-center gap-2"
-          >
-            ← Назад до Dashboard
-          </button>
+          <BackButton to="/" label="Назад до Dashboard" variant="light" />
         </div>
 
         {/* Заголовок кампанії */}
@@ -208,13 +193,13 @@ export default function CampaignDetailsPage() {
                     {currentCampaign.title}
                   </h1>
                   <div className="flex items-center gap-3 flex-wrap">
-                    {getVisibilityBadge(currentCampaign.visibility)}
+                    <VisibilityBadge visibility={currentCampaign.visibility} />
                     {currentCampaign.system && (
                       <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
                         🎲 {currentCampaign.system}
                       </span>
                     )}
-                    {myRole && getRoleBadge(myRole)}
+                    {myRole && <RoleBadge role={myRole} />}
                   </div>
                 </div>
                 
@@ -234,7 +219,7 @@ export default function CampaignDetailsPage() {
 
               <div className="flex items-center gap-6 text-sm text-[#4D774E]">
                 <span>👤 Власник: <strong>{currentCampaign.owner?.displayName || currentCampaign.owner?.username}</strong></span>
-                <span>📅 Створено: {formatDate(currentCampaign.createdAt)}</span>
+                <span>📅 Створено: <DateTimeDisplay value={currentCampaign.createdAt} format="long" /></span>
                 <span>👥 {currentCampaign.members?.length || 0} учасників</span>
               </div>
             </div>
@@ -315,13 +300,11 @@ export default function CampaignDetailsPage() {
                   {campaignMembers.map(member => (
                     <div key={member.id} className="flex items-center justify-between p-3 border-2 border-[#9DC88D]/30 rounded-xl">
                       <div className="flex items-center gap-3">
-                        {member.user?.avatarUrl ? (
-                          <img src={member.user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-[#164A41] flex items-center justify-center text-white font-bold">
-                            {member.user?.username?.[0]?.toUpperCase()}
-                          </div>
-                        )}
+                        <UserAvatar
+                          src={member.user?.avatarUrl}
+                          name={member.user?.displayName || member.user?.username}
+                          size="sm"
+                        />
                         <div>
                           <Link 
                             to={`/user/${member.user?.username}`}
@@ -334,7 +317,7 @@ export default function CampaignDetailsPage() {
                       </div>
                       
                       <div className="flex items-center gap-3">
-                        {getRoleBadge(member.role)}
+                        <RoleBadge role={member.role} />
                         
                         {/* Дії для власника */}
                         {isOwner && member.role !== 'OWNER' && (
@@ -367,15 +350,11 @@ export default function CampaignDetailsPage() {
             {activeTab === 'sessions' && (
               <DashboardCard title="Сесії кампанії">
                 {currentCampaign.sessions?.length === 0 ? (
-                  <div className="text-center py-8 text-[#4D774E]">
-                    <div className="text-4xl mb-4">📅</div>
-                    <p>Ще немає запланованих сесій</p>
-                    {canManage && (
-                      <button className="mt-4 px-4 py-2 bg-[#164A41] text-white rounded-xl hover:bg-[#1f5c52] transition-colors">
-                        + Створити сесію
-                      </button>
-                    )}
-                  </div>
+                  <EmptyState
+                    icon="📅"
+                    title="Ще немає запланованих сесій"
+                    action={canManage ? { label: '+ Створити сесію', onClick: () => {} } : undefined}
+                  />
                 ) : (
                   <div className="space-y-3">
                     {currentCampaign.sessions?.map(session => (
@@ -386,17 +365,10 @@ export default function CampaignDetailsPage() {
                       >
                         <div className="flex items-center justify-between">
                           <h4 className="font-bold text-[#164A41]">{session.title}</h4>
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            session.status === 'PLANNED' ? 'bg-blue-100 text-blue-800' :
-                            session.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
-                            session.status === 'FINISHED' ? 'bg-gray-100 text-gray-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {session.status}
-                          </span>
+                          <StatusBadge status={session.status} size="sm" showIcon={false} />
                         </div>
                         <div className="text-sm text-[#4D774E] mt-2">
-                          📅 {formatDate(session.date)}
+                          📅 <DateTimeDisplay value={session.date} format="long" />
                           {session.maxPlayers && ` • 👥 макс. ${session.maxPlayers}`}
                         </div>
                       </Link>
@@ -409,23 +381,18 @@ export default function CampaignDetailsPage() {
             {activeTab === 'requests' && canManage && (
               <DashboardCard title="Заявки на вступ">
                 {joinRequests?.length === 0 ? (
-                  <div className="text-center py-8 text-[#4D774E]">
-                    <div className="text-4xl mb-4">📭</div>
-                    <p>Немає нових заявок</p>
-                  </div>
+                  <EmptyState icon="📭" title="Немає нових заявок" />
                 ) : (
                   <div className="space-y-3">
                     {joinRequests?.map(request => (
                       <div key={request.id} className="p-4 border-2 border-[#F1B24A]/30 rounded-xl bg-[#F1B24A]/5">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
-                            {request.user?.avatarUrl ? (
-                              <img src={request.user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-[#164A41] flex items-center justify-center text-white font-bold">
-                                {request.user?.username?.[0]?.toUpperCase()}
-                              </div>
-                            )}
+                            <UserAvatar
+                              src={request.user?.avatarUrl}
+                              name={request.user?.displayName || request.user?.username}
+                              size="sm"
+                            />
                             <div>
                               <Link 
                                 to={`/user/${request.user?.username}`}
@@ -434,7 +401,7 @@ export default function CampaignDetailsPage() {
                                 {request.user?.displayName || request.user?.username}
                               </Link>
                               <div className="text-sm text-[#4D774E]">
-                                {formatDate(request.createdAt)}
+                                <DateTimeDisplay value={request.createdAt} format="long" />
                               </div>
                             </div>
                           </div>
@@ -511,6 +478,16 @@ export default function CampaignDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Модалка підтвердження */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={closeConfirmModal}
+      />
     </div>
   );
 }

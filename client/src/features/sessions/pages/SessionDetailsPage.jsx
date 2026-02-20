@@ -1,9 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import useSessionStore from '@/stores/useSessionStore';
 import useAuthStore from '@/stores/useAuthStore';
 import DashboardCard from '@/components/ui/DashboardCard';
 import Snowfall from 'react-snowfall';
+import {
+  StatusBadge,
+  DateTimeDisplay,
+  UserAvatar,
+  ConfirmModal,
+  BackButton,
+  EmptyState,
+} from '@/components/shared';
 
 /**
  * Сторінка деталей сесії
@@ -28,6 +36,7 @@ export default function SessionDetailsPage() {
 
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinCharacterName, setJoinCharacterName] = useState('');
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null, variant: 'primary' });
 
   useEffect(() => {
     if (id) {
@@ -62,38 +71,9 @@ export default function SessionDetailsPage() {
   const canManage = isOwner || isGM;
   const amParticipant = isParticipant();
 
-  // Форматування дати та часу
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('uk-UA', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  };
-
-  const formatTime = (dateStr) => {
-    return new Date(dateStr).toLocaleTimeString('uk-UA', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  // Бейдж статусу
-  const getStatusBadge = (status) => {
-    const badges = {
-      PLANNED: { text: 'Заплановано', icon: '📅', class: 'bg-blue-100 text-blue-800' },
-      ACTIVE: { text: 'В процесі', icon: '🎮', class: 'bg-green-100 text-green-800' },
-      FINISHED: { text: 'Завершено', icon: '✅', class: 'bg-gray-100 text-gray-800' },
-      CANCELLED: { text: 'Скасовано', icon: '❌', class: 'bg-red-100 text-red-800' },
-    };
-    const badge = badges[status] || badges.PLANNED;
-    return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${badge.class}`}>
-        {badge.icon} {badge.text}
-      </span>
-    );
-  };
+  const closeConfirmModal = useCallback(() => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+  }, []);
 
   // Обробники
   const handleJoinSession = async () => {
@@ -103,18 +83,32 @@ export default function SessionDetailsPage() {
     fetchSessionById(id);
   };
 
-  const handleLeaveSession = async () => {
-    if (window.confirm('Ви впевнені, що хочете покинути сесію?')) {
-      await leaveSessionAction(id);
-      fetchSessionById(id);
-    }
+  const handleLeaveSession = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Покинути сесію?',
+      message: 'Ви впевнені, що хочете покинути сесію?',
+      variant: 'danger',
+      onConfirm: async () => {
+        closeConfirmModal();
+        await leaveSessionAction(id);
+        fetchSessionById(id);
+      },
+    });
   };
 
-  const handleRemoveParticipant = async (participantId) => {
-    if (window.confirm('Видалити цього учасника з сесії?')) {
-      await removeParticipantAction(id, participantId);
-      fetchSessionById(id);
-    }
+  const handleRemoveParticipant = (participantId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Видалити учасника?',
+      message: 'Видалити цього учасника з сесії?',
+      variant: 'danger',
+      onConfirm: async () => {
+        closeConfirmModal();
+        await removeParticipantAction(id, participantId);
+        fetchSessionById(id);
+      },
+    });
   };
 
   const handleStatusChange = async (newStatus) => {
@@ -180,12 +174,7 @@ export default function SessionDetailsPage() {
       <div className="relative z-10 max-w-4xl mx-auto">
         {/* Навігація */}
         <div className="mb-6 flex items-center gap-4">
-          <button
-            onClick={() => navigate('/')}
-            className="text-white hover:text-[#F1B24A] transition-colors"
-          >
-            ← Dashboard
-          </button>
+          <BackButton to="/" label="Dashboard" variant="light" />
           {currentSession.campaign && (
             <>
               <span className="text-white/50">/</span>
@@ -207,7 +196,7 @@ export default function SessionDetailsPage() {
                 {currentSession.title}
               </h1>
               <div className="flex items-center gap-3 flex-wrap">
-                {getStatusBadge(currentSession.status)}
+                <StatusBadge status={currentSession.status} />
                 <span className="text-[#4D774E]">
                   🏰 {currentSession.campaign?.title}
                 </span>
@@ -229,8 +218,8 @@ export default function SessionDetailsPage() {
             <div className="flex items-center gap-2">
               <span className="text-2xl">📅</span>
               <div>
-                <div className="font-bold text-[#164A41]">{formatDate(currentSession.date)}</div>
-                <div className="text-sm text-[#4D774E]">{formatTime(currentSession.date)}</div>
+                <DateTimeDisplay value={currentSession.date} format="full" className="font-bold text-[#164A41]" as="div" />
+                <DateTimeDisplay value={currentSession.date} format="time" className="text-sm text-[#4D774E]" as="div" />
               </div>
             </div>
             
@@ -349,7 +338,7 @@ export default function SessionDetailsPage() {
               </div>
               <div className="flex justify-between">
                 <span>Статус</span>
-                <strong>{getStatusBadge(currentSession.status)}</strong>
+                <strong><StatusBadge status={currentSession.status} size="sm" /></strong>
               </div>
               {currentSession.campaign?.system && (
                 <div className="flex justify-between">
@@ -364,13 +353,11 @@ export default function SessionDetailsPage() {
         {/* Список учасників */}
         <DashboardCard title={`Учасники сесії (${currentSession.participants?.length || 0})`}>
           {currentSession.participants?.length === 0 ? (
-            <div className="text-center py-8 text-[#4D774E]">
-              <div className="text-4xl mb-4">👥</div>
-              <p>Ще ніхто не приєднався</p>
-              {canJoin() && (
-                <p className="text-sm mt-2">Будьте першим!</p>
-              )}
-            </div>
+            <EmptyState
+              icon="👥"
+              title="Ще ніхто не приєднався"
+              description={canJoin() ? 'Будьте першим!' : undefined}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {currentSession.participants?.map(participant => (
@@ -379,17 +366,11 @@ export default function SessionDetailsPage() {
                   className="flex items-center justify-between p-3 border-2 border-[#9DC88D]/30 rounded-xl"
                 >
                   <div className="flex items-center gap-3">
-                    {participant.user?.avatarUrl ? (
-                      <img 
-                        src={participant.user.avatarUrl} 
-                        alt="" 
-                        className="w-10 h-10 rounded-full object-cover" 
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-[#164A41] flex items-center justify-center text-white font-bold">
-                        {participant.user?.username?.[0]?.toUpperCase()}
-                      </div>
-                    )}
+                    <UserAvatar
+                      src={participant.user?.avatarUrl}
+                      name={participant.user?.displayName || participant.user?.username}
+                      size="sm"
+                    />
                     <div>
                       <Link 
                         to={`/user/${participant.user?.username}`}
@@ -420,6 +401,16 @@ export default function SessionDetailsPage() {
           )}
         </DashboardCard>
       </div>
+
+      {/* Модалка підтвердження */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={closeConfirmModal}
+      />
 
       {/* Модалка приєднання */}
       {showJoinModal && (
