@@ -1,4 +1,5 @@
 import React from 'react';
+import { StatusBadge, RoleBadge, DateTimeDisplay } from '@/components/shared';
 
 /**
  * SessionCard — Карточка сесії з акордеоном
@@ -28,15 +29,6 @@ export default function SessionCard({
   isJoining, 
   joinError 
 }) {
-  // Форматування часу
-  const formatTime = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString('uk-UA', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
-
   // Форматування тривалості
   const formatDuration = (minutes) => {
     const hours = Math.floor(minutes / 60);
@@ -44,22 +36,6 @@ export default function SessionCard({
     if (hours === 0) return `${mins} хв`;
     if (mins === 0) return `${hours} год`;
     return `${hours} год ${mins} хв`;
-  };
-
-  // Статус бейдж
-  const getStatusBadge = (status) => {
-    const badges = {
-      PLANNED: { text: 'Заплановано', class: 'bg-blue-100 text-blue-800' },
-      ACTIVE: { text: 'Активна', class: 'bg-green-100 text-green-800' },
-      FINISHED: { text: 'Завершена', class: 'bg-gray-100 text-gray-800' },
-      CANCELED: { text: 'Скасована', class: 'bg-red-100 text-red-800' },
-    };
-    const badge = badges[status] || badges.PLANNED;
-    return (
-      <span className={`px-2 py-1 text-xs rounded-full ${badge.class}`}>
-        {badge.text}
-      </span>
-    );
   };
 
   const canJoin = session.status === 'PLANNED' && !session.myRole && session.currentPlayers < session.maxPlayers;
@@ -85,18 +61,16 @@ export default function SessionCard({
           </h4>
           <div className="flex items-center gap-2">
             {session.myRole && (
-              <span className="px-2 py-1 text-xs rounded-full bg-[#F1B24A] text-[#164A41] font-bold">
-                {session.myRole}
-              </span>
+              <RoleBadge role={session.myRole} />
             )}
-            {getStatusBadge(session.status)}
+            <StatusBadge status={session.status} size="sm" showIcon={false} />
           </div>
         </div>
 
         {/* Основна інформація */}
         <div className="flex items-center gap-4 text-sm text-[#4D774E]">
           <span className="flex items-center gap-1">
-            🕐 {formatTime(session.date)}
+            🕐 <DateTimeDisplay value={session.date} format="time" />
           </span>
           <span className="flex items-center gap-1">
             ⏱️ {formatDuration(session.duration)}

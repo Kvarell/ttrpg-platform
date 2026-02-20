@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import useDashboardStore from './useDashboardStore';
 
 // Константа ключа для localStorage (така ж як була в storage.js)
 const STORAGE_KEY = 'ttrpg_app_user';
@@ -53,6 +54,12 @@ const useAuthStore = create(
        * @param {User} user - Дані користувача
        */
       setUser: (user) => {
+        const currentUserId = get().user?.id;
+
+        if (currentUserId && currentUserId !== user?.id) {
+          useDashboardStore.getState().reset();
+        }
+
         set({ 
           user, 
           isAuthenticated: true,
@@ -77,6 +84,8 @@ const useAuthStore = create(
        * Очистити користувача (logout)
        */
       clearUser: () => {
+        useDashboardStore.getState().reset();
+
         set({ 
           user: null, 
           isAuthenticated: false,
