@@ -1,5 +1,7 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { VIEW_MODES, LEFT_PANEL_MODES, PANEL_MODES } from '@/stores/useDashboardStore';
+import useDashboardStore from '@/stores/useDashboardStore';
 
 // Controller hook — вся логіка сторінки інкапсульована тут
 import useDashboardPageController from '../hooks/useDashboardPageController';
@@ -20,6 +22,7 @@ import SessionParticipantsWidget from '../components/widgets/SessionParticipants
 import UserProfilePreviewWidget from '../components/widgets/UserProfilePreviewWidget';
 import MyGamesListWidget from '../components/widgets/MyGamesListWidget';
 import MyCampaignsWidget from '../components/widgets/MyCampaignsWidget';
+import CreateCampaignWidget from '@/features/campaigns/components/widgets/CreateCampaignWidget';
 import {
   SearchFiltersWidget,
   SearchResultsWidget,
@@ -37,6 +40,8 @@ import FullPageLoader from '@/components/shared/FullPageLoader';
  * - вибір віджетів за viewMode + panelMode
  */
 export default function DashboardPage() {
+  const navigate = useNavigate();
+
   const {
     user,
     viewMode,
@@ -48,6 +53,8 @@ export default function DashboardPage() {
     handleProfileUpdate,
     handleLogout,
   } = useDashboardPageController();
+
+  const setRightPanelMode = useDashboardStore((state) => state.setRightPanelMode);
 
   if (!user) {
     return <FullPageLoader text="Завантаження світу..." />;
@@ -91,7 +98,20 @@ export default function DashboardPage() {
           return <HomeRightWidget />;
       }
     }
-    if (viewMode === VIEW_MODES.MY_GAMES) return <MyCampaignsWidget />;
+    if (viewMode === VIEW_MODES.MY_GAMES) {
+      if (rightPanelMode === PANEL_MODES.CREATE_CAMPAIGN) {
+        return (
+          <CreateCampaignWidget
+            onSuccess={(newCampaign) => {
+              setRightPanelMode(PANEL_MODES.CAMPAIGNS);
+              if (newCampaign?.id) navigate(`/campaign/${newCampaign.id}`);
+            }}
+            onCancel={() => setRightPanelMode(PANEL_MODES.CAMPAIGNS)}
+          />
+        );
+      }
+      return <MyCampaignsWidget />;
+    }
     if (viewMode === VIEW_MODES.PROFILE) {
       return (
         <ProfileMenuWidget
