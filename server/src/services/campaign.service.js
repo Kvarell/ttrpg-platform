@@ -83,11 +83,10 @@ class CampaignService {
         },
       };
     } else {
-      // all - кампанії, де я усім (власник або учасник)
-      whereCondition.OR = [
-        { ownerId: userId },
-        { members: { some: { userId } } },
-      ];
+      // all - кампанії, де я учасник (owner автоматично є в members)
+      whereCondition.members = {
+        some: { userId },
+      };
     }
 
     const campaigns = await prisma.campaign.findMany({
@@ -189,11 +188,11 @@ class CampaignService {
     const updated = await prisma.campaign.update({
       where: { id: parseInt(campaignId) },
       data: {
-        title: updateData.title || undefined,
-        description: updateData.description || undefined,
-        imageUrl: updateData.imageUrl || undefined,
-        system: updateData.system || undefined,
-        visibility: updateData.visibility || undefined,
+        title: updateData.title !== undefined ? updateData.title : undefined,
+        description: updateData.description !== undefined ? updateData.description : undefined,
+        imageUrl: updateData.imageUrl !== undefined ? updateData.imageUrl : undefined,
+        system: updateData.system !== undefined ? updateData.system : undefined,
+        visibility: updateData.visibility !== undefined ? updateData.visibility : undefined,
         // Якщо змінюємо видимість на LINK_ONLY, генеруємо код
         ...(updateData.visibility === 'LINK_ONLY' && { 
           inviteCode: crypto.randomBytes(8).toString('hex') 
@@ -221,7 +220,8 @@ class CampaignService {
 
     this._requireCampaignOwner(campaign, userId, 'Тільки власник може видаляти кампанію');
 
-    // Каскадне видалення: members, sessions, participants видаляються автоматично
+    // Каскадне видалення: members, joinRequests видаляються автоматично (onDelete: Cascade)
+    // Sessions отримають campaignId = null (onDelete: SetNull) — стануть one-shot
     await prisma.campaign.delete({
       where: { id: parseInt(campaignId) },
     });

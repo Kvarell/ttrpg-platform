@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useDashboardStore from '@/stores/useDashboardStore';
 import useSessionStore from '@/stores/useSessionStore';
 import DashboardCard from '@/components/ui/DashboardCard';
 import SessionCard from '../ui/SessionCard';
+import { VisibilityBadge } from '@/components/shared';
+import { getSystemIcon } from '@/constants/gameSystems';
 
 function mapSearchFiltersToLocal(searchFilters) {
   return {
@@ -241,6 +244,7 @@ export function SearchFiltersWidget({ onSearch }) {
  * Використовує useDashboardStore для централізованого управління станом
  */
 export function SearchResultsWidget() {
+  const navigate = useNavigate();
   const { 
     searchActiveTab,
     campaignResults,
@@ -335,33 +339,41 @@ export function SearchResultsWidget() {
           ))}
 
           {/* Кампанії */}
-          {searchActiveTab === 'campaigns' && items.map((campaign) => (
-            <div 
-              key={campaign.id}
-              className="p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/30 transition-colors cursor-pointer"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <h4 className="font-bold text-[#164A41] flex-1">{campaign.title}</h4>
-              </div>
-              
-              {campaign.description && (
-                <p className="text-sm text-[#4D774E] mb-2 line-clamp-2">{campaign.description}</p>
-              )}
-              
-              <div className="flex flex-wrap gap-3 text-sm text-[#4D774E]">
-                {campaign.system && <span>🎲 {campaign.system}</span>}
-                <span>👥 {campaign.membersCount} учасників</span>
-                <span>📅 {campaign.sessionsCount} сесій</span>
-              </div>
-              
-              <div className="mt-2 text-sm">
-                <span className="text-[#4D774E]">Власник: </span>
-                <span className="font-medium text-[#164A41]">
-                  {campaign.owner?.displayName || campaign.owner?.username}
-                </span>
-              </div>
-            </div>
-          ))}
+          {searchActiveTab === 'campaigns' && items.map((campaign) => {
+            const icon = getSystemIcon(campaign.system);
+            return (
+              <button
+                key={campaign.id}
+                onClick={() => navigate(`/campaign/${campaign.id}`)}
+                className="w-full text-left p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/30 hover:shadow-md transition-all"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="text-lg flex-shrink-0">{icon}</span>
+                    <h4 className="font-bold text-[#164A41] truncate">{campaign.title}</h4>
+                  </div>
+                  <VisibilityBadge visibility={campaign.visibility} iconOnly />
+                </div>
+                
+                {campaign.description && (
+                  <p className="text-sm text-[#4D774E] mb-2 line-clamp-2">{campaign.description}</p>
+                )}
+                
+                <div className="flex flex-wrap gap-3 text-sm text-[#4D774E]">
+                  {campaign.system && <span>🎲 {campaign.system}</span>}
+                  <span>👥 {campaign.membersCount || campaign.members?.length || 0} учасників</span>
+                  <span>📅 {campaign.sessionsCount || campaign.sessions?.length || 0} сесій</span>
+                </div>
+                
+                <div className="mt-2 text-sm">
+                  <span className="text-[#4D774E]">Власник: </span>
+                  <span className="font-medium text-[#164A41]">
+                    {campaign.owner?.displayName || campaign.owner?.username}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
 
           {/* Кнопка "Завантажити ще" */}
           {results.hasMore && (

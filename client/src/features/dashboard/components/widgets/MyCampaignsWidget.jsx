@@ -1,23 +1,44 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useCampaignStore from '../../../../stores/useCampaignStore';
 import DashboardCard from '@/components/ui/DashboardCard';
 import { RoleBadge, VisibilityBadge, EmptyState } from '@/components/shared';
+import CreateCampaignModal from '../../../campaigns/components/CreateCampaignModal';
+import { getSystemIcon } from '@/constants/gameSystems';
+import useAuthStore from '@/stores/useAuthStore';
 
 /**
  * Віджет списку моїх кампаній
  */
 export default function MyCampaignsWidget() {
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
   const { campaigns, fetchMyCampaigns, error } = useCampaignStore();
   const [filter, setFilter] = useState('all'); // all, owner, member
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     fetchMyCampaigns(filter);
   }, [filter, fetchMyCampaigns]);
 
   // Визначення ролі користувача в кампанії
-  const getUserRole = (campaign, userId) => {
-    const myMembership = campaign.members?.find(m => m.userId === userId);
-    return myMembership?.role || (campaign.ownerId === userId ? 'OWNER' : null);
+  const getUserRole = (campaign) => {
+    if (!user) return null;
+    if (campaign.ownerId === user.id) return 'OWNER';
+    const myMembership = campaign.members?.find(m => m.userId === user.id);
+    return myMembership?.role || null;
+  };
+
+  const handleCampaignClick = (campaignId) => {
+    navigate(`/campaign/${campaignId}`);
+  };
+
+  const handleCreateSuccess = (newCampaign) => {
+    setShowCreateModal(false);
+    // Переходимо на сторінку нової кампанії
+    if (newCampaign?.id) {
+      navigate(`/campaign/${newCampaign.id}`);
+    }
   };
 
   return (
@@ -72,59 +93,70 @@ export default function MyCampaignsWidget() {
           icon="📚"
           title="Немає кампаній"
           description="Створіть нову або приєднайтесь до існуючої"
-          action={{ label: '+ Створити кампанію', onClick: () => {} }}
+          action={{ label: '+ Створити кампанію', onClick: () => setShowCreateModal(true) }}
           className="h-full"
         />
       ) : (
         <div className="flex flex-col gap-3">
-          {campaigns.map((campaign) => (
-            <div 
-              key={campaign.id}
-              className="p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/30 transition-colors cursor-pointer"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2 flex-1">
-                  <VisibilityBadge visibility={campaign.visibility} iconOnly />
-                  <h4 className="font-bold text-[#164A41]">{campaign.title}</h4>
+          {campaigns.map((campaign) => {
+            const role = getUserRole(campaign);
+            const icon = getSystemIcon(campaign.system);
+
+            return (
+              <button
+                key={campaign.id}
+                onClick={() => handleCampaignClick(campaign.id)}
+                className="w-full text-left p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/30 hover:shadow-md transition-all"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <VisibilityBadge visibility={campaign.visibility} iconOnly />
+                    <span className="text-lg flex-shrink-0">{icon}</span>
+                    <h4 className="font-bold text-[#164A41] truncate">{campaign.title}</h4>
+                  </div>
+                  {role && <RoleBadge role={role} />}
                 </div>
-                <RoleBadge role={getUserRole(campaign)} />
-              </div>
 
-              {/* Опис */}
-              {campaign.description && (
-                <p className="text-sm text-[#4D774E] mb-2 line-clamp-2">
-                  {campaign.description}
-                </p>
-              )}
+                {/* Опис */}
+                {campaign.description && (
+                  <p className="text-sm text-[#4D774E] mb-2 line-clamp-2">
+                    {campaign.description}
+                  </p>
+                )}
 
-              {/* Система */}
-              {campaign.system && (
-                <div className="text-sm text-[#4D774E] mb-2">
-                  🎲 {campaign.system}
+                {/* Статистика */}
+                <div className="flex items-center gap-4 text-sm text-[#4D774E]">
+                  {campaign.system && <span>🎲 {campaign.system}</span>}
+                  <span>👥 {campaign.members?.length || 0}</span>
+                  <span>📅 {campaign.sessions?.length || 0} сесій</span>
                 </div>
-              )}
 
-              {/* Статистика */}
-              <div className="flex items-center gap-4 text-sm text-[#4D774E]">
-                <span>👥 {campaign.members?.length || 0} учасників</span>
-                <span>📅 {campaign.sessions?.length || 0} сесій</span>
-              </div>
-
-              {/* Заявки (якщо власник/GM і є pending) */}
-              {campaign.joinRequests?.length > 0 && (
-                <div className="mt-2 px-2 py-1 bg-[#F1B24A]/20 rounded-lg text-sm text-[#164A41]">
-                  ⚠️ {campaign.joinRequests.length} заявок на приєднання
-                </div>
-              )}
-            </div>
-          ))}
+                {/* Заявки (якщо власник/GM і є pending) */}
+                {campaign.joinRequests?.length > 0 && (
+                  <div className="mt-2 px-2 py-1 bg-[#F1B24A]/20 rounded-lg text-sm text-[#164A41]">
+                    ⚠️ {campaign.joinRequests.length} заявок на приєднання
+                  </div>
+                )}
+              </button>
+            );
+          })}
           
           {/* Кнопка створення */}
-          <button className="p-4 border-2 border-dashed border-[#9DC88D]/50 rounded-xl text-[#4D774E] hover:border-[#164A41] hover:text-[#164A41] transition-colors">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="p-4 border-2 border-dashed border-[#9DC88D]/50 rounded-xl text-[#4D774E] hover:border-[#164A41] hover:text-[#164A41] transition-colors font-medium"
+          >
             + Створити нову кампанію
           </button>
         </div>
       )}
+
+      {/* Модалка створення */}
+      <CreateCampaignModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={handleCreateSuccess}
+      />
     </DashboardCard>
   );
 }

@@ -13,7 +13,7 @@ import PublicProfilePage from "../features/profile/pages/PublicProfilePage";
 import ConfirmEmailChangePage from "../features/security/pages/ConfirmEmailChangePage";
 
 // Сторінки деталей
-import CampaignDetailsPage from "../features/campaigns/pages/CampaignDetailsPage";
+import CampaignPage from "../features/campaigns/pages/CampaignPage";
 import SessionPage from "../features/sessions/pages/SessionPage";
 
 import ProtectedRoute from "./ProtectedRoute";
@@ -36,7 +36,7 @@ const AppRoutes = () => {
         path="/campaign/:id" 
         element={
           <ProtectedRoute>
-            <CampaignDetailsPage />
+            <CampaignPage />
           </ProtectedRoute>
         } 
       />

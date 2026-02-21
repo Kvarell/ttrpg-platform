@@ -12,6 +12,7 @@ import {
 import useDashboardStore from '@/stores/useDashboardStore';
 import useSessionStore from '@/stores/useSessionStore';
 import useCalendarStore from '@/stores/useCalendarStore';
+import useAuthStore from '@/stores/useAuthStore';
 import { getSystemIcon } from '@/constants/gameSystems';
 
 /**
@@ -30,6 +31,7 @@ import { getSystemIcon } from '@/constants/gameSystems';
 export default function SessionPreviewWidget() {
   const navigate = useNavigate();
 
+  const user = useAuthStore((state) => state.user);
   const selectedSessionId = useDashboardStore((s) => s.selectedSessionId);
   const closePreview = useDashboardStore((s) => s.closePreview);
 
@@ -128,11 +130,14 @@ export default function SessionPreviewWidget() {
   }
 
   const session = currentSession;
-  const isParticipant = Boolean(session.myRole);
+  const isParticipant = session.participants?.some(p => p.userId === user?.id) ?? false;
+  const myParticipant = session.participants?.find(p => p.userId === user?.id);
+  const myRole = myParticipant?.role || (session.creatorId === user?.id ? 'GM' : null);
+  const currentPlayers = session.participants?.filter(p => p.role === 'PLAYER').length || 0;
   const canJoin =
     session.status === 'PLANNED' &&
     !isParticipant &&
-    session.currentPlayers < session.maxPlayers;
+    currentPlayers < session.maxPlayers;
 
   return (
     <DashboardCard
@@ -148,8 +153,8 @@ export default function SessionPreviewWidget() {
             </h2>
             <StatusBadge status={session.status} />
           </div>
-          {isParticipant && (
-            <RoleBadge role={session.myRole} size="md" />
+          {isParticipant && myRole && (
+            <RoleBadge role={myRole} size="md" />
           )}
         </div>
 
@@ -176,7 +181,7 @@ export default function SessionPreviewWidget() {
           <div className="flex items-center gap-2 text-[#4D774E]">
             <span>👥</span>
             <span>
-              {session.currentPlayers}/{session.maxPlayers} гравців
+              {currentPlayers}/{session.maxPlayers} гравців
             </span>
           </div>
           {/* Система */}
