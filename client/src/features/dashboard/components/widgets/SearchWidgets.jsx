@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useDashboardStore from '@/stores/useDashboardStore';
-import useSessionStore from '@/stores/useSessionStore';
+import useSessionStore from '@/features/sessions/store/useSessionStore';
 import DashboardCard from '@/components/ui/DashboardCard';
 import SessionCard from '../ui/SessionCard';
 import { VisibilityBadge } from '@/components/shared';

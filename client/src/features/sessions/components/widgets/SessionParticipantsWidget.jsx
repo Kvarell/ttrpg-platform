@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
 import { EmptyState, ConfirmModal } from '@/components/shared';
 import ParticipantCard from '../ui/ParticipantCard';
-import useSessionStore from '@/stores/useSessionStore';
+import useSessionStore from '../../store/useSessionStore';
 import { useState, useCallback } from 'react';
 
 /**

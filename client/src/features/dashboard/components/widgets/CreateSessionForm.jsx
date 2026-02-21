@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import useSessionStore from '@/stores/useSessionStore';
+import useSessionStore from '@/features/sessions/store/useSessionStore';
 import { GAME_SYSTEMS } from '@/constants/gameSystems';
 import Dropdown from '@/components/ui/Dropdown';
 import Button from '@/components/ui/Button';

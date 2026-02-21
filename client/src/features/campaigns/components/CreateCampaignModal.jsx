@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Button from '@/components/ui/Button';
 import { GAME_SYSTEMS } from '@/constants/gameSystems';
-import useCampaignStore from '@/stores/useCampaignStore';
+import useCampaignStore from '../store/useCampaignStore';
 
 /**
  * CreateCampaignModal — модалка створення нової кампанії.

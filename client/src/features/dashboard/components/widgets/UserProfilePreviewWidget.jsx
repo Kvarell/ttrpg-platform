@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
 import { UserAvatar, BackButton, CopyProfileLinkButton } from '@/components/shared';
 import useDashboardStore from '@/stores/useDashboardStore';
-import useSessionStore from '@/stores/useSessionStore';
+import useSessionStore from '@/features/sessions/store/useSessionStore';
 import { getProfileByUsername } from '@/features/profile/api/profileApi';
 import api from '@/lib/axios';
 

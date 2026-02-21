@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
 import { EmptyState, ConfirmModal, UserAvatar, DateTimeDisplay } from '@/components/shared';
 import MemberCard from '../ui/MemberCard';
-import useCampaignStore from '@/stores/useCampaignStore';
+import useCampaignStore from '../../store/useCampaignStore';
 
 /**
  * CampaignMembersWidget — правий віджет на сторінці кампанії.

@@ -7,8 +7,8 @@ import {
   DateTimeDisplay,
   EmptyState,
 } from '@/components/shared';
-import useCampaignStore from '@/stores/useCampaignStore';
-import useSessionStore from '@/stores/useSessionStore';
+import useCampaignStore from '@/features/campaigns/store/useCampaignStore';
+import useSessionStore from '@/features/sessions/store/useSessionStore';
 import { getSystemIcon } from '@/constants/gameSystems';
 
 /**
