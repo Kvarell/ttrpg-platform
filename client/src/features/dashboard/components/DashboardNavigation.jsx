@@ -26,11 +26,11 @@ export default function DashboardNavigation({ currentView, onNavigate, user, onL
           isActive={currentView === VIEW_MODES.MY_GAMES}
           onClick={() => onNavigate(VIEW_MODES.MY_GAMES)}
         />
-        <NavButton 
+        {/* <NavButton 
           label="Пошук" 
           isActive={currentView === VIEW_MODES.SEARCH}
           onClick={() => onNavigate(VIEW_MODES.SEARCH)}
-        />
+        /> */}
         <NavButton 
           label="Профіль" 
           isActive={currentView === VIEW_MODES.PROFILE}
