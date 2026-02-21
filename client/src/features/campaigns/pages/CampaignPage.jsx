@@ -230,6 +230,7 @@ export default function CampaignPage() {
           <CampaignSessionsWidget
             campaign={currentCampaign}
             canManage={canManage}
+            onSessionCreated={() => fetchCampaignById(id)}
           />
         );
 
@@ -251,6 +252,7 @@ export default function CampaignPage() {
           <CampaignSessionsWidget
             campaign={currentCampaign}
             canManage={canManage}
+            onSessionCreated={() => fetchCampaignById(id)}
           />
         );
     }

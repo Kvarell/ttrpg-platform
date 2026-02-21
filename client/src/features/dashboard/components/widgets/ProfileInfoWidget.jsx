@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
 import { getProfileByUsername } from '@/features/profile/api/profileApi';
 import useAuthStore from '@/stores/useAuthStore';
-import { UserAvatar } from '@/components/shared';
+import { UserAvatar, CopyProfileLinkButton } from '@/components/shared';
 
 export default function ProfileInfoWidget({
   mode = 'me',
@@ -147,6 +147,10 @@ export default function ProfileInfoWidget({
           <p className="text-[#164A41] text-sm">{profile.bio}</p>
         </div>
       )}
+
+      <div className="mt-4 pt-4 border-t border-[#9DC88D]/20">
+        <CopyProfileLinkButton username={profile.username} />
+      </div>
     </DashboardCard>
   );
 }

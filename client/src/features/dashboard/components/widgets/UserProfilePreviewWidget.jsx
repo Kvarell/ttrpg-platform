@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import DashboardCard from '@/components/ui/DashboardCard';
-import { UserAvatar, BackButton } from '@/components/shared';
-import Button from '@/components/ui/Button';
+import { UserAvatar, BackButton, CopyProfileLinkButton } from '@/components/shared';
 import useDashboardStore from '@/stores/useDashboardStore';
 import useSessionStore from '@/stores/useSessionStore';
 import { getProfileByUsername } from '@/features/profile/api/profileApi';
@@ -14,10 +12,9 @@ import api from '@/lib/axios';
  * Відображає публічний профіль іншого користувача:
  * - Аватар, displayName, bio, timezone
  * - Кнопка "Назад" → повертає до session-preview
- * - Кнопка "Відкрити профіль" → повна сторінка
+ * - Кнопка "Поділитися" → копіює посилання на профіль
  */
 export default function UserProfilePreviewWidget() {
-  const navigate = useNavigate();
   const previewUserId = useDashboardStore((s) => s.previewUserId);
   const selectedSessionId = useDashboardStore((s) => s.selectedSessionId);
 
@@ -181,15 +178,8 @@ export default function UserProfilePreviewWidget() {
           )}
         </div>
 
-        {/* Кнопка відкрити повний профіль */}
-        {profile.username && (
-          <Button
-            onClick={() => navigate(`/user/${profile.username}`)}
-            variant="outline"
-          >
-            👤 Відкрити повний профіль
-          </Button>
-        )}
+        {/* Кнопка поділитися профілем */}
+        <CopyProfileLinkButton username={profile.username} />
       </div>
     </DashboardCard>
   );

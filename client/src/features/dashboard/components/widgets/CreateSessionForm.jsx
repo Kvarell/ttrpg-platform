@@ -9,10 +9,11 @@ import Button from '@/components/ui/Button';
  * 
  * @param {Object} props
  * @param {string} props.initialDate - Початкова дата (з календаря)
+ * @param {number} [props.campaignId] - ID кампанії (для створення сесії в кампанії)
  * @param {Function} props.onSuccess - Callback при успішному створенні
  * @param {Function} props.onCancel - Callback при скасуванні
  */
-export default function CreateSessionForm({ initialDate, onSuccess, onCancel }) {
+export default function CreateSessionForm({ initialDate, campaignId, onSuccess, onCancel }) {
   const { createNewSession } = useSessionStore();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -106,6 +107,7 @@ export default function CreateSessionForm({ initialDate, onSuccess, onCancel }) 
       const result = await createNewSession({
         ...formData,
         date: new Date(formData.date).toISOString(),
+        ...(campaignId ? { campaignId: Number(campaignId) } : {}),
       });
       
       if (result.success) {
