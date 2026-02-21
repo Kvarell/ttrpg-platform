@@ -17,13 +17,11 @@ import { getSystemIcon } from '@/constants/gameSystems';
  * @param {Object} session — дані сесії
  * @param {Function} onJoin — колбек приєднання (characterName?)
  * @param {boolean} canJoin — чи може юзер приєднатися
- * @param {boolean} isLoading
  */
 export default function SessionPagePreviewWidget({
   session,
   onJoin,
   canJoin = false,
-  isLoading = false,
 }) {
   const navigate = useNavigate();
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -205,10 +203,11 @@ export default function SessionPagePreviewWidget({
               Приєднатися до сесії
             </h3>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-[#164A41] mb-2">
+              <label htmlFor="join-character-name" className="block text-sm font-medium text-[#164A41] mb-2">
                 Ім'я персонажа (опціонально)
               </label>
               <input
+                id="join-character-name"
                 type="text"
                 value={joinCharacterName}
                 onChange={(e) => setJoinCharacterName(e.target.value)}

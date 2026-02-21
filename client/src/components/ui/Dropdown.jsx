@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useId } from 'react';
 
 const Dropdown = ({ 
   options, 
@@ -11,6 +11,8 @@ const Dropdown = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const buttonId = useId();
+  const listboxId = useId();
 
   // Закриття при кліку поза елементом
   useEffect(() => {
@@ -44,8 +46,8 @@ const Dropdown = ({
     <div className="w-full relative" ref={dropdownRef}>
       {/* Лейбл як у твоїй формі */}
       {label && (
-        <label 
-          onClick={() => !disabled && setIsOpen(!isOpen)}
+        <label
+          htmlFor={buttonId}
           className="block text-sm font-medium text-[#164A41] mb-1 cursor-pointer"
         >
           {label}
@@ -54,8 +56,12 @@ const Dropdown = ({
       
       <div className="relative">
         <button
+          id={buttonId}
           type="button"
           disabled={disabled}
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          aria-controls={listboxId}
           onClick={() => !disabled && setIsOpen(!isOpen)}
           className={`
             w-full px-3 py-2 text-left bg-white border-2 rounded-lg 
@@ -87,27 +93,36 @@ const Dropdown = ({
         </button>
 
         {isOpen && (
-          <ul className="absolute z-50 w-full mt-1 bg-white border border-[#9DC88D] rounded-lg shadow-lg max-h-60 overflow-auto py-1">
+          <ul
+            id={listboxId}
+            role="listbox"
+            aria-label={label}
+            className="absolute z-50 w-full mt-1 bg-white border border-[#9DC88D] rounded-lg shadow-lg max-h-60 overflow-auto py-1"
+          >
             {options.map((option) => {
               const isSelected = value === option.value;
               return (
-                <li
-                  key={option.value}
-                  onClick={() => handleSelect(option)}
-                  className={`
-                    px-3 py-2 text-sm cursor-pointer transition-colors
-                    ${isSelected 
-                      ? 'bg-[#164A41]/10 text-[#164A41] font-medium' 
-                      : 'text-gray-700 hover:bg-[#9DC88D]/20'
-                    }
-                  `}
-                >
-                  {option.label}
+                <li key={option.value} role="presentation">
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => handleSelect(option)}
+                    className={`
+                      w-full px-3 py-2 text-sm text-left cursor-pointer transition-colors
+                      ${isSelected
+                        ? 'bg-[#164A41]/10 text-[#164A41] font-medium'
+                        : 'text-gray-700 hover:bg-[#9DC88D]/20'
+                      }
+                    `}
+                  >
+                    {option.label}
+                  </button>
                 </li>
               );
             })}
             {options.length === 0 && (
-              <li className="px-3 py-2 text-sm text-gray-400 text-center">
+              <li role="presentation" className="px-3 py-2 text-sm text-gray-400 text-center">
                 Список порожній
               </li>
             )}

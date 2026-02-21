@@ -116,8 +116,9 @@ export function SearchFiltersWidget({ onSearch }) {
 
         {/* Система */}
         <div>
-          <label className="block text-sm font-medium text-[#164A41] mb-1">Система</label>
+          <label htmlFor="filter-system" className="block text-sm font-medium text-[#164A41] mb-1">Система</label>
           <input
+            id="filter-system"
             type="text"
             name="system"
             value={localFilters.system}
@@ -144,8 +145,9 @@ export function SearchFiltersWidget({ onSearch }) {
             {/* Дати */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-[#164A41] mb-1">Від</label>
+                <label htmlFor="filter-dateFrom" className="block text-sm font-medium text-[#164A41] mb-1">Від</label>
                 <input
+                  id="filter-dateFrom"
                   type="date"
                   name="dateFrom"
                   value={localFilters.dateFrom}
@@ -154,8 +156,9 @@ export function SearchFiltersWidget({ onSearch }) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#164A41] mb-1">До</label>
+                <label htmlFor="filter-dateTo" className="block text-sm font-medium text-[#164A41] mb-1">До</label>
                 <input
+                  id="filter-dateTo"
                   type="date"
                   name="dateTo"
                   value={localFilters.dateTo}
@@ -168,8 +171,9 @@ export function SearchFiltersWidget({ onSearch }) {
             {/* Ціна */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-[#164A41] mb-1">Мін. ціна</label>
+                <label htmlFor="filter-minPrice" className="block text-sm font-medium text-[#164A41] mb-1">Мін. ціна</label>
                 <input
+                  id="filter-minPrice"
                   type="number"
                   name="minPrice"
                   value={localFilters.minPrice}
@@ -180,8 +184,9 @@ export function SearchFiltersWidget({ onSearch }) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#164A41] mb-1">Макс. ціна</label>
+                <label htmlFor="filter-maxPrice" className="block text-sm font-medium text-[#164A41] mb-1">Макс. ціна</label>
                 <input
+                  id="filter-maxPrice"
                   type="number"
                   name="maxPrice"
                   value={localFilters.maxPrice}

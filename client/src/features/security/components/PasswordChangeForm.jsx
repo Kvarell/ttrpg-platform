@@ -110,11 +110,12 @@ export default function PasswordChangeForm() {
 
       {/* Поточний пароль */}
       <div>
-        <label className="block text-sm font-medium text-[#164A41] mb-2">
+        <label htmlFor="currentPassword" className="block text-sm font-medium text-[#164A41] mb-2">
           Поточний пароль
         </label>
         <div className="relative">
           <input
+            id="currentPassword"
             type={showPasswords.current ? 'text' : 'password'}
             name="currentPassword"
             value={formData.currentPassword}
@@ -144,11 +145,12 @@ export default function PasswordChangeForm() {
 
       {/* Новий пароль */}
       <div>
-        <label className="block text-sm font-medium text-[#164A41] mb-2">
+        <label htmlFor="newPassword" className="block text-sm font-medium text-[#164A41] mb-2">
           Новий пароль
         </label>
         <div className="relative">
           <input
+            id="newPassword"
             type={showPasswords.new ? 'text' : 'password'}
             name="newPassword"
             value={formData.newPassword}
@@ -180,11 +182,12 @@ export default function PasswordChangeForm() {
 
       {/* Підтвердження пароля */}
       <div>
-        <label className="block text-sm font-medium text-[#164A41] mb-2">
+        <label htmlFor="confirmPassword" className="block text-sm font-medium text-[#164A41] mb-2">
           Підтвердіть новий пароль
         </label>
         <div className="relative">
           <input
+            id="confirmPassword"
             type={showPasswords.confirm ? 'text' : 'password'}
             name="confirmPassword"
             value={formData.confirmPassword}

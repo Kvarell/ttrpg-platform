@@ -19,16 +19,18 @@ export default function PublicProfilePage() {
 
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!username) return;
     let cancelled = false;
-    setIsLoading(true);
-    setError(null);
 
-    getProfileByUsername(username)
-      .then((result) => {
+    const load = async () => {
+      if (cancelled) return;
+      setProfile(null);
+      setError(null);
+
+      try {
+        const result = await getProfileByUsername(username);
         if (!cancelled) {
           if (result?.profile) {
             setProfile(result.profile);
@@ -36,16 +38,16 @@ export default function PublicProfilePage() {
             setError('Профіль не знайдено');
           }
         }
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setError('Не вдалося завантажити профіль');
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
+      }
+    };
 
+    load();
     return () => { cancelled = true; };
   }, [username]);
+
+  const isLoading = !profile && !error;
 
   const renderContent = () => {
     if (isLoading) {

@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import DashboardCard from '@/components/ui/DashboardCard';
 import Button from '@/components/ui/Button';
 import {
@@ -35,7 +34,6 @@ export default function CampaignInfoWidget({
   onRegenerateCode,
   isLoading = false,
 }) {
-  const navigate = useNavigate();
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     title: '',

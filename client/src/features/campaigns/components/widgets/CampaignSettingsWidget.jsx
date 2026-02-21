@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
+import FormField from '@/components/ui/FormField';
 import Button from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/shared';
 import { GAME_SYSTEMS } from '@/constants/gameSystems';
@@ -26,26 +27,23 @@ export default function CampaignSettingsWidget({
   isOwner = false,
   isLoading = false,
 }) {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    system: '',
-    visibility: 'PUBLIC',
+  const buildFormData = (c) => ({
+    title: c?.title || '',
+    description: c?.description || '',
+    system: c?.system || '',
+    visibility: c?.visibility || 'PUBLIC',
   });
+
+  const [formData, setFormData] = useState(() => buildFormData(campaign));
+  const [formCampaignId, setFormCampaignId] = useState(campaign?.id ?? null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
 
-  // Ініціалізація форми при зміні кампанії
-  useEffect(() => {
-    if (campaign) {
-      setFormData({
-        title: campaign.title || '',
-        description: campaign.description || '',
-        system: campaign.system || '',
-        visibility: campaign.visibility || 'PUBLIC',
-      });
-    }
-  }, [campaign]);
+  // Скидати форму при зміні кампанії (обчислення під час рендеру, без effect)
+  if (campaign?.id !== formCampaignId) {
+    setFormCampaignId(campaign?.id ?? null);
+    setFormData(buildFormData(campaign));
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -78,15 +76,14 @@ export default function CampaignSettingsWidget({
 
   const inputClasses =
     'w-full p-3 border-2 border-[#9DC88D]/50 rounded-xl focus:border-[#164A41] outline-none text-[#164A41] bg-white transition-colors';
-  const labelClasses = 'block text-sm font-medium text-[#164A41] mb-1';
 
   return (
     <DashboardCard title="⚙️ Налаштування кампанії">
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {/* Назва */}
-        <div>
-          <label className={labelClasses}>Назва кампанії *</label>
+        <FormField id="title" label="Назва кампанії" required>
           <input
+            id="title"
             type="text"
             name="title"
             value={formData.title}
@@ -95,12 +92,12 @@ export default function CampaignSettingsWidget({
             required
             maxLength={100}
           />
-        </div>
+        </FormField>
 
         {/* Опис */}
-        <div>
-          <label className={labelClasses}>Опис</label>
+        <FormField id="description" label="Опис">
           <textarea
+            id="description"
             name="description"
             value={formData.description}
             onChange={handleChange}
@@ -109,13 +106,13 @@ export default function CampaignSettingsWidget({
             maxLength={2000}
             placeholder="Опишіть вашу кампанію..."
           />
-        </div>
+        </FormField>
 
         {/* Система та Видимість */}
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelClasses}>Ігрова система</label>
+          <FormField id="system" label="Ігрова система">
             <select
+              id="system"
               name="system"
               value={formData.system}
               onChange={handleChange}
@@ -128,10 +125,10 @@ export default function CampaignSettingsWidget({
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <label className={labelClasses}>Видимість</label>
+          </FormField>
+          <FormField id="visibility" label="Видимість">
             <select
+              id="visibility"
               name="visibility"
               value={formData.visibility}
               onChange={handleChange}
@@ -141,7 +138,7 @@ export default function CampaignSettingsWidget({
               <option value="PRIVATE">🔒 Приватна</option>
               <option value="LINK_ONLY">🔗 За посиланням</option>
             </select>
-          </div>
+          </FormField>
         </div>
 
         {/* Успішне збереження */}

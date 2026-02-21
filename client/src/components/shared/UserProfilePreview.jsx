@@ -24,10 +24,12 @@ export default function UserProfilePreview({ userId, onBack, participants = [] }
     if (!userId) return;
 
     let cancelled = false;
-    setError(null);
-    setProfile(null);
 
     const loadProfile = async () => {
+      if (cancelled) return;
+      setError(null);
+      setProfile(null);
+
       try {
         const response = await api.get(`/profile/user/${userId}`);
         if (!cancelled && response.data?.success) {

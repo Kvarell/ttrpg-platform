@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
+import FormField from '@/components/ui/FormField';
 import Button from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/shared';
 import { GAME_SYSTEMS } from '@/constants/gameSystems';
@@ -25,36 +26,28 @@ export default function SessionSettingsWidget({
   onDelete,
   isLoading = false,
 }) {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    notes: '',
-    date: '',
-    duration: '',
-    maxPlayers: '',
-    system: '',
-    location: '',
-    price: '',
+  const buildFormData = (s) => ({
+    title: s?.title || '',
+    description: s?.description || '',
+    notes: s?.notes || '',
+    date: s?.date ? new Date(s.date).toISOString().slice(0, 16) : '',
+    duration: s?.duration || '',
+    maxPlayers: s?.maxPlayers || '',
+    system: s?.system || s?.campaign?.system || '',
+    location: s?.location || '',
+    price: s?.price || '',
   });
+
+  const [formData, setFormData] = useState(() => buildFormData(session));
+  const [formSessionId, setFormSessionId] = useState(session?.id ?? null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
 
-  // Ініціалізація форми при зміні сесії
-  useEffect(() => {
-    if (session) {
-      setFormData({
-        title: session.title || '',
-        description: session.description || '',
-        notes: session.notes || '',
-        date: session.date ? new Date(session.date).toISOString().slice(0, 16) : '',
-        duration: session.duration || '',
-        maxPlayers: session.maxPlayers || '',
-        system: session.system || session.campaign?.system || '',
-        location: session.location || '',
-        price: session.price || '',
-      });
-    }
-  }, [session]);
+  // Скидати форму при зміні сесії (обчислення під час рендеру, без effect)
+  if (session?.id !== formSessionId) {
+    setFormSessionId(session?.id ?? null);
+    setFormData(buildFormData(session));
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -93,15 +86,14 @@ export default function SessionSettingsWidget({
 
   const inputClasses =
     'w-full p-3 border-2 border-[#9DC88D]/50 rounded-xl focus:border-[#164A41] outline-none text-[#164A41] bg-white transition-colors';
-  const labelClasses = 'block text-sm font-medium text-[#164A41] mb-1';
 
   return (
     <DashboardCard title="⚙️ Налаштування сесії">
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {/* Назва */}
-        <div>
-          <label className={labelClasses}>Назва сесії *</label>
+        <FormField id="title" label="Назва сесії" required>
           <input
+            id="title"
             type="text"
             name="title"
             value={formData.title}
@@ -110,12 +102,12 @@ export default function SessionSettingsWidget({
             required
             maxLength={100}
           />
-        </div>
+        </FormField>
 
         {/* Опис */}
-        <div>
-          <label className={labelClasses}>Опис</label>
+        <FormField id="description" label="Опис">
           <textarea
+            id="description"
             name="description"
             value={formData.description}
             onChange={handleChange}
@@ -123,12 +115,12 @@ export default function SessionSettingsWidget({
             rows={3}
             maxLength={2000}
           />
-        </div>
+        </FormField>
 
         {/* Нотатки GM */}
-        <div>
-          <label className={labelClasses}>Нотатки GM (видно тільки учасникам)</label>
+        <FormField id="notes" label="Нотатки GM (видно тільки учасникам)">
           <textarea
+            id="notes"
             name="notes"
             value={formData.notes}
             onChange={handleChange}
@@ -137,13 +129,13 @@ export default function SessionSettingsWidget({
             maxLength={2000}
             placeholder="Приватні нотатки для гравців..."
           />
-        </div>
+        </FormField>
 
         {/* Дата і Тривалість */}
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelClasses}>Дата і час *</label>
+          <FormField id="date" label="Дата і час" required>
             <input
+              id="date"
               type="datetime-local"
               name="date"
               value={formData.date}
@@ -151,10 +143,10 @@ export default function SessionSettingsWidget({
               className={inputClasses}
               required
             />
-          </div>
-          <div>
-            <label className={labelClasses}>Тривалість (хв)</label>
+          </FormField>
+          <FormField id="duration" label="Тривалість (хв)">
             <input
+              id="duration"
               type="number"
               name="duration"
               value={formData.duration}
@@ -164,14 +156,14 @@ export default function SessionSettingsWidget({
               max={720}
               placeholder="180"
             />
-          </div>
+          </FormField>
         </div>
 
         {/* Макс гравців та Система */}
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelClasses}>Макс. гравців</label>
+          <FormField id="maxPlayers" label="Макс. гравців">
             <input
+              id="maxPlayers"
               type="number"
               name="maxPlayers"
               value={formData.maxPlayers}
@@ -181,10 +173,10 @@ export default function SessionSettingsWidget({
               max={20}
               placeholder="6"
             />
-          </div>
-          <div>
-            <label className={labelClasses}>Ігрова система</label>
+          </FormField>
+          <FormField id="system" label="Ігрова система">
             <select
+              id="system"
               name="system"
               value={formData.system}
               onChange={handleChange}
@@ -197,14 +189,14 @@ export default function SessionSettingsWidget({
                 </option>
               ))}
             </select>
-          </div>
+          </FormField>
         </div>
 
         {/* Локація та Ціна */}
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelClasses}>Локація</label>
+          <FormField id="location" label="Локація">
             <input
+              id="location"
               type="text"
               name="location"
               value={formData.location}
@@ -213,10 +205,10 @@ export default function SessionSettingsWidget({
               placeholder="Онлайн / Адреса"
               maxLength={200}
             />
-          </div>
-          <div>
-            <label className={labelClasses}>Ціна (грн)</label>
+          </FormField>
+          <FormField id="price" label="Ціна (грн)">
             <input
+              id="price"
               type="number"
               name="price"
               value={formData.price}
@@ -225,7 +217,7 @@ export default function SessionSettingsWidget({
               min={0}
               placeholder="0"
             />
-          </div>
+          </FormField>
         </div>
 
         {/* Успішне збереження */}
