@@ -109,10 +109,11 @@ export default function CreateCampaignWidget({ onSuccess, onCancel }) {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Назва */}
         <div>
-          <label className="block text-sm font-medium text-[#164A41] mb-1">
+          <label htmlFor="title" className="block text-sm font-medium text-[#164A41] mb-1">
             Назва кампанії <span className="text-red-500">*</span>
           </label>
           <input
+            id="title"
             type="text"
             name="title"
             value={formData.title}
@@ -128,10 +129,11 @@ export default function CreateCampaignWidget({ onSuccess, onCancel }) {
 
         {/* Опис */}
         <div>
-          <label className="block text-sm font-medium text-[#164A41] mb-1">
+          <label htmlFor="description" className="block text-sm font-medium text-[#164A41] mb-1">
             Опис
           </label>
           <textarea
+            id="description"
             name="description"
             value={formData.description}
             onChange={handleChange}
@@ -151,10 +153,11 @@ export default function CreateCampaignWidget({ onSuccess, onCancel }) {
         {/* Система та Видимість */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-[#164A41] mb-1">
+            <label htmlFor="system" className="block text-sm font-medium text-[#164A41] mb-1">
               Ігрова система
             </label>
             <select
+              id="system"
               name="system"
               value={formData.system}
               onChange={handleChange}
@@ -170,10 +173,11 @@ export default function CreateCampaignWidget({ onSuccess, onCancel }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#164A41] mb-1">
+            <label htmlFor="visibility" className="block text-sm font-medium text-[#164A41] mb-1">
               Видимість <span className="text-red-500">*</span>
             </label>
             <select
+              id="visibility"
               name="visibility"
               value={formData.visibility}
               onChange={handleChange}

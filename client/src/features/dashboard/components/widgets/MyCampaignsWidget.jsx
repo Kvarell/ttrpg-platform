@@ -37,15 +37,6 @@ export default function MyCampaignsWidget() {
     setRightPanelMode(PANEL_MODES.CREATE_CAMPAIGN);
   };
 
-  const handleCreateSuccess = (newCampaign) => {
-    // Перезавантажуємо список кампаній
-    fetchMyCampaigns(filter);
-    // Переходимо на сторінку нової кампанії
-    if (newCampaign?.id) {
-      navigate(`/campaign/${newCampaign.id}`);
-    }
-  };
-
   return (
     <DashboardCard 
       title="Мої кампанії"

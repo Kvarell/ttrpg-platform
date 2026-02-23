@@ -47,19 +47,18 @@ export default function useCampaignPageController() {
     defaultTab: TABS.SESSIONS,
   });
 
-  // Завантаження
+  // Завантаження; скидання viewingUserId при зміні id — у cleanup, щоб не викликати setState синхронно в effect
   useEffect(() => {
     if (id) {
       fetchCampaignById(id);
       fetchCampaignMembers(id);
     }
-    return () => clearCurrentCampaign();
+    return () => {
+      setViewingUserId(null);
+      clearCurrentCampaign();
+    };
   }, [id, fetchCampaignById, fetchCampaignMembers, clearCurrentCampaign]);
 
-  // Скинути перегляд профілю при зміні кампанії
-  useEffect(() => {
-    setViewingUserId(null);
-  }, [id]);
 
   // === Ролі та права ===
   const myRole = useMemo(() => {

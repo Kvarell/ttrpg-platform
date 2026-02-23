@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import DashboardCard from '@/components/ui/DashboardCard';
 import Button from '@/components/ui/Button';
 import {
@@ -17,17 +16,14 @@ import { getSystemIcon } from '@/constants/gameSystems';
  * @param {Object} campaign — дані кампанії
  * @param {Function} onJoinRequest — колбек подачі заявки (message)
  * @param {boolean} canJoin — чи може юзер подати заявку
- * @param {boolean} isLoading
  * @param {string|null} pendingRequestStatus — статус вже поданої заявки (якщо є)
  */
 export default function CampaignPreviewWidget({
   campaign,
   onJoinRequest,
   canJoin = false,
-  isLoading = false,
   pendingRequestStatus = null,
 }) {
-  const navigate = useNavigate();
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinMessage, setJoinMessage] = useState('');
   const [joinError, setJoinError] = useState(null);
@@ -160,10 +156,11 @@ export default function CampaignPreviewWidget({
               Подати заявку на вступ
             </h3>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-[#164A41] mb-2">
+              <label htmlFor="join-message" className="block text-sm font-medium text-[#164A41] mb-2">
                 Повідомлення (опціонально)
               </label>
               <textarea
+                id="join-message"
                 value={joinMessage}
                 onChange={(e) => setJoinMessage(e.target.value)}
                 placeholder="Розкажіть про себе або свій досвід..."

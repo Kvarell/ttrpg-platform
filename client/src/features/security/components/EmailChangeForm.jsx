@@ -88,10 +88,11 @@ export default function EmailChangeForm({ currentEmail }) {
 
       {/* Новий email */}
       <div>
-        <label className="block text-sm font-medium text-[#164A41] mb-2">
+        <label htmlFor="newEmail" className="block text-sm font-medium text-[#164A41] mb-2">
           Новий email
         </label>
         <input
+          id="newEmail"
           type="email"
           name="newEmail"
           value={formData.newEmail}
@@ -104,11 +105,12 @@ export default function EmailChangeForm({ currentEmail }) {
 
       {/* Пароль для підтвердження */}
       <div>
-        <label className="block text-sm font-medium text-[#164A41] mb-2">
+        <label htmlFor="password" className="block text-sm font-medium text-[#164A41] mb-2">
           Пароль для підтвердження
         </label>
         <div className="relative">
           <input
+            id="password"
             type={showPassword ? 'text' : 'password'}
             name="password"
             value={formData.password}

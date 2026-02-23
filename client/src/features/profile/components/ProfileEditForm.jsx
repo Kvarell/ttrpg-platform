@@ -111,10 +111,11 @@ export default function ProfileEditForm({ onSuccess }) {
 
         {/* Display Name */}
         <div>
-          <label className="block text-sm font-medium text-[#164A41] mb-2">
+          <label htmlFor="displayName" className="block text-sm font-medium text-[#164A41] mb-2">
             Відображуване ім'я
           </label>
           <input
+            id="displayName"
             type="text"
             name="displayName"
             value={formData.displayName}
@@ -130,10 +131,11 @@ export default function ProfileEditForm({ onSuccess }) {
 
         {/* Bio */}
         <div>
-          <label className="block text-sm font-medium text-[#164A41] mb-2">
+          <label htmlFor="bio" className="block text-sm font-medium text-[#164A41] mb-2">
             Про себе
           </label>
           <textarea
+            id="bio"
             name="bio"
             value={formData.bio}
             onChange={handleChange}

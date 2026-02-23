@@ -427,10 +427,11 @@ export default function SessionDetailsPage() {
             </h3>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-[#164A41] mb-2">
+              <label htmlFor="join-character-name" className="block text-sm font-medium text-[#164A41] mb-2">
                 Ім'я персонажа (опціонально)
               </label>
               <input
+                id="join-character-name"
                 type="text"
                 value={joinCharacterName}
                 onChange={(e) => setJoinCharacterName(e.target.value)}

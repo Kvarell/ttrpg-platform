@@ -63,6 +63,12 @@ export default function ConfirmModal({
     if (e.target === overlayRef.current) onCancel?.();
   };
 
+  const handleOverlayKeyDown = (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target === overlayRef.current) {
+      onCancel?.();
+    }
+  };
+
   const confirmVariants = {
     primary: 'bg-[#164A41] hover:bg-[#1f5c52] text-white',
     danger: 'bg-red-500 hover:bg-red-600 text-white',
@@ -71,13 +77,17 @@ export default function ConfirmModal({
   return (
     <div
       ref={overlayRef}
+      role="presentation"
       onClick={handleOverlayClick}
+      onKeyDown={handleOverlayKeyDown}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-modal-title"
     >
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6 animate-in fade-in zoom-in-95">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-modal-title"
+        className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6 animate-in fade-in zoom-in-95"
+      >
         <h3
           id="confirm-modal-title"
           className="text-lg font-bold text-[#164A41] mb-2"

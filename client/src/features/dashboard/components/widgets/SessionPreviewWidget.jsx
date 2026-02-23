@@ -7,7 +7,6 @@ import {
   RoleBadge,
   DateTimeDisplay,
   BackButton,
-  formatDate,
 } from '@/components/shared';
 import useDashboardStore from '@/stores/useDashboardStore';
 import useSessionStore from '@/features/sessions/store/useSessionStore';

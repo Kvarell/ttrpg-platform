@@ -111,11 +111,12 @@ export default function DeleteAccountForm() {
 
       {/* Пароль */}
       <div>
-        <label className="block text-sm font-medium text-red-700 mb-2">
+        <label htmlFor="delete-password" className="block text-sm font-medium text-red-700 mb-2">
           Ваш пароль
         </label>
         <div className="relative">
           <input
+            id="delete-password"
             type={showPassword ? 'text' : 'password'}
             name="password"
             value={formData.password}
@@ -145,10 +146,11 @@ export default function DeleteAccountForm() {
 
       {/* Підтвердження */}
       <div>
-        <label className="block text-sm font-medium text-red-700 mb-2">
+        <label htmlFor="delete-confirmation" className="block text-sm font-medium text-red-700 mb-2">
           Введіть "ВИДАЛИТИ" для підтвердження
         </label>
         <input
+          id="delete-confirmation"
           type="text"
           name="confirmation"
           value={formData.confirmation}

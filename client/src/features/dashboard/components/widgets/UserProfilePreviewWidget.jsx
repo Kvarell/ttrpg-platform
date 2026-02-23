@@ -42,7 +42,7 @@ export default function UserProfilePreviewWidget() {
         if (!cancelled && response.data?.success) {
           setProfile(response.data.profile || response.data.data);
         }
-      } catch (err) {
+      } catch {
         // Fallback: спробуємо знайти username у учасниках сесії
         if (!cancelled) {
           try {

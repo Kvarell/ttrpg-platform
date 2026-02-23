@@ -44,16 +44,16 @@ export default function useSessionPageController() {
     defaultTab: TABS.DETAILS,
   });
 
-  // Завантаження
+  // Завантаження; скидання viewingUserId при зміні id — у cleanup, щоб не викликати setState синхронно в effect
   useEffect(() => {
-    if (id) fetchSessionById(id);
-    return () => clearCurrentSession();
+    if (id) {
+      fetchSessionById(id);
+    }
+    return () => {
+      setViewingUserId(null);
+      clearCurrentSession();
+    };
   }, [id, fetchSessionById, clearCurrentSession]);
-
-  // Скинути перегляд профілю при зміні сесії
-  useEffect(() => {
-    setViewingUserId(null);
-  }, [id]);
 
   // === Ролі та права ===
   const myRole = useMemo(() => {

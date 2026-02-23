@@ -143,10 +143,11 @@ export default function CreateSessionForm({ initialDate, campaignId, onSuccess, 
       
       {/* Назва */}
       <div>
-        <label className="block text-sm font-medium text-[#164A41] mb-1">
+        <label htmlFor="title" className="block text-sm font-medium text-[#164A41] mb-1">
           Назва сесії *
         </label>
         <input
+          id="title"
           type="text"
           name="title"
           value={formData.title}
@@ -162,10 +163,11 @@ export default function CreateSessionForm({ initialDate, campaignId, onSuccess, 
       
       {/* Опис */}
       <div>
-        <label className="block text-sm font-medium text-[#164A41] mb-1">
+        <label htmlFor="description" className="block text-sm font-medium text-[#164A41] mb-1">
           Опис
         </label>
         <textarea
+          id="description"
           name="description"
           value={formData.description}
           onChange={handleChange}
@@ -195,10 +197,11 @@ export default function CreateSessionForm({ initialDate, campaignId, onSuccess, 
       
       {/* Дата та час */}
       <div>
-        <label className="block text-sm font-medium text-[#164A41] mb-1">
+        <label htmlFor="date" className="block text-sm font-medium text-[#164A41] mb-1">
           Дата і час *
         </label>
         <input
+          id="date"
           type="datetime-local"
           name="date"
           value={formData.date}
@@ -242,10 +245,11 @@ export default function CreateSessionForm({ initialDate, campaignId, onSuccess, 
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-[#164A41] mb-1">
+          <label htmlFor="maxPlayers" className="block text-sm font-medium text-[#164A41] mb-1">
             Макс. гравців
           </label>
           <input
+            id="maxPlayers"
             type="number"
             name="maxPlayers"
             value={formData.maxPlayers}
@@ -263,10 +267,11 @@ export default function CreateSessionForm({ initialDate, campaignId, onSuccess, 
       {/* Ціна та Видимість */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-[#164A41] mb-1">
+          <label htmlFor="price" className="block text-sm font-medium text-[#164A41] mb-1">
             Ціна (грн)
           </label>
           <input
+            id="price"
             type="number"
             name="price"
             value={formData.price}
