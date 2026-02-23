@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import DashboardCard from '@/components/ui/DashboardCard';
-import { UserAvatar, BackButton } from '@/components/shared';
-import Button from '@/components/ui/Button';
+import { UserAvatar, BackButton, CopyProfileLinkButton } from '@/components/shared';
 import api from '@/lib/axios';
 import { getProfileByUsername } from '@/features/profile/api/profileApi';
 
@@ -19,7 +17,6 @@ import { getProfileByUsername } from '@/features/profile/api/profileApi';
  * @param {Array} participants — учасники сесії (для fallback)
  */
 export default function UserProfilePreview({ userId, onBack, participants = [] }) {
-  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(null);
 
@@ -152,15 +149,8 @@ export default function UserProfilePreview({ userId, onBack, participants = [] }
           )}
         </div>
 
-        {/* Кнопка — повний профіль */}
-        {profile.username && (
-          <Button
-            onClick={() => navigate(`/user/${profile.username}`)}
-            variant="outline"
-          >
-            Відкрити повний профіль
-          </Button>
-        )}
+        {/* Кнопка поділитися профілем */}
+        <CopyProfileLinkButton username={profile.username} />
       </div>
     </DashboardCard>
   );

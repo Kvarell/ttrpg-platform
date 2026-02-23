@@ -1,8 +1,8 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
-import { EmptyState } from '@/components/shared';
+import { BackButton, EmptyState } from '@/components/shared';
 import SessionListItem from '../ui/SessionListItem';
+import CreateSessionForm from '@/features/dashboard/components/widgets/CreateSessionForm';
 
 /**
  * CampaignSessionsWidget — лівий віджет у Full Mode, таб "Сесії" (default).
@@ -16,8 +16,9 @@ import SessionListItem from '../ui/SessionListItem';
 export default function CampaignSessionsWidget({
   campaign,
   canManage = false,
+  onSessionCreated,
 }) {
-  const navigate = useNavigate();
+  const [isCreating, setIsCreating] = useState(false);
 
   if (!campaign) return null;
 
@@ -41,6 +42,28 @@ export default function CampaignSessionsWidget({
 
   const title = `📅 Сесії кампанії (${sessions.length})`;
 
+  // === Режим створення сесії ===
+  if (isCreating) {
+    return (
+      <DashboardCard
+        title="Створити сесію"
+        actions={
+          <BackButton label="Назад" onClick={() => setIsCreating(false)} variant="dark" />
+        }
+      >
+        <CreateSessionForm
+          campaignId={campaign.id}
+          onSuccess={() => {
+            setIsCreating(false);
+            onSessionCreated?.();
+          }}
+          onCancel={() => setIsCreating(false)}
+        />
+      </DashboardCard>
+    );
+  }
+
+  // === Режим списку сесій ===
   return (
     <DashboardCard title={title}>
       <div className="flex flex-col gap-4">
@@ -75,11 +98,7 @@ export default function CampaignSessionsWidget({
         {/* Кнопка створення сесії (GM/Owner) */}
         {canManage && (
           <button
-            onClick={() => {
-              // TODO: Navigate to session creation with campaignId pre-filled
-              // For now, navigate to dashboard with intent to create
-              navigate(`/?view=home&createSession=true&campaignId=${campaign.id}`);
-            }}
+            onClick={() => setIsCreating(true)}
             className="w-full py-3 border-2 border-dashed border-[#9DC88D]/50 rounded-xl text-[#4D774E] hover:border-[#164A41] hover:text-[#164A41] hover:bg-[#9DC88D]/5 transition-all font-medium"
           >
             + Створити сесію
