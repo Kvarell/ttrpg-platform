@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
-import { EmptyState, ConfirmModal } from '@/components/shared';
+import { EmptyState, ConfirmModal, ParticipantsList } from '@/components/shared';
 import ParticipantCard from '../ui/ParticipantCard';
 import useSessionStore from '../../store/useSessionStore';
 import { useState, useCallback } from 'react';
@@ -81,18 +81,19 @@ export default function SessionPageParticipantsWidget({
           className="h-full"
         />
       ) : (
-        <div className="flex flex-col gap-2">
-          {participants.map((participant) => (
+        <ParticipantsList
+          items={participants}
+          getItemKey={(participant) => participant.id}
+          renderItem={(participant) => (
             <ParticipantCard
-              key={participant.id}
               participant={participant}
               canManage={canManage}
               currentUserId={currentUserId}
               onRemove={handleRemove}
               onViewProfile={onViewProfile}
             />
-          ))}
-        </div>
+          )}
+        />
       )}
 
       <ConfirmModal

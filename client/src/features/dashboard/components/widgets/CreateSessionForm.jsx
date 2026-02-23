@@ -37,7 +37,7 @@ export default function CreateSessionForm({ initialDate, campaignId, onSuccess, 
     title: '',
     description: '',
     date: getDefaultDateTime(),
-    duration: 180,
+    duration: 240,
     maxPlayers: 4,
     price: 0,
     visibility: 'PUBLIC',
@@ -152,7 +152,7 @@ export default function CreateSessionForm({ initialDate, campaignId, onSuccess, 
           name="title"
           value={formData.title}
           onChange={handleChange}
-          placeholder="Напр: Драконячий хаос - Сесія 5"
+          placeholder="Напр: Драконячий хаос"
           className={inputClass('title')}
           maxLength={150}
         />
@@ -206,9 +206,6 @@ export default function CreateSessionForm({ initialDate, campaignId, onSuccess, 
           name="date"
           value={formData.date}
           onChange={handleChange}
-          // 👇 ЗМІНА ТУТ:
-          // accent-[#164A41] -> фарбує синій квадратик у календарі в твій зелений
-          // cursor-pointer -> робить курсор "рукою" при наведенні
           className={`${inputClass('date')} accent-[#164A41] cursor-pointer`}
         />
         {errors.date && (
@@ -278,7 +275,7 @@ export default function CreateSessionForm({ initialDate, campaignId, onSuccess, 
             onChange={handleChange}
             min={0}
             max={10000}
-            step={10}
+            step={100}
             className={inputClass('price')}
           />
           {errors.price && (

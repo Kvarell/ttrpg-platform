@@ -12,3 +12,4 @@ export { default as CopyProfileLinkButton } from './CopyProfileLinkButton';
 export { default as UserProfilePreview } from './UserProfilePreview';
 export { default as FullPageLoader } from './FullPageLoader';
 export { default as ErrorScreen } from './ErrorScreen';
+export { default as ParticipantsList } from './ParticipantsList';

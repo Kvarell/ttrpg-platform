@@ -1,6 +1,9 @@
 import React from 'react';
 import { StatusBadge, RoleBadge, DateTimeDisplay } from '@/components/shared';
-
+import GroupPeople from '@/components/ui/icons/GroupPeople';
+import Dice20 from '@/components/ui/icons/Dice20';
+import Data from '@/components/ui/icons/Data';
+import Timer from '@/components/ui/icons/Timer';
 /**
  * SessionCard — Карточка сесії з акордеоном
  * 
@@ -64,17 +67,17 @@ export default function SessionCard({
         {/* Основна інформація */}
         <div className="flex items-center gap-4 text-sm text-[#4D774E]">
           <span className="flex items-center gap-1">
-            🕐 <DateTimeDisplay value={session.date} format="time" />
+            <Data className="w-4 h-4" /> <DateTimeDisplay value={session.date} format="time" />
           </span>
           <span className="flex items-center gap-1">
-            ⏱️ {formatDuration(session.duration)}
+            <Timer className="w-4 h-4" /> {formatDuration(session.duration)}
           </span>
           <span className="flex items-center gap-1">
-            👥 {session.currentPlayers}/{session.maxPlayers}
+            <GroupPeople className="w-4 h-4" /> {session.currentPlayers}/{session.maxPlayers}
           </span>
           {session.system && (
             <span className="flex items-center gap-1">
-              🎲 {session.system}
+              <Dice20 className="w-4 h-4" /> {session.system}
             </span>
           )}
         </div>
@@ -104,7 +107,7 @@ export default function SessionCard({
           {/* Кампанія */}
           {session.campaign && (
             <div className="text-sm text-[#4D774E] mb-3">
-              <span className="font-medium">📚 Кампанія:</span> {session.campaign.title}
+              <span className="font-medium">Кампанія:</span> {session.campaign.title}
               {session.campaign.system && (
                 <span className="text-xs ml-2 px-2 py-0.5 bg-[#9DC88D]/20 rounded">
                   {session.campaign.system}
@@ -115,13 +118,13 @@ export default function SessionCard({
 
           {/* GM */}
           <div className="text-sm text-[#4D774E] mb-4">
-            <span className="font-medium">🎭 GM:</span> {session.creator?.displayName || session.creator?.username}
+            <span className="font-medium">GM:</span> {session.creator?.displayName || session.creator?.username}
           </div>
 
           {/* Ціна */}
           {session.price > 0 && (
             <div className="text-sm font-bold text-[#164A41] mb-4">
-              💰 {session.price} грн
+              Вартість: {session.price} грн
             </div>
           )}
 
@@ -133,7 +136,7 @@ export default function SessionCard({
             }}
             className="w-full py-2 px-4 bg-[#F1B24A] text-[#164A41] rounded-lg font-bold hover:bg-[#4D774E] hover:text-white transition-colors"
           >
-            📋 Деталі
+            Деталі
           </button>
         </div>
       )}

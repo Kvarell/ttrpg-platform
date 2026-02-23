@@ -1,5 +1,5 @@
 import React from 'react';
-import GameSessionCount from '../../../../components/ui/icons/GameSessionCount';
+import Campfire from '../../../../components/ui/icons/Campfire';
 /**
  * Компонент для відображення дня календаря з детальною інформацією
  * 
@@ -97,7 +97,7 @@ export default function CalendarDayCell({
               text-sm font-bold
               ${isSelected ? 'text-[#164A41]' : 'text-gray-900'}
             `}>
-                <GameSessionCount className="w-3.5 h-3.5" /> {count}
+                <Campfire className="w-3.5 h-3.5" /> {count}
 
                 {/* 3. Сама підказка */}
                 <div className="

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
-import { UserAvatar, RoleBadge, EmptyState } from '@/components/shared';
+import { UserAvatar, RoleBadge, EmptyState, ParticipantsList } from '@/components/shared';
 import useDashboardStore from '@/stores/useDashboardStore';
 import useSessionStore from '@/features/sessions/store/useSessionStore';
 
@@ -61,14 +61,16 @@ export default function SessionParticipantsWidget() {
           className="h-full"
         />
       ) : (
-        <div className="flex flex-col gap-2">
-          {participants.map((participant) => {
+        <ParticipantsList
+          items={participants}
+          getItemKey={(participant) => participant.id}
+          renderItem={(participant) => {
             const user = participant.user || {};
             const displayName = user.displayName || user.username || 'Невідомий';
 
             return (
               <button
-                key={participant.id}
+                type="button"
                 onClick={() => openUserProfile(user.id)}
                 className="flex items-center gap-3 p-3 rounded-xl border-2 border-transparent hover:border-[#9DC88D]/50 hover:bg-[#9DC88D]/10 transition-all text-left w-full"
               >
@@ -99,8 +101,8 @@ export default function SessionParticipantsWidget() {
                 )}
               </button>
             );
-          })}
-        </div>
+          }}
+        />
       )}
     </DashboardCard>
   );

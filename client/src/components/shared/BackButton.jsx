@@ -42,7 +42,7 @@ export default function BackButton({
       onClick={handleClick}
       className={`text-sm transition-colors flex items-center gap-1 ${variants[variant] || variants.dark} ${className}`}
     >
-      ← {label}
+      {label}
     </button>
   );
 }

@@ -6,6 +6,7 @@ import CreateSessionForm from './CreateSessionForm';
 import SessionCard from '../ui/SessionCard';
 import Button from '@/components/ui/Button';
 import { BackButton, EmptyState, formatDate } from '@/components/shared';
+import Dice20 from '@/components/ui/icons/Dice20';
 
 /**
  * HomeRightWidget — Права панель для режиму "Головна"
@@ -114,7 +115,7 @@ return (
           ) : */}
           {daySessions.length === 0 ? (
             <EmptyState
-              icon="🎲"
+              icon={<Dice20 className="w-14 h-14" />}
               title="Немає запланованих сесій"
               description="на цей день"
               className="h-full"

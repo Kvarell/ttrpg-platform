@@ -1,4 +1,4 @@
-const GameSessionCount = ({ className = "w-6 h-6" }) => {
+const Campfire = ({ className = "w-6 h-6" }) => {
   return (
     <svg 
       xmlns="http://www.w3.org/2000/svg" 
@@ -12,4 +12,4 @@ const GameSessionCount = ({ className = "w-6 h-6" }) => {
   );
 };
 
-export default GameSessionCount;
+export default Campfire;

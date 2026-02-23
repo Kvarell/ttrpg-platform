@@ -5,7 +5,7 @@ import useDashboardStore, { VIEW_MODES } from '@/stores/useDashboardStore';
 import useCalendarStore from '@/stores/useCalendarStore';
 import Button from '@/components/ui/Button';
 import { formatDate } from '@/components/shared';
-
+import Arrow from '@/components/ui/icons/Arrow';
 /**
  * Універсальний CalendarWidget для всіх режимів Dashboard
  * 
@@ -95,37 +95,38 @@ export default function CalendarWidget({ title, showTodayButton }) {
   // Дні тижня
   const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 
-  const navigationActions = (
-    <div className="flex gap-2">
+const navigationActions = (
+    <div className="flex gap-2 items-center">
       <button
         onClick={goToPrevMonth}
-        className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-[#9DC88D]/30 hover:bg-[#9DC88D]/20 transition-colors text-[#164A41]"
+        className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#9DC88D]/30 hover:bg-[#9DC88D]/20 transition-colors text-[#164A41]"
         aria-label="Попередній місяць"
       >
-        ←
+        <Arrow direction="left" className="w-5 h-5" />
       </button>
+      
       {shouldShowTodayButton && (
         <div className="flex-shrink-0">
           <Button
             onClick={goToToday}
             variant="primary"
             fullWidth={false}
-            className="!py-1 !px-3 h-8 text-sm !font-semibold"
+            className="h-8 px-3 text-base !font-semibold flex items-center justify-center"
           >
             Сьогодні
           </Button>
         </div>
       )}
+      
       <button
         onClick={goToNextMonth}
-        className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-[#9DC88D]/30 hover:bg-[#9DC88D]/20 transition-colors text-[#164A41]"
+        className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#9DC88D]/30 hover:bg-[#9DC88D]/20 transition-colors text-[#164A41]"
         aria-label="Наступний місяць"
       >
-        →
+        <Arrow direction="right" className="w-5 h-5" />
       </button>
     </div>
-  );
-
+  );  
   // Генеруємо заголовок на основі viewMode
   const getViewModeLabel = () => {
     switch (viewMode) {
@@ -141,7 +142,7 @@ export default function CalendarWidget({ title, showTodayButton }) {
   const viewModeLabel = getViewModeLabel();
   const cardTitle = title || (viewModeLabel 
     ? `${viewModeLabel} — ${monthName.charAt(0).toUpperCase() + monthName.slice(1)}`
-    : `Календар — ${monthName.charAt(0).toUpperCase() + monthName.slice(1)}`
+    : `${monthName.charAt(0).toUpperCase() + monthName.slice(1)}`
   );
 
   return (

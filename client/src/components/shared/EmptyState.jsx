@@ -1,21 +1,23 @@
+import Dice20 from '../ui/icons/Dice20';
+
 /**
  * Заглушка "немає даних" — уніфікований порожній стан.
  *
  * Використання:
  *   <EmptyState
- *     icon="🎲"
+ *     icon={<Dice20 className="w-10 h-10" />}
  *     title="Немає запланованих сесій"
  *     description="на цей день"
  *     action={{ label: '+ Створити сесію', onClick: handleCreate }}
  *   />
  *
- * @param {string} icon — емодзі-іконка
+ * @param {React.ReactNode} icon — іконка/компонент
  * @param {string} title — основний текст
  * @param {string} [description] — додатковий підтекст
  * @param {{ label: string, onClick: Function }} [action] — опціональна CTA-кнопка
  */
 export default function EmptyState({
-  icon = '📭',
+  icon = <Dice20 className="w-10 h-10" />,
   title,
   description,
   action,
@@ -23,7 +25,7 @@ export default function EmptyState({
 }) {
   return (
     <div className={`flex flex-col items-center justify-center py-8 text-[#4D774E] ${className}`}>
-      <div className="text-4xl mb-4">{icon}</div>
+      <div className="mb-4">{icon}</div>
       {title && <p className="text-lg font-medium text-center">{title}</p>}
       {description && <p className="text-sm mt-2 text-center">{description}</p>}
       {action && (
