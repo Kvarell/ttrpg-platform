@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
 import { UserAvatar, RoleBadge, EmptyState } from '@/components/shared';
 import useDashboardStore from '@/stores/useDashboardStore';
-import useSessionStore from '@/stores/useSessionStore';
+import useSessionStore from '@/features/sessions/store/useSessionStore';
 
 /**
  * SessionParticipantsWidget — правий віджет на Dashboard.

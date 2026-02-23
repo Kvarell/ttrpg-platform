@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useCampaignStore from '../../../../stores/useCampaignStore';
+import useCampaignStore from '@/features/campaigns/store/useCampaignStore';
 import DashboardCard from '@/components/ui/DashboardCard';
 import { RoleBadge, VisibilityBadge, EmptyState } from '@/components/shared';
 import CreateCampaignModal from '../../../campaigns/components/CreateCampaignModal';

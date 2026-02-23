@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import useSessionStore from '@/stores/useSessionStore';
+import useSessionStore from '../store/useSessionStore';
 import useAuthStore from '@/stores/useAuthStore';
 import DashboardCard from '@/components/ui/DashboardCard';
 import Snowfall from 'react-snowfall';

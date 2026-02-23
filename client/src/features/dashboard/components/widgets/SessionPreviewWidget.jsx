@@ -10,7 +10,7 @@ import {
   formatDate,
 } from '@/components/shared';
 import useDashboardStore from '@/stores/useDashboardStore';
-import useSessionStore from '@/stores/useSessionStore';
+import useSessionStore from '@/features/sessions/store/useSessionStore';
 import useCalendarStore from '@/stores/useCalendarStore';
 import useAuthStore from '@/stores/useAuthStore';
 import { getSystemIcon } from '@/constants/gameSystems';
