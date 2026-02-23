@@ -14,7 +14,7 @@ import ConfirmEmailChangePage from "../features/security/pages/ConfirmEmailChang
 
 // Сторінки деталей
 import CampaignDetailsPage from "../features/campaigns/pages/CampaignDetailsPage";
-import SessionDetailsPage from "../features/sessions/pages/SessionDetailsPage";
+import SessionPage from "../features/sessions/pages/SessionPage";
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -46,7 +46,7 @@ const AppRoutes = () => {
         path="/session/:id" 
         element={
           <ProtectedRoute>
-            <SessionDetailsPage />
+            <SessionPage />
           </ProtectedRoute>
         } 
       />
