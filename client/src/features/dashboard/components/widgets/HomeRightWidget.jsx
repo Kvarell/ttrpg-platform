@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
 import useDashboardStore, { PANEL_MODES } from '@/stores/useDashboardStore';
 import useCalendarStore from '@/stores/useCalendarStore';
-import useSessionStore from '@/stores/useSessionStore';
 import CreateSessionForm from './CreateSessionForm';
 import SessionCard from '../ui/SessionCard';
 import Button from '@/components/ui/Button';
@@ -18,7 +17,7 @@ import { BackButton, EmptyState, formatDate } from '@/components/shared';
  * Features:
  * - Sticky footer з кнопкою "Створити сесію"
  * - Акордеон для розгортання деталей сесії
- * - Кнопка "Приєднатися" в розгорнутих деталях
+ * - Кнопка "Деталі" для inline preview на Dashboard
  * - Автоматично показує сесії на сьогодні при першому завантаженні
  */
 export default function HomeRightWidget() {
@@ -32,6 +31,7 @@ export default function HomeRightWidget() {
     expandedSessionId,
     setRightPanelMode,
     toggleSessionExpanded,
+    openSessionPreview,
   } = useDashboardStore();
 
   const {
@@ -39,11 +39,6 @@ export default function HomeRightWidget() {
     fetchDaySessions,
     fetchCalendarStats,
   } = useCalendarStore();
-
-  const { joinSessionAction } = useSessionStore();
-
-  const [joiningSessionId, setJoiningSessionId] = useState(null);
-  const [joinErrors, setJoinErrors] = useState({});
 
   // Автоматично встановлюємо сьогоднішню дату при першому завантаженні
   useEffect(() => {
@@ -59,20 +54,9 @@ export default function HomeRightWidget() {
     return formatDate(dateStr, 'dayMonth');
   };
 
-  // Обробник приєднання до сесії
-  const handleJoinSession = async (sessionId) => {
-    setJoiningSessionId(sessionId);
-    setJoinErrors(prev => ({ ...prev, [sessionId]: null }));
-    
-    const result = await joinSessionAction(sessionId);
-    
-    if (!result?.success) {
-      setJoinErrors(prev => ({ ...prev, [sessionId]: result.error }));
-    } else if (selectedDate) {
-      await fetchDaySessions(selectedDate, { viewMode, searchFilters, hasSearched });
-    }
-    
-    setJoiningSessionId(null);
+  // Обробник перегляду деталей сесії (inline preview)
+  const handleDetails = (sessionId) => {
+    openSessionPreview(sessionId);
   };
 
   // Перехід до форми створення
@@ -139,7 +123,6 @@ return (
             <div className="flex flex-col gap-3">
               {daySessions.map((session) => {
                 const isExpanded = expandedSessionId === session.id;
-                const isJoining = joiningSessionId === session.id;
                 
                 return (
                   <SessionCard
@@ -147,9 +130,7 @@ return (
                     session={session}
                     isExpanded={isExpanded}
                     onToggle={() => toggleSessionExpanded(session.id)}
-                    onJoin={handleJoinSession}
-                    isJoining={isJoining}
-                    joinError={joinErrors[session.id] || null}
+                    onDetails={handleDetails}
                   />
                 );
               })}

@@ -11,23 +11,19 @@ import { StatusBadge, RoleBadge, DateTimeDisplay } from '@/components/shared';
  * - Інформацію про кампанію
  * - Ім'я GM
  * - Ціну (якщо є)
- * - Кнопку приєднання (якщо можна)
+ * - Кнопку "Деталі" для preview на Dashboard
  * 
  * @param {Object} props
  * @param {Object} props.session - Об'єкт сесії
  * @param {boolean} props.isExpanded - Чи розгорнута картка
  * @param {Function} props.onToggle - Функція для розгортання/згортання
- * @param {Function} props.onJoin - Функція для приєднання до сесії
- * @param {boolean} props.isJoining - Чи відбувається процес приєднання
- * @param {string} props.joinError - Помилка приєднання (якщо є)
+ * @param {Function} props.onDetails - Функція для перегляду деталей (inline preview)
  */
 export default function SessionCard({ 
   session, 
   isExpanded, 
   onToggle, 
-  onJoin, 
-  isJoining, 
-  joinError 
+  onDetails,
 }) {
   // Форматування тривалості
   const formatDuration = (minutes) => {
@@ -37,8 +33,6 @@ export default function SessionCard({
     if (mins === 0) return `${hours} год`;
     return `${hours} год ${mins} хв`;
   };
-
-  const canJoin = session.status === 'PLANNED' && !session.myRole && session.currentPlayers < session.maxPlayers;
 
   return (
     <div 
@@ -131,30 +125,16 @@ export default function SessionCard({
             </div>
           )}
 
-          {/* Помилка приєднання */}
-          {joinError && (
-            <div className="text-sm text-red-600 mb-3 p-2 bg-red-50 rounded-lg">
-              {joinError}
-            </div>
-          )}
-
-          {/* Кнопка приєднання */}
-          {canJoin && (
-            <button 
-              onClick={() => onJoin(session.id)}
-              disabled={isJoining} 
-              className="w-full py-2 px-4 bg-[#9DC88D] text-[#164A41] rounded-lg font-bold hover:bg-[#8ab87a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isJoining ? 'Приєднання...' : '🎲 Приєднатися'}
-            </button>
-          )}
-
-          {/* Повідомлення для учасника */}
-          {session.myRole && (
-            <div className="text-center text-sm text-[#4D774E] py-2">
-              Ви вже є учасником цієї сесії
-            </div>
-          )}
+          {/* Кнопка "Деталі" — відкриває inline preview на Dashboard */}
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onDetails(session.id);
+            }}
+            className="w-full py-2 px-4 bg-[#F1B24A] text-[#164A41] rounded-lg font-bold hover:bg-[#4D774E] hover:text-white transition-colors"
+          >
+            📋 Деталі
+          </button>
         </div>
       )}
     </div>
