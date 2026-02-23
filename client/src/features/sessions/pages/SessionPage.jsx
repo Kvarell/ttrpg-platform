@@ -112,15 +112,18 @@ export default function SessionPage() {
     if (amParticipant) return false;
     if (currentSession.status !== 'PLANNED') return false;
     if (currentSession.maxPlayers) {
-      const current = currentSession.participants?.length || 0;
-      if (current >= currentSession.maxPlayers) return false;
+      const currentPlayers =
+        currentSession.participants?.filter((p) => p.role === 'PLAYER').length || 0;
+      if (currentPlayers >= currentSession.maxPlayers) return false;
     }
     return true;
   };
 
   // === Actions ===
   const handleJoin = async (characterName) => {
-    const result = await joinSessionAction(id);
+    const result = await joinSessionAction(id, {
+      characterName: characterName || undefined,
+    });
     if (result?.success) {
       await fetchSessionById(id);
     }
@@ -270,32 +273,44 @@ export default function SessionPage() {
             onTabChange={setActiveTab}
             canManage={canManage}
             campaignTitle={currentSession.campaign?.title}
-            campaignId={currentSession.campaign?.id}
           />
         ) : (
           // Preview mode — проста навігація без табів
-          <nav className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/')}
-              className="text-white/70 hover:text-[#F1B24A] transition-colors text-sm flex items-center gap-1"
-            >
-              ← Dashboard
-            </button>
-            {currentSession.campaign && (
-              <>
-                <span className="text-white/40">/</span>
-                <button
-                  onClick={() => navigate(`/campaign/${currentSession.campaign.id}`)}
-                  className="text-white/70 hover:text-[#F1B24A] transition-colors text-sm truncate max-w-[150px]"
-                >
-                  {currentSession.campaign.title}
-                </button>
-              </>
-            )}
-            <span className="text-white/40">/</span>
-            <span className="text-white font-bold text-sm truncate">
-              {currentSession.title}
-            </span>
+          <nav className="flex items-center gap-4 justify-between w-full">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="bg-white px-4 py-2 rounded-xl border-2 border-[#9DC88D]/30 shadow-md flex items-center gap-2">
+                <div className="w-6 h-6 bg-[#164A41] rounded-full flex items-center justify-center text-[#F1B24A] font-bold text-xs">
+                  D20
+                </div>
+                <span className="font-bold text-[#164A41] hidden md:block">TTRPG Platform</span>
+              </div>
+
+              {currentSession.campaign && (
+                <>
+                  <span className="text-white/40 hidden sm:inline">/</span>
+                  <button
+                    onClick={() => navigate(`/campaign/${currentSession.campaign.id}`)}
+                    className="text-white/70 hover:text-[#F1B24A] transition-colors text-sm truncate max-w-[150px]"
+                  >
+                    {currentSession.campaign.title}
+                  </button>
+                </>
+              )}
+
+              <span className="text-white/40 hidden sm:inline">/</span>
+              <span className="text-white font-bold text-sm truncate">
+                {currentSession.title}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-end flex-1">
+              <button
+                onClick={() => navigate('/')}
+                className="px-4 py-2 rounded-xl border-2 border-white/50 bg-[#164A41] text-white hover:bg-[#F1B24A] hover:text-[#164A41] hover:border-[#164A41] transition-all font-bold shadow-lg"
+              >
+                На головну
+              </button>
+            </div>
           </nav>
         )
       }

@@ -35,8 +35,11 @@ const useCampaignStore = create((set) => ({
   // Запити на приєднання до кампанії
   joinRequests: [],
   
-  // Стан завантаження
+  // Стан завантаження (гранулярний)
   isLoading: false,
+  isLoadingMembers: false,
+  isLoadingRequests: false,
+  isLoadingAction: false,
   
   // Помилки
   error: null,
@@ -169,7 +172,7 @@ const useCampaignStore = create((set) => ({
 
   // Отримати членів кампанії
   fetchCampaignMembers: async (campaignId) => {
-    set({ isLoading: true, error: null });
+    set({ isLoadingMembers: true, error: null });
     try {
       const response = await getCampaignMembers(campaignId);
       if (response.success) {
@@ -184,13 +187,13 @@ const useCampaignStore = create((set) => ({
       set({ error: message });
       return { success: false, error: message };
     } finally {
-      set({ isLoading: false });
+      set({ isLoadingMembers: false });
     }
   },
 
   // Додати члена до кампанії
   addMember: async (campaignId, newMemberId, role = 'PLAYER') => {
-    set({ isLoading: true, error: null });
+    set({ isLoadingAction: true, error: null });
     try {
       const response = await addMemberToCampaign(campaignId, newMemberId, role);
       if (response.success) {
@@ -207,19 +210,19 @@ const useCampaignStore = create((set) => ({
       set({ error: message });
       return { success: false, error: message };
     } finally {
-      set({ isLoading: false });
+      set({ isLoadingAction: false });
     }
   },
 
   // Видалити члена з кампанії
   removeMember: async (campaignId, memberId) => {
-    set({ isLoading: true, error: null });
+    set({ isLoadingAction: true, error: null });
     try {
       const response = await removeMemberFromCampaign(campaignId, memberId);
       if (response.success) {
         set((state) => ({
           campaignMembers: state.campaignMembers.filter(
-            (m) => m.id !== memberId
+            (m) => m.userId !== memberId
           ),
         }));
         return { success: true };
@@ -232,13 +235,13 @@ const useCampaignStore = create((set) => ({
       set({ error: message });
       return { success: false, error: message };
     } finally {
-      set({ isLoading: false });
+      set({ isLoadingAction: false });
     }
   },
 
   // Оновити роль члена
   changeMemberRole: async (campaignId, memberId, role) => {
-    set({ isLoading: true, error: null });
+    set({ isLoadingAction: true, error: null });
     try {
       const response = await updateMemberRole(campaignId, memberId, role);
       if (response.success) {
@@ -257,7 +260,7 @@ const useCampaignStore = create((set) => ({
       set({ error: message });
       return { success: false, error: message };
     } finally {
-      set({ isLoading: false });
+      set({ isLoadingAction: false });
     }
   },
 
@@ -265,7 +268,7 @@ const useCampaignStore = create((set) => ({
 
   // Регенерувати код запрошення
   regenerateCode: async (campaignId) => {
-    set({ isLoading: true, error: null });
+    set({ isLoadingAction: true, error: null });
     try {
       const response = await regenerateInviteCode(campaignId);
       if (response.success) {
@@ -291,13 +294,13 @@ const useCampaignStore = create((set) => ({
       set({ error: message });
       return { success: false, error: message };
     } finally {
-      set({ isLoading: false });
+      set({ isLoadingAction: false });
     }
   },
 
   // Приєднатися за кодом запрошення
   joinByCode: async (inviteCode) => {
-    set({ isLoading: true, error: null });
+    set({ isLoadingAction: true, error: null });
     try {
       const response = await joinByInviteCode(inviteCode);
       if (response.success) {
@@ -311,7 +314,7 @@ const useCampaignStore = create((set) => ({
       set({ error: message });
       return { success: false, error: message };
     } finally {
-      set({ isLoading: false });
+      set({ isLoadingAction: false });
     }
   },
 
@@ -319,7 +322,7 @@ const useCampaignStore = create((set) => ({
 
   // Отримати запити на приєднання
   fetchJoinRequests: async (campaignId) => {
-    set({ isLoading: true, error: null });
+    set({ isLoadingRequests: true, error: null });
     try {
       const response = await getJoinRequests(campaignId);
       if (response.success) {
@@ -334,13 +337,13 @@ const useCampaignStore = create((set) => ({
       set({ error: message });
       return { success: false, error: message };
     } finally {
-      set({ isLoading: false });
+      set({ isLoadingRequests: false });
     }
   },
 
   // Надіслати запит на приєднання
   submitRequest: async (campaignId, message = '') => {
-    set({ isLoading: true, error: null });
+    set({ isLoadingAction: true, error: null });
     try {
       const response = await submitJoinRequest(campaignId, message);
       if (response.success) {
@@ -354,13 +357,13 @@ const useCampaignStore = create((set) => ({
       set({ error: message });
       return { success: false, error: message };
     } finally {
-      set({ isLoading: false });
+      set({ isLoadingAction: false });
     }
   },
 
   // Схвалити запит
   approveRequest: async (requestId, role = 'PLAYER') => {
-    set({ isLoading: true, error: null });
+    set({ isLoadingAction: true, error: null });
     try {
       const response = await approveJoinRequest(requestId, role);
       if (response.success) {
@@ -377,13 +380,13 @@ const useCampaignStore = create((set) => ({
       set({ error: message });
       return { success: false, error: message };
     } finally {
-      set({ isLoading: false });
+      set({ isLoadingAction: false });
     }
   },
 
   // Відхилити запит
   rejectRequest: async (requestId) => {
-    set({ isLoading: true, error: null });
+    set({ isLoadingAction: true, error: null });
     try {
       const response = await rejectJoinRequest(requestId);
       if (response.success) {
@@ -400,7 +403,7 @@ const useCampaignStore = create((set) => ({
       set({ error: message });
       return { success: false, error: message };
     } finally {
-      set({ isLoading: false });
+      set({ isLoadingAction: false });
     }
   },
 
@@ -420,6 +423,9 @@ const useCampaignStore = create((set) => ({
       campaignMembers: [],
       joinRequests: [],
       isLoading: false,
+      isLoadingMembers: false,
+      isLoadingRequests: false,
+      isLoadingAction: false,
       error: null,
     }),
 }));

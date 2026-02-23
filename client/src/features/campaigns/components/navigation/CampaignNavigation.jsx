@@ -3,34 +3,34 @@ import { useNavigate } from 'react-router-dom';
 import TopBarTabButton from '@/components/ui/TopBarTabButton';
 
 const TABS = {
+  SESSIONS: 'sessions',
   DETAILS: 'details',
   SETTINGS: 'settings',
 };
 
 /**
- * SessionNavigation — topBar навігація на сторінці сесії.
+ * CampaignNavigation — topBar навігація на сторінці кампанії.
  *
  * Показує:
  * - Кнопку "Назад" (на Dashboard)
- * - Назву сесії
- * - Таби: Деталі | Налаштування (GM only)
+ * - Назву кампанії
+ * - Таби: Сесії | Деталі | Налаштування (Owner/GM only)
  *
- * @param {string} sessionTitle — назва сесії
- * @param {string} activeTab — поточний таб ('details' | 'settings')
+ * @param {string} campaignTitle — назва кампанії
+ * @param {string} activeTab — поточний таб ('sessions' | 'details' | 'settings')
  * @param {Function} onTabChange — колбек зміни табу
- * @param {boolean} canManage — чи є юзер GM/Owner (для відображення табу "Налаштування")
- * @param {string} campaignTitle — назва кампанії (опціонально)
+ * @param {boolean} canManage — чи є юзер Owner/GM (для відображення табу "Налаштування")
  */
-export default function SessionNavigation({
-  sessionTitle,
+export default function CampaignNavigation({
+  campaignTitle,
   activeTab,
   onTabChange,
   canManage = false,
-  campaignTitle,
 }) {
   const navigate = useNavigate();
 
   const tabs = [
+    { key: TABS.SESSIONS, label: 'Сесії' },
     { key: TABS.DETAILS, label: 'Деталі' },
     ...(canManage ? [{ key: TABS.SETTINGS, label: 'Налаштування' }] : []),
   ];
@@ -45,8 +45,8 @@ export default function SessionNavigation({
           <span className="font-bold text-[#164A41] hidden md:block shrink-0">TTRPG Platform</span>
 
           <span className="text-[#164A41]/50 hidden md:inline">/</span>
-          <span className="font-bold text-[#164A41] text-sm truncate max-w-[220px]" title={sessionTitle}>
-            {sessionTitle || campaignTitle || 'Сесія'}
+          <span className="font-bold text-[#164A41] text-sm truncate max-w-[220px]" title={campaignTitle}>
+            {campaignTitle || 'Кампанія'}
           </span>
         </div>
 

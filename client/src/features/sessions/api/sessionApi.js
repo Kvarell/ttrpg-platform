@@ -133,8 +133,8 @@ export const getSessionParticipants = async (sessionId) => {
  * Приєднатися до сесії
  * @param {number} sessionId
  */
-export const joinSession = async (sessionId) => {
-  const response = await api.post(`/sessions/${sessionId}/join`, {});
+export const joinSession = async (sessionId, payload = {}) => {
+  const response = await api.post(`/sessions/${sessionId}/join`, payload);
   return response.data;
 };
 

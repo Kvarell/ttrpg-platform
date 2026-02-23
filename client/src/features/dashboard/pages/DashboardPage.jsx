@@ -19,6 +19,7 @@ import SessionPreviewWidget from '../components/widgets/SessionPreviewWidget';
 import SessionParticipantsWidget from '../components/widgets/SessionParticipantsWidget';
 import UserProfilePreviewWidget from '../components/widgets/UserProfilePreviewWidget';
 import MyGamesListWidget from '../components/widgets/MyGamesListWidget';
+import MyCampaignsWidget from '../components/widgets/MyCampaignsWidget';
 import { SearchFiltersWidget, SearchResultsWidget } from '../components/widgets/SearchWidgets';
 
 export default function DashboardPage() {
@@ -115,7 +116,7 @@ export default function DashboardPage() {
       }
     }
     if (viewMode === VIEW_MODES.MY_GAMES) {
-      return null;
+      return <MyCampaignsWidget />;
     }
     if (viewMode === VIEW_MODES.PROFILE) {
       return (

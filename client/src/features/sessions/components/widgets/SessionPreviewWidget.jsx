@@ -42,8 +42,13 @@ export default function SessionPagePreviewWidget({
 
   const getFreeSpots = () => {
     if (!session?.maxPlayers) return '∞';
-    const current = session.participants?.length || 0;
-    return Math.max(0, session.maxPlayers - current);
+    const currentPlayers =
+      session.participants?.filter((participant) => participant.role === 'PLAYER').length || 0;
+    return Math.max(0, session.maxPlayers - currentPlayers);
+  };
+
+  const getPlayerCount = () => {
+    return session?.participants?.filter((participant) => participant.role === 'PLAYER').length || 0;
   };
 
   const handleJoin = async () => {
@@ -96,7 +101,7 @@ export default function SessionPagePreviewWidget({
           <div className="flex items-center gap-2 text-[#4D774E]">
             <span>👥</span>
             <span>
-              {session.participants?.length || 0}
+              {getPlayerCount()}
               {session.maxPlayers ? ` / ${session.maxPlayers}` : ''} гравців
             </span>
           </div>

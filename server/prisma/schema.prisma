@@ -140,7 +140,7 @@ model Session {
                                               // або задається вручну для one-shot
   
   campaignId  Int?                            // Nullable для one-shots
-  campaign    Campaign? @relation(fields: [campaignId], references: [id])
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   
   creatorId   Int                             // Хто створив (GM)
   creator     User      @relation("CreatedSessions", fields: [creatorId], references: [id])

@@ -224,10 +224,10 @@ const useSessionStore = create((set, get) => ({
   /**
    * Приєднатися до сесії
    */
-  joinSessionAction: async (sessionId) => {
+  joinSessionAction: async (sessionId, payload = {}) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await joinSession(sessionId);
+      const response = await joinSession(sessionId, payload);
       if (response.success) {
         // Оновити поточну сесію якщо відкрита
         if (get().currentSession?.id === sessionId) {

@@ -76,7 +76,9 @@ export default function SessionDetailsPage() {
 
   // Обробники
   const handleJoinSession = async () => {
-    await joinSessionAction(id, joinCharacterName || undefined);
+    await joinSessionAction(id, {
+      characterName: joinCharacterName || undefined,
+    });
     setShowJoinModal(false);
     setJoinCharacterName('');
     fetchSessionById(id);
@@ -118,8 +120,9 @@ export default function SessionDetailsPage() {
   // Кількість вільних місць
   const getFreeSpots = () => {
     if (!currentSession?.maxPlayers) return '∞';
-    const current = currentSession.participants?.length || 0;
-    return Math.max(0, currentSession.maxPlayers - current);
+    const currentPlayers =
+      currentSession.participants?.filter((participant) => participant.role === 'PLAYER').length || 0;
+    return Math.max(0, currentSession.maxPlayers - currentPlayers);
   };
 
   const canJoin = () => {
@@ -127,12 +130,16 @@ export default function SessionDetailsPage() {
     if (amParticipant) return false;
     if (currentSession.status !== 'PLANNED') return false;
     if (currentSession.maxPlayers) {
-      const current = currentSession.participants?.length || 0;
-      if (current >= currentSession.maxPlayers) return false;
+      const currentPlayers =
+        currentSession.participants?.filter((participant) => participant.role === 'PLAYER').length || 0;
+      if (currentPlayers >= currentSession.maxPlayers) return false;
     }
-    // Перевіряємо чи є членом кампанії
-    const isCampaignMember = currentSession.campaign?.members?.some(m => m.userId === user.id);
-    return isCampaignMember;
+    // Для one-shot кампанії немає — дозволяємо приєднання
+    if (!currentSession.campaign) return true;
+
+    // Для кампаній — тільки члени кампанії
+    const isCampaignMember = currentSession.campaign?.members?.some((member) => member.userId === user.id);
+    return Boolean(isCampaignMember);
   };
 
   // if (isLoading && !currentSession) {

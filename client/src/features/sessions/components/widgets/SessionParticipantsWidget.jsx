@@ -68,7 +68,7 @@ export default function SessionPageParticipantsWidget({
   };
 
   const title = maxPlayers
-    ? `Учасники (${participants.length}/${maxPlayers})`
+    ? `Учасники (${participants.filter((participant) => participant.role === 'PLAYER').length}/${maxPlayers})`
     : `Учасники (${participants.length})`;
 
   return (
