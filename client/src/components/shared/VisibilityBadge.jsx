@@ -1,7 +1,7 @@
 const VISIBILITY_CONFIG = {
-  PUBLIC:    { text: 'Публічна',       icon: '🌐', class: 'bg-green-100 text-green-800' },
-  PRIVATE:   { text: 'Приватна',       icon: '🔒', class: 'bg-gray-100 text-gray-800' },
-  LINK_ONLY: { text: 'За посиланням',  icon: '🔗', class: 'bg-blue-100 text-blue-800' },
+  PUBLIC:    { text: 'Публічна',       abbrev: 'ПУБ', class: 'bg-green-100 text-green-800' },
+  PRIVATE:   { text: 'Приватна',       abbrev: 'ПРИ', class: 'bg-gray-100 text-gray-800' },
+  LINK_ONLY: { text: 'За посиланням',  abbrev: 'ПОС', class: 'bg-blue-100 text-blue-800' },
 };
 
 /**
@@ -9,14 +9,20 @@ const VISIBILITY_CONFIG = {
  *
  * @param {'PUBLIC'|'PRIVATE'|'LINK_ONLY'} visibility
  * @param {'sm'|'md'} size
- * @param {boolean} showIcon — показувати емодзі
- * @param {boolean} iconOnly — тільки іконка без тексту
+ * @param {boolean} iconOnly — компактний варіант (абревіатура без повного тексту)
  */
-export default function VisibilityBadge({ visibility, size = 'md', showIcon = true, iconOnly = false }) {
+export default function VisibilityBadge({ visibility, size = 'md', iconOnly = false }) {
   const badge = VISIBILITY_CONFIG[visibility] || VISIBILITY_CONFIG.PRIVATE;
 
   if (iconOnly) {
-    return <span className="text-lg" title={badge.text}>{badge.icon}</span>;
+    return (
+      <span
+        className={`inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded ${badge.class}`}
+        title={badge.text}
+      >
+        {badge.abbrev}
+      </span>
+    );
   }
 
   const sizeClasses = {
@@ -26,7 +32,6 @@ export default function VisibilityBadge({ visibility, size = 'md', showIcon = tr
 
   return (
     <span className={`inline-flex items-center gap-1 rounded-full ${sizeClasses[size]} ${badge.class}`}>
-      {showIcon && <span>{badge.icon}</span>}
       {badge.text}
     </span>
   );

@@ -39,12 +39,10 @@ export default function CopyProfileLinkButton({ username }) {
     >
       {copied ? (
         <>
-          <span>✅</span>
           <span>Посилання скопійовано!</span>
         </>
       ) : (
         <>
-          <span>🔗</span>
           <span>Поділитися профілем</span>
         </>
       )}

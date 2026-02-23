@@ -6,6 +6,9 @@ import DashboardCard from '@/components/ui/DashboardCard';
 import SessionCard from '../ui/SessionCard';
 import { VisibilityBadge } from '@/components/shared';
 import { getSystemIcon } from '@/constants/gameSystems';
+import Dice20 from '@/components/ui/icons/Dice20';
+import GroupPeople from '@/components/ui/icons/GroupPeople';
+import Data from '@/components/ui/icons/Data';
 
 function mapSearchFiltersToLocal(searchFilters) {
   return {
@@ -318,13 +321,11 @@ export function SearchResultsWidget() {
         </div>
       ) : !hasSearched ? (
         <div className="flex flex-col items-center justify-center h-full text-[#4D774E]">
-          <div className="text-4xl mb-4">🔍</div>
           <p>Введіть параметри пошуку</p>
-          <p className="text-sm mt-2">та натисніть "Шукати"</p>
+          <p className="text-sm mt-2">та натисніть &quot;Шукати&quot;</p>
         </div>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-[#4D774E]">
-          <div className="text-4xl mb-4">🔍</div>
           <p>Нічого не знайдено</p>
           <p className="text-sm mt-2">Спробуйте змінити фільтри пошуку</p>
         </div>
@@ -365,9 +366,9 @@ export function SearchResultsWidget() {
                 )}
                 
                 <div className="flex flex-wrap gap-3 text-sm text-[#4D774E]">
-                  {campaign.system && <span>🎲 {campaign.system}</span>}
-                  <span>👥 {campaign.membersCount || campaign.members?.length || 0} учасників</span>
-                  <span>📅 {campaign.sessionsCount || campaign.sessions?.length || 0} сесій</span>
+                  {campaign.system && <span className="flex items-center gap-1"><Dice20 className="w-4 h-4" /> {campaign.system}</span>}
+                  <span className="flex items-center gap-1"><GroupPeople className="w-4 h-4" /> {campaign.membersCount || campaign.members?.length || 0} учасників</span>
+                  <span className="flex items-center gap-1"><Data className="w-4 h-4" /> {campaign.sessionsCount || campaign.sessions?.length || 0} сесій</span>
                 </div>
                 
                 <div className="mt-2 text-sm">

@@ -8,6 +8,8 @@ import {
   ConfirmModal,
 } from '@/components/shared';
 import { getSystemIcon } from '@/constants/gameSystems';
+import Data from '@/components/ui/icons/Data';
+import GroupPeople from '@/components/ui/icons/GroupPeople';
 
 /**
  * CampaignInfoWidget — лівий віджет у Full Mode (для учасників), таб "Деталі".
@@ -107,24 +109,23 @@ export default function CampaignInfoWidget({
           )}
           {/* Учасники */}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>👥</span>
+            <GroupPeople className="w-4 h-4" />
             <span>{campaign.members?.length || 0} учасників</span>
           </div>
           {/* Сесій */}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>📅</span>
+            <Data className="w-4 h-4" />
             <span>{campaign.sessions?.length || 0} сесій</span>
           </div>
           {/* Власник */}
           {campaign.owner && (
             <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>👤</span>
               <span>{campaign.owner.displayName || campaign.owner.username || 'Власник'}</span>
             </div>
           )}
           {/* Створено */}
           <div className="flex items-center gap-2 text-[#4D774E] col-span-2">
-            <span>📆</span>
+            <Data className="w-4 h-4" />
             <span>Створено: </span>
             <DateTimeDisplay value={campaign.createdAt} format="long" />
           </div>
@@ -144,7 +145,7 @@ export default function CampaignInfoWidget({
         {/* Опис */}
         {campaign.description && (
           <div className="border-t border-[#9DC88D]/20 pt-4">
-            <h4 className="text-sm font-bold text-[#164A41] mb-2">📝 Опис кампанії</h4>
+            <h4 className="text-sm font-bold text-[#164A41] mb-2">Опис кампанії</h4>
             <p className="text-sm text-[#4D774E] whitespace-pre-wrap">
               {campaign.description}
             </p>
@@ -154,7 +155,7 @@ export default function CampaignInfoWidget({
         {/* Код запрошення (Owner/GM) */}
         {canManage && campaign.inviteCode && (
           <div className="border-t border-[#9DC88D]/20 pt-4">
-            <h4 className="text-sm font-bold text-[#164A41] mb-3">🔗 Код запрошення</h4>
+            <h4 className="text-sm font-bold text-[#164A41] mb-3">Код запрошення</h4>
             <div className="p-4 bg-[#9DC88D]/20 rounded-xl">
               <div className="flex items-center gap-3 flex-wrap">
                 <code className="px-3 py-2 bg-white rounded-lg font-mono text-[#164A41] text-sm">
@@ -164,13 +165,13 @@ export default function CampaignInfoWidget({
                   onClick={copyInviteLink}
                   className="px-3 py-2 bg-[#164A41] text-white rounded-lg hover:bg-[#1f5c52] transition-colors text-sm"
                 >
-                  {codeCopied ? '✅ Скопійовано!' : '📋 Копіювати посилання'}
+                  {codeCopied ? 'Скопійовано!' : 'Копіювати посилання'}
                 </button>
                 <button
                   onClick={handleRegenerateCode}
                   className="px-3 py-2 border border-[#164A41] text-[#164A41] rounded-lg hover:bg-gray-50 transition-colors text-sm"
                 >
-                  🔄 Оновити код
+                  Оновити код
                 </button>
               </div>
             </div>

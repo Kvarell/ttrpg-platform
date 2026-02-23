@@ -4,6 +4,9 @@ import DashboardCard from '@/components/ui/DashboardCard';
 import { UserAvatar, CopyProfileLinkButton } from '@/components/shared';
 import { getProfileByUsername } from '@/features/profile/api/profileApi';
 import useAuthStore from '@/stores/useAuthStore';
+import Arrow from '@/components/ui/icons/Arrow';
+import Timer from '@/components/ui/icons/Timer';
+import Dice20 from '@/components/ui/icons/Dice20';
 
 /**
  * PublicProfilePage — сторінка /user/:username.
@@ -65,7 +68,6 @@ export default function PublicProfilePage() {
     if (error) {
       return (
         <div className="flex flex-col items-center justify-center py-8 text-[#4D774E]">
-          <div className="text-4xl mb-4">😕</div>
           <p className="text-lg">{error}</p>
         </div>
       );
@@ -88,11 +90,13 @@ export default function PublicProfilePage() {
 
         {/* Статистика */}
         <div className="flex gap-3 text-sm flex-wrap justify-center">
-          <div className="bg-[#9DC88D]/20 px-3 py-1 rounded-full text-[#164A41]">
-            🎮 {profile.stats?.sessionsPlayed || 0} сесій
+          <div className="bg-[#9DC88D]/20 px-3 py-1 rounded-full text-[#164A41] flex items-center gap-1.5">
+            <Dice20 className="w-4 h-4" />
+            {profile.stats?.sessionsPlayed || 0} сесій
           </div>
-          <div className="bg-[#9DC88D]/20 px-3 py-1 rounded-full text-[#164A41]">
-            ⏱️ {profile.stats?.hoursPlayed || 0} годин
+          <div className="bg-[#9DC88D]/20 px-3 py-1 rounded-full text-[#164A41] flex items-center gap-1.5">
+            <Timer className="w-4 h-4" />
+            {profile.stats?.hoursPlayed || 0} годин
           </div>
         </div>
 
@@ -106,19 +110,16 @@ export default function PublicProfilePage() {
         <div className="w-full border-t border-[#9DC88D]/20 pt-4 space-y-2">
           {profile.timezone && (
             <div className="flex items-center gap-2 text-sm text-[#4D774E]">
-              <span>🌍</span>
               <span>Часовий пояс: {profile.timezone}</span>
             </div>
           )}
           {profile.language && (
             <div className="flex items-center gap-2 text-sm text-[#4D774E]">
-              <span>💬</span>
               <span>Мова: {profile.language}</span>
             </div>
           )}
           {profile.city && (
             <div className="flex items-center gap-2 text-sm text-[#4D774E]">
-              <span>📍</span>
               <span>{profile.city}</span>
             </div>
           )}
@@ -139,7 +140,8 @@ export default function PublicProfilePage() {
             onClick={() => navigate('/')}
             className="flex items-center gap-2 text-[#F1B24A] hover:text-[#F1B24A]/80 transition-colors text-sm"
           >
-            ← Повернутися на дашборд
+            <Arrow className="w-4 h-4" direction="left" />
+            Повернутися на дашборд
           </button>
         )}
 

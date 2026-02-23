@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useForm, useWatch } from 'react-hook-form';
 import { resetPassword } from '../api/authApi';
+import Arrow from '@/components/ui/icons/Arrow';
 
 import AuthInput from "../ui/AuthInput";
 import AuthButton from "../ui/AuthButton";
@@ -50,7 +51,7 @@ export default function ResetPasswordForm() {
   if (tokenError) {
       return (
         <div className="text-center py-4">
-            <div className="text-5xl mb-4">⚠️</div>
+
             <p className="text-[#164A41] mb-6 font-medium">{tokenError}</p>
             <Link to="/forgot-password" className="inline-block px-6 py-2 bg-[#F1B24A] hover:bg-[#4D774E] text-[#164A41] hover:text-white rounded-lg transition font-semibold">
                 Спробувати ще раз
@@ -110,7 +111,7 @@ export default function ResetPasswordForm() {
 
       <div className="mt-6 text-center">
         <Link to="/login" className="text-[#164A41] hover:text-[#F1B24A] font-semibold transition-colors flex items-center justify-center gap-2">
-          <span>←</span> Назад до входу
+          <Arrow className="w-4 h-4" direction="left" /> Назад до входу
         </Link>
       </div>
     </form>

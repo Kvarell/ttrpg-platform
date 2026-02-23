@@ -4,6 +4,7 @@ import { EmptyState, ConfirmModal, ParticipantsList } from '@/components/shared'
 import ParticipantCard from '../ui/ParticipantCard';
 import useSessionStore from '../../store/useSessionStore';
 import { useState, useCallback } from 'react';
+import GroupPeople from '@/components/ui/icons/GroupPeople';
 
 /**
  * SessionParticipantsWidget — правий віджет на сторінці сесії.
@@ -75,7 +76,7 @@ export default function SessionPageParticipantsWidget({
     <DashboardCard title={title}>
       {participants.length === 0 ? (
         <EmptyState
-          icon="👥"
+          icon={<GroupPeople className="w-10 h-10" />}
           title="Ще немає учасників"
           description="Будьте першим!"
           className="h-full"

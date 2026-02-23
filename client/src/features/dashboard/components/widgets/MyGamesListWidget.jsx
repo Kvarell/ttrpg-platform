@@ -10,6 +10,10 @@ import {
 import useCampaignStore from '@/features/campaigns/store/useCampaignStore';
 import useSessionStore from '@/features/sessions/store/useSessionStore';
 import { getSystemIcon } from '@/constants/gameSystems';
+import Dice20 from '@/components/ui/icons/Dice20';
+import GroupPeople from '@/components/ui/icons/GroupPeople';
+import Data from '@/components/ui/icons/Data';
+import Timer from '@/components/ui/icons/Timer';
 
 /**
  * MyGamesListWidget — ліва панель для "Мої ігри" view.
@@ -83,7 +87,7 @@ export default function MyGamesListWidget() {
     return (
       <DashboardCard title="Мої ігри">
         <EmptyState
-          icon="🎮"
+          icon={<Dice20 className="w-10 h-10" />}
           title="У вас ще немає ігор"
           description="Приєднайтесь до сесії або створіть свою на вкладці Головна"
           className="h-full"
@@ -99,7 +103,7 @@ export default function MyGamesListWidget() {
         {campaigns.length > 0 && (
           <section>
             <h3 className="text-lg font-bold text-[#164A41] mb-3 flex items-center gap-2">
-              📋 Мої кампанії
+              Мої кампанії
             </h3>
             <div className="flex flex-col gap-2">
               {campaigns.map((campaign) => {
@@ -118,12 +122,12 @@ export default function MyGamesListWidget() {
                         <span>{icon}</span>
                         <span className="truncate">{campaign.title}</span>
                       </h4>
-                      <StatusBadge status={campaign.status || 'ACTIVE'} size="sm" showIcon={false} />
+                      <StatusBadge status={campaign.status || 'ACTIVE'} size="sm" />
                     </div>
                     <div className="flex items-center gap-3 text-sm text-[#4D774E] mt-1">
                       <RoleBadge role={myRole} />
                       <span className="flex items-center gap-1">
-                        👥 {membersCount} учасників
+                        <GroupPeople className="w-4 h-4" /> {membersCount} учасників
                       </span>
                       {campaign.system && (
                         <span className="text-xs px-2 py-0.5 bg-[#9DC88D]/20 rounded">
@@ -142,7 +146,7 @@ export default function MyGamesListWidget() {
         {oneShotSessions.length > 0 && (
           <section>
             <h3 className="text-lg font-bold text-[#164A41] mb-3 flex items-center gap-2">
-              🎲 Мої сесії (one-shot)
+              <Dice20 className="w-5 h-5" /> Мої сесії (one-shot)
             </h3>
             <div className="flex flex-col gap-2">
               {oneShotSessions.map((session) => {
@@ -160,23 +164,23 @@ export default function MyGamesListWidget() {
                         <span>{icon}</span>
                         <span className="truncate">{session.title}</span>
                       </h4>
-                      <StatusBadge status={session.status} size="sm" showIcon={false} />
+                      <StatusBadge status={session.status} size="sm" />
                     </div>
                     <div className="flex items-center gap-3 text-sm text-[#4D774E] mt-1 flex-wrap">
                       <RoleBadge role={myRole} />
                       <span className="flex items-center gap-1">
-                        📅 <DateTimeDisplay value={session.date} format="short" />
+                        <Data className="w-4 h-4" /> <DateTimeDisplay value={session.date} format="short" />
                       </span>
                       <span className="flex items-center gap-1">
-                        🕐 <DateTimeDisplay value={session.date} format="time" />
+                        <Timer className="w-4 h-4" /> <DateTimeDisplay value={session.date} format="time" />
                       </span>
                       {session.duration && (
                         <span className="flex items-center gap-1">
-                          ⏱️ {formatDuration(session.duration)}
+                          <Timer className="w-4 h-4" /> {formatDuration(session.duration)}
                         </span>
                       )}
                       <span className="flex items-center gap-1">
-                        👥 {session.currentPlayers}/{session.maxPlayers}
+                        <GroupPeople className="w-4 h-4" /> {session.currentPlayers}/{session.maxPlayers}
                       </span>
                     </div>
                   </button>

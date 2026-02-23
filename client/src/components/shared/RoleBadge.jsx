@@ -1,11 +1,11 @@
 const ROLE_CONFIG = {
   OWNER:  { text: 'Власник', class: 'bg-[#F1B24A] text-[#164A41]' },
-  GM:     { text: 'GM',      class: 'bg-[#164A41] text-white' },
+  GM:     { text: 'Майстер', class: 'bg-[#164A41] text-white' },
   PLAYER: { text: 'Гравець', class: 'bg-[#9DC88D] text-[#164A41]' },
 };
 
 /**
- * Бейдж ролі користувача (OWNER, GM, PLAYER)
+ * Бейдж ролі користувача (OWNER, MASTER, PLAYER)
  *
  * @param {'OWNER'|'GM'|'PLAYER'} role
  * @param {'sm'|'md'} size — sm: compact, md: standard

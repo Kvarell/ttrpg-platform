@@ -6,7 +6,7 @@ import { ConfirmModal } from '@/components/shared';
 import { GAME_SYSTEMS } from '@/constants/gameSystems';
 
 /**
- * CampaignSettingsWidget — лівий віджет в табі "Налаштування" (Owner/GM only).
+ * CampaignSettingsWidget — лівий віджет в табі "Налаштування" (Власник/Майстер).
  *
  * Дозволяє редагувати:
  * - Назву, опис
@@ -161,7 +161,7 @@ export default function CampaignSettingsWidget({
         {/* Секція небезпечних дій (тільки для Owner) */}
         {isOwner && (
           <div className="border-t border-red-200 pt-4 mt-2">
-            <h4 className="text-sm font-bold text-red-600 mb-3">⚠️ Небезпечна зона</h4>
+            <h4 className="text-sm font-bold text-red-600 mb-3">Небезпечна зона</h4>
             <p className="text-xs text-red-500 mb-3">
               Видалення кампанії призведе до втрати всіх сесій та даних. Цю дію неможливо відмінити.
             </p>

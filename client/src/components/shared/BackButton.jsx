@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import Arrow from '@/components/ui/icons/Arrow';
 
 /**
  * Кнопка "Назад" — уніфікований стиль для всього додатку.
@@ -42,6 +43,7 @@ export default function BackButton({
       onClick={handleClick}
       className={`text-sm transition-colors flex items-center gap-1 ${variants[variant] || variants.dark} ${className}`}
     >
+      <Arrow className="w-4 h-4" direction="left" />
       {label}
     </button>
   );

@@ -1,6 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StatusBadge, DateTimeDisplay } from '@/components/shared';
+import Data from '@/components/ui/icons/Data';
+import Timer from '@/components/ui/icons/Timer';
+import GroupPeople from '@/components/ui/icons/GroupPeople';
 
 /**
  * SessionListItem — елемент списку сесій кампанії.
@@ -25,16 +28,6 @@ export default function SessionListItem({ session, index }) {
     return `${hours} год ${mins} хв`;
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'PLANNED': return '🟢';
-      case 'ACTIVE': return '🔵';
-      case 'FINISHED': return '✅';
-      case 'CANCELLED': return '❌';
-      default: return '⚪';
-    }
-  };
-
   const participantCount = session.participants?.length || session._count?.participants || 0;
 
   return (
@@ -44,32 +37,31 @@ export default function SessionListItem({ session, index }) {
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="text-lg flex-shrink-0">{getStatusIcon(session.status)}</span>
-          <h4 className="font-bold text-[#164A41] truncate group-hover:text-[#1f5c52]">
+            <h4 className="font-bold text-[#164A41] truncate group-hover:text-[#1f5c52]">
             {index !== undefined ? `Сесія #${index + 1} — ` : ''}
             {session.title}
           </h4>
         </div>
-        <StatusBadge status={session.status} size="sm" showIcon={false} />
+        <StatusBadge status={session.status} size="sm" />
       </div>
 
       <div className="flex items-center gap-4 text-sm text-[#4D774E] flex-wrap">
         <div className="flex items-center gap-1">
-          <span>📅</span>
+          <Data className="w-4 h-4" />
           <DateTimeDisplay value={session.date} format="long" />
         </div>
         <div className="flex items-center gap-1">
-          <span>🕐</span>
+          <Timer className="w-4 h-4" />
           <DateTimeDisplay value={session.date} format="time" />
         </div>
         {session.duration && (
           <div className="flex items-center gap-1">
-            <span>⏱️</span>
+            <Timer className="w-4 h-4" />
             <span>{formatDuration(session.duration)}</span>
           </div>
         )}
         <div className="flex items-center gap-1">
-          <span>👥</span>
+          <GroupPeople className="w-4 h-4" />
           <span>
             {participantCount}
             {session.maxPlayers ? `/${session.maxPlayers}` : ''} гравців

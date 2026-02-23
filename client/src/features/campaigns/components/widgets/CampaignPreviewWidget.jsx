@@ -7,6 +7,8 @@ import {
   BackButton,
 } from '@/components/shared';
 import { getSystemIcon } from '@/constants/gameSystems';
+import Data from '@/components/ui/icons/Data';
+import GroupPeople from '@/components/ui/icons/GroupPeople';
 
 /**
  * CampaignPreviewWidget — лівий віджет для не-учасників на /campaign/:id.
@@ -71,24 +73,23 @@ export default function CampaignPreviewWidget({
           )}
           {/* Учасники */}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>👥</span>
+            <GroupPeople className="w-4 h-4" />
             <span>{campaign.members?.length || campaign._count?.members || 0} учасників</span>
           </div>
-          {/* Власник/GM */}
+          {/* Власник/Майстер */}
           {campaign.owner && (
             <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>👤</span>
               <span>{campaign.owner.displayName || campaign.owner.username || 'Власник'}</span>
             </div>
           )}
           {/* Сесій */}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>📅</span>
+            <Data className="w-4 h-4" />
             <span>{campaign.sessions?.length || campaign._count?.sessions || 0} сесій</span>
           </div>
           {/* Створено */}
           <div className="flex items-center gap-2 text-[#4D774E] col-span-2">
-            <span>📆</span>
+            <Data className="w-4 h-4" />
             <span>Створено: </span>
             <DateTimeDisplay value={campaign.createdAt} format="long" />
           </div>
@@ -97,7 +98,7 @@ export default function CampaignPreviewWidget({
         {/* Опис */}
         {campaign.description && (
           <div className="border-t border-[#9DC88D]/20 pt-4">
-            <h4 className="text-sm font-bold text-[#164A41] mb-2">📝 Опис</h4>
+            <h4 className="text-sm font-bold text-[#164A41] mb-2">Опис</h4>
             <p className="text-sm text-[#4D774E] whitespace-pre-wrap">
               {campaign.description}
             </p>
@@ -127,7 +128,7 @@ export default function CampaignPreviewWidget({
         {/* Статус вже поданої заявки */}
         {pendingRequestStatus && (
           <div className="text-sm text-[#4D774E] text-center p-3 bg-[#F1B24A]/10 rounded-lg border border-[#F1B24A]/30">
-            ⏳ Ваша заявка вже подана і очікує на розгляд
+            Ваша заявка вже подана і очікує на розгляд
           </div>
         )}
 
@@ -137,7 +138,7 @@ export default function CampaignPreviewWidget({
             onClick={() => setShowJoinModal(true)}
             variant="primary"
           >
-            📩 Подати заявку на вступ
+            Подати заявку на вступ
           </Button>
         )}
 

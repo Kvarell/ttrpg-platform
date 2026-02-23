@@ -1,9 +1,9 @@
 const STATUS_CONFIG = {
-  PLANNED:   { text: 'Заплановано', icon: '📅', class: 'bg-blue-100 text-blue-800' },
-  ACTIVE:    { text: 'В процесі',  icon: '🎮', class: 'bg-green-100 text-green-800' },
-  FINISHED:  { text: 'Завершено',  icon: '✅', class: 'bg-gray-100 text-gray-800' },
-  CANCELLED: { text: 'Скасовано',  icon: '❌', class: 'bg-red-100 text-red-800' },
-  CANCELED:  { text: 'Скасовано',  icon: '❌', class: 'bg-red-100 text-red-800' }, // alias
+  PLANNED:   { text: 'Заплановано', class: 'bg-blue-100 text-blue-800' },
+  ACTIVE:    { text: 'В процесі',  class: 'bg-green-100 text-green-800' },
+  FINISHED:  { text: 'Завершено',  class: 'bg-gray-100 text-gray-800' },
+  CANCELLED: { text: 'Скасовано',  class: 'bg-red-100 text-red-800' },
+  CANCELED:  { text: 'Скасовано',  class: 'bg-red-100 text-red-800' }, // alias
 };
 
 /**
@@ -11,9 +11,8 @@ const STATUS_CONFIG = {
  *
  * @param {'PLANNED'|'ACTIVE'|'FINISHED'|'CANCELLED'|'CANCELED'} status
  * @param {'sm'|'md'} size — sm: compact (text-xs), md: standard (text-sm)
- * @param {boolean} showIcon — показувати емодзі-іконку
  */
-export default function StatusBadge({ status, size = 'md', showIcon = true }) {
+export default function StatusBadge({ status, size = 'md' }) {
   const badge = STATUS_CONFIG[status] || STATUS_CONFIG.PLANNED;
 
   const sizeClasses = {
@@ -23,7 +22,6 @@ export default function StatusBadge({ status, size = 'md', showIcon = true }) {
 
   return (
     <span className={`inline-flex items-center gap-1 rounded-full ${sizeClasses[size]} ${badge.class}`}>
-      {showIcon && <span>{badge.icon}</span>}
       {badge.text}
     </span>
   );

@@ -89,7 +89,7 @@ export default function CreateCampaignWidget({ onSuccess, onCancel }) {
     <div className="bg-white rounded-2xl p-6 shadow-lg max-h-screen overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-5 sticky top-0 bg-white">
-        <h2 className="text-lg font-bold text-[#164A41]">📋 Нова кампанія</h2>
+        <h2 className="text-lg font-bold text-[#164A41]">Нова кампанія</h2>
         <button
           onClick={onCancel}
           className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"

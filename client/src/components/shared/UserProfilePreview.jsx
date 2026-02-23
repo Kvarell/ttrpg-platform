@@ -3,6 +3,7 @@ import DashboardCard from '@/components/ui/DashboardCard';
 import { UserAvatar, BackButton, CopyProfileLinkButton } from '@/components/shared';
 import api from '@/lib/axios';
 import { getProfileByUsername } from '@/features/profile/api/profileApi';
+import Dice20 from '@/components/ui/icons/Dice20';
 
 /**
  * UserProfilePreview — перегляд профілю юзера на сторінці сесії.
@@ -72,8 +73,7 @@ export default function UserProfilePreview({ userId, onBack, participants = [] }
         actions={<BackButton label="Назад" onClick={onBack} variant="dark" />}
       >
         <div className="flex flex-col items-center justify-center py-8 text-[#4D774E]">
-          <div className="text-4xl mb-4">😕</div>
-          <p className="text-lg">{error}</p>
+          <div className="text-lg">{error}</div>
         </div>
       </DashboardCard>
     );
@@ -133,19 +133,17 @@ export default function UserProfilePreview({ userId, onBack, participants = [] }
         <div className="w-full border-t border-[#9DC88D]/20 pt-4 space-y-2">
           {profile.timezone && (
             <div className="flex items-center gap-2 text-sm text-[#4D774E]">
-              <span>🌍</span>
               <span>{profile.timezone}</span>
             </div>
           )}
           {profile.city && (
             <div className="flex items-center gap-2 text-sm text-[#4D774E]">
-              <span>📍</span>
               <span>{profile.city}</span>
             </div>
           )}
           {profile.preferredSystem && (
             <div className="flex items-center gap-2 text-sm text-[#4D774E]">
-              <span>🎲</span>
+              <Dice20 className="w-4 h-4" />
               <span>{profile.preferredSystem}</span>
             </div>
           )}

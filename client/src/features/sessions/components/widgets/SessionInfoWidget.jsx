@@ -9,6 +9,10 @@ import {
   ConfirmModal,
 } from '@/components/shared';
 import { getSystemIcon } from '@/constants/gameSystems';
+import Data from '@/components/ui/icons/Data';
+import Timer from '@/components/ui/icons/Timer';
+import GroupPeople from '@/components/ui/icons/GroupPeople';
+import Dice20 from '@/components/ui/icons/Dice20';
 
 /**
  * SessionInfoWidget — лівий віджет у Full Mode (для учасників).
@@ -121,24 +125,24 @@ export default function SessionInfoWidget({
         <div className="grid grid-cols-2 gap-3 p-4 bg-[#9DC88D]/10 rounded-xl">
           {/* Дата */}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>📅</span>
+            <Data className="w-4 h-4" />
             <DateTimeDisplay value={session.date} format="long" />
           </div>
           {/* Час */}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>🕐</span>
+            <Timer className="w-4 h-4" />
             <DateTimeDisplay value={session.date} format="time" />
           </div>
           {/* Тривалість */}
           {session.duration && (
             <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>⏱️</span>
+              <Timer className="w-4 h-4" />
               <span>{formatDuration(session.duration)}</span>
             </div>
           )}
           {/* Гравці */}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>👥</span>
+            <GroupPeople className="w-4 h-4" />
             <span>
               {getPlayerCount()}
               {session.maxPlayers ? ` / ${session.maxPlayers}` : ''} гравців
@@ -153,13 +157,11 @@ export default function SessionInfoWidget({
           )}
           {/* Вільних місць */}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>🪑</span>
             <span>Вільних: {getFreeSpots()}</span>
           </div>
           {/* GM */}
           {session.creator && (
             <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>🎭</span>
               <span>
                 {session.creator.displayName || session.creator.username || 'GM'}
               </span>
@@ -168,7 +170,6 @@ export default function SessionInfoWidget({
           {/* Локація */}
           {session.location && (
             <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>📍</span>
               <span>{session.location}</span>
             </div>
           )}
@@ -177,7 +178,7 @@ export default function SessionInfoWidget({
         {/* Опис */}
         {session.description && (
           <div className="border-t border-[#9DC88D]/20 pt-4">
-            <h4 className="text-sm font-bold text-[#164A41] mb-2">📝 Опис сесії</h4>
+            <h4 className="text-sm font-bold text-[#164A41] mb-2">Опис сесії</h4>
             <p className="text-sm text-[#4D774E] whitespace-pre-wrap">
               {session.description}
             </p>
@@ -187,7 +188,7 @@ export default function SessionInfoWidget({
         {/* Нотатки GM */}
         {session.notes && (
           <div className="p-4 bg-[#F1B24A]/10 rounded-xl border-2 border-[#F1B24A]/30">
-            <h4 className="text-sm font-bold text-[#164A41] mb-2">📋 Нотатки від GM</h4>
+            <h4 className="text-sm font-bold text-[#164A41] mb-2">Нотатки від GM</h4>
             <p className="text-sm text-[#4D774E] whitespace-pre-wrap">
               {session.notes}
             </p>
@@ -198,7 +199,7 @@ export default function SessionInfoWidget({
         <div className="border-t border-[#9DC88D]/20 pt-4">
           {session.campaign ? (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold text-[#164A41]">📚 Кампанія:</span>
+              <span className="text-sm font-bold text-[#164A41]">Кампанія:</span>
               <button
                 onClick={() => navigate(`/campaign/${session.campaign.id}`)}
                 className="text-sm text-[#4D774E] hover:text-[#164A41] underline transition-colors"
@@ -213,7 +214,7 @@ export default function SessionInfoWidget({
             </div>
           ) : (
             <div className="flex items-center gap-2 text-sm text-[#4D774E]">
-              <span>🎲</span>
+              <Dice20 className="w-4 h-4" />
               <span>One-shot сесія</span>
             </div>
           )}
@@ -222,7 +223,7 @@ export default function SessionInfoWidget({
         {/* Ціна */}
         {session.price > 0 && (
           <div className="text-sm font-bold text-[#164A41]">
-            💰 {session.price} грн
+            {session.price} грн
           </div>
         )}
 
@@ -252,7 +253,7 @@ export default function SessionInfoWidget({
                     onClick={() => handleStatusChange('ACTIVE')}
                     className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
                   >
-                    🎮 Розпочати
+                    Розпочати
                   </button>
                 )}
                 {session.status === 'ACTIVE' && (
@@ -260,7 +261,7 @@ export default function SessionInfoWidget({
                     onClick={() => handleStatusChange('FINISHED')}
                     className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
                   >
-                    ✅ Завершити
+                    Завершити
                   </button>
                 )}
                 {session.status === 'PLANNED' && (
@@ -268,7 +269,7 @@ export default function SessionInfoWidget({
                     onClick={() => handleStatusChange('CANCELLED')}
                     className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
                   >
-                    ❌ Скасувати
+                    Скасувати
                   </button>
                 )}
               </div>

@@ -12,7 +12,7 @@ import Timer from '@/components/ui/icons/Timer';
  * - Час, тривалість, кількість гравців, систему
  * - Опис сесії (при розгортанні)
  * - Інформацію про кампанію
- * - Ім'я GM
+ * - Ім'я Майстра
  * - Ціну (якщо є)
  * - Кнопку "Деталі" для preview на Dashboard
  * 
@@ -60,7 +60,7 @@ export default function SessionCard({
             {session.myRole && (
               <RoleBadge role={session.myRole} />
             )}
-            <StatusBadge status={session.status} size="sm" showIcon={false} />
+            <StatusBadge status={session.status} size="sm" />
           </div>
         </div>
 
@@ -116,9 +116,9 @@ export default function SessionCard({
             </div>
           )}
 
-          {/* GM */}
+          {/* Майстер */}
           <div className="text-sm text-[#4D774E] mb-4">
-            <span className="font-medium">GM:</span> {session.creator?.displayName || session.creator?.username}
+            <span className="font-medium">Майстер:</span> {session.creator?.displayName || session.creator?.username}
           </div>
 
           {/* Ціна */}

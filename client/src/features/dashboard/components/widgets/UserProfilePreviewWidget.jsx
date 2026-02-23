@@ -166,13 +166,11 @@ export default function UserProfilePreviewWidget() {
         <div className="border-t border-[#9DC88D]/20 pt-4 space-y-2">
           {profile.timezone && (
             <div className="flex items-center gap-2 text-sm text-[#4D774E]">
-              <span>🌍</span>
               <span>Часовий пояс: {profile.timezone}</span>
             </div>
           )}
           {profile.language && (
             <div className="flex items-center gap-2 text-sm text-[#4D774E]">
-              <span>💬</span>
               <span>Мова: {profile.language}</span>
             </div>
           )}

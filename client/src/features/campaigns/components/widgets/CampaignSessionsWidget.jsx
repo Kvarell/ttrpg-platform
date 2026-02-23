@@ -8,7 +8,7 @@ import CreateSessionForm from '@/features/dashboard/components/widgets/CreateSes
  * CampaignSessionsWidget — лівий віджет у Full Mode, таб "Сесії" (default).
  *
  * Показує список сесій кампанії.
- * GM/Owner може створювати нові сесії.
+ * Майстер/Власник може створювати нові сесії.
  *
  * @param {Object} campaign — дані кампанії (з sessions)
  * @param {boolean} canManage — чи може юзер створювати сесії
@@ -70,9 +70,9 @@ export default function CampaignSessionsWidget({
         {/* Статистика */}
         {sessions.length > 0 && (
           <div className="flex items-center gap-4 text-sm text-[#4D774E] p-3 bg-[#9DC88D]/10 rounded-xl">
-            <span>🟢 Заплановано: {plannedCount}</span>
-            <span>✅ Завершено: {finishedCount}</span>
-            <span>📊 Всього: {sessions.length}</span>
+            <span>Заплановано: {plannedCount}</span>
+            <span>Завершено: {finishedCount}</span>
+            <span>Всього: {sessions.length}</span>
           </div>
         )}
 
@@ -81,7 +81,7 @@ export default function CampaignSessionsWidget({
           <EmptyState
             icon="📅"
             title="Ще немає сесій"
-            description={canManage ? 'Створіть першу сесію для цієї кампанії' : 'GM ще не створив жодної сесії'}
+            description={canManage ? 'Створіть першу сесію для цієї кампанії' : 'Майстер ще не створив жодної сесії'}
           />
         ) : (
           <div className="flex flex-col gap-2">
@@ -95,7 +95,7 @@ export default function CampaignSessionsWidget({
           </div>
         )}
 
-        {/* Кнопка створення сесії (GM/Owner) */}
+        {/* Кнопка створення сесії (Майстер/Власник) */}
         {canManage && (
           <button
             onClick={() => setIsCreating(true)}

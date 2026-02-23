@@ -118,7 +118,6 @@ export function ProfileContentWidget({ currentSection, user, onProfileUpdate }) 
       return (
         <DashboardCard title="Баланс та платежі">
           <div className="text-center py-12">
-            <div className="text-6xl mb-4">💰</div>
             <h3 className="text-xl font-bold text-[#164A41] mb-2">Поповнення балансу</h3>
             <p className="text-[#4D774E] mb-6">
               Ця функція буде доступна найближчим часом
@@ -135,7 +134,6 @@ export function ProfileContentWidget({ currentSection, user, onProfileUpdate }) 
       return (
         <DashboardCard title="Мої персонажі">
           <div className="text-center py-12">
-            <div className="text-6xl mb-4">🧙</div>
             <h3 className="text-xl font-bold text-[#164A41] mb-2">Персонажі</h3>
             <p className="text-[#4D774E] mb-6">
               Створюйте та керуйте своїми ігровими персонажами
@@ -158,7 +156,6 @@ export function ProfileContentWidget({ currentSection, user, onProfileUpdate }) 
             {/* Discord */}
             <div className="flex items-center justify-between p-4 border-2 border-[#9DC88D]/30 rounded-xl">
               <div className="flex items-center gap-3">
-                <span className="text-2xl">🎮</span>
                 <div>
                   <div className="font-bold text-[#164A41]">Discord</div>
                   <div className="text-xs text-[#4D774E]">Не підключено</div>
@@ -172,7 +169,6 @@ export function ProfileContentWidget({ currentSection, user, onProfileUpdate }) 
             {/* Telegram */}
             <div className="flex items-center justify-between p-4 border-2 border-[#9DC88D]/30 rounded-xl">
               <div className="flex items-center gap-3">
-                <span className="text-2xl">📱</span>
                 <div>
                   <div className="font-bold text-[#164A41]">Telegram</div>
                   <div className="text-xs text-[#4D774E]">Не підключено</div>
@@ -208,7 +204,7 @@ export function ProfileContentWidget({ currentSection, user, onProfileUpdate }) 
             
             {/* Досягнення */}
             <div>
-              <h4 className="font-bold text-[#164A41] mb-3">🏆 Досягнення</h4>
+              <h4 className="font-bold text-[#164A41] mb-3">Досягнення</h4>
               <div className="text-center py-8 text-[#4D774E] border-2 border-dashed border-[#9DC88D]/30 rounded-xl">
                 Ваші досягнення з'являться тут після першої гри
               </div>

@@ -6,6 +6,9 @@ import DashboardCard from '@/components/ui/DashboardCard';
 import { RoleBadge, VisibilityBadge, EmptyState } from '@/components/shared';
 import { getSystemIcon } from '@/constants/gameSystems';
 import useAuthStore from '@/stores/useAuthStore';
+import Dice20 from '@/components/ui/icons/Dice20';
+import GroupPeople from '@/components/ui/icons/GroupPeople';
+import Data from '@/components/ui/icons/Data';
 
 /**
  * Віджет списку моїх кампаній
@@ -122,15 +125,15 @@ export default function MyCampaignsWidget() {
 
                 {/* Статистика */}
                 <div className="flex items-center gap-4 text-sm text-[#4D774E]">
-                  {campaign.system && <span>🎲 {campaign.system}</span>}
-                  <span>👥 {campaign.members?.length || 0}</span>
-                  <span>📅 {campaign.sessions?.length || 0} сесій</span>
+                  {campaign.system && <span className="flex items-center gap-1"><Dice20 className="w-4 h-4" /> {campaign.system}</span>}
+                  <span className="flex items-center gap-1"><GroupPeople className="w-4 h-4" /> {campaign.members?.length || 0}</span>
+                  <span className="flex items-center gap-1"><Data className="w-4 h-4" /> {campaign.sessions?.length || 0} сесій</span>
                 </div>
 
                 {/* Заявки (якщо власник/GM і є pending) */}
                 {campaign.joinRequests?.length > 0 && (
                   <div className="mt-2 px-2 py-1 bg-[#F1B24A]/20 rounded-lg text-sm text-[#164A41]">
-                    ⚠️ {campaign.joinRequests.length} заявок на приєднання
+                    {campaign.joinRequests.length} заявок на приєднання
                   </div>
                 )}
               </button>

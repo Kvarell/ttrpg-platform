@@ -3,6 +3,7 @@ import DashboardCard from '@/components/ui/DashboardCard';
 import { EmptyState, ConfirmModal, UserAvatar, DateTimeDisplay } from '@/components/shared';
 import MemberCard from '../ui/MemberCard';
 import useCampaignStore from '../../store/useCampaignStore';
+import GroupPeople from '@/components/ui/icons/GroupPeople';
 
 /**
  * CampaignMembersWidget — правий віджет на сторінці кампанії.
@@ -10,12 +11,12 @@ import useCampaignStore from '../../store/useCampaignStore';
  * Відображає:
  * - Список членів кампанії (з ролями)
  * - Для Owner — управління ролями та видалення
- * - Для Owner/GM — список заявок на вступ
+ * - Для Власника/Майстра — список заявок на вступ
  * - Клік на учасника → callback onViewProfile
  *
  * @param {number} campaignId — ID кампанії
  * @param {boolean} isOwner — чи є юзер Owner
- * @param {boolean} canManage — чи може юзер керувати (Owner/GM)
+ * @param {boolean} canManage — чи може юзер керувати (Власник/Майстер)
  * @param {number} currentUserId — ID поточного юзера
  * @param {Function} onViewProfile — колбек для перегляду профілю (userId)
  */
@@ -97,10 +98,10 @@ export default function CampaignMembersWidget({
   return (
     <div className="flex flex-col gap-3 h-full overflow-y-auto">
       {/* Учасники */}
-      <DashboardCard title={`👥 Учасники (${campaignMembers.length})`}>
+      <DashboardCard title={`Учасники (${campaignMembers.length})`}>
         {campaignMembers.length === 0 ? (
           <EmptyState
-            icon="👥"
+            icon={<GroupPeople className="w-10 h-10" />}
             title="Ще немає учасників"
             description="Запросіть гравців за кодом запрошення"
           />
@@ -121,9 +122,9 @@ export default function CampaignMembersWidget({
         )}
       </DashboardCard>
 
-      {/* Заявки на вступ (Owner/GM only) */}
+      {/* Заявки на вступ (Власник/Майстер) */}
       {canManage && pendingRequests.length > 0 && (
-        <DashboardCard title={`📩 Заявки (${pendingRequests.length})`}>
+        <DashboardCard title={`Заявки (${pendingRequests.length})`}>
           <div className="flex flex-col gap-3">
             {pendingRequests.map((request) => (
               <div

@@ -5,6 +5,7 @@ import AuthLayout from "../components/AuthLayout";
 import AuthButton from "../ui/AuthButton";
 import AuthInput from "../ui/AuthInput";
 import AlertMessage from "../../../components/ui/AlertMessage";
+import Arrow from '@/components/ui/icons/Arrow';
 
 export default function VerifyEmailNoticePage() {
   const location = useLocation();
@@ -93,7 +94,7 @@ export default function VerifyEmailNoticePage() {
           to="/login"
           className="inline-flex items-center text-[#164A41] hover:text-[#F1B24A] font-semibold transition-colors group" 
         >
-          <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span>
+          <span className="mr-2 group-hover:-translate-x-1 transition-transform"><Arrow className="w-4 h-4" direction="left" /></span>
           Повернутися до входу
         </Link>
       </div>

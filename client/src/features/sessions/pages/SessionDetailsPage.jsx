@@ -12,6 +12,9 @@ import {
   BackButton,
   EmptyState,
 } from '@/components/shared';
+import Data from '@/components/ui/icons/Data';
+import Timer from '@/components/ui/icons/Timer';
+import GroupPeople from '@/components/ui/icons/GroupPeople';
 
 /**
  * Сторінка деталей сесії
@@ -153,7 +156,6 @@ export default function SessionDetailsPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-[#164A41] flex flex-col items-center justify-center text-white">
-        <div className="text-4xl mb-4">😕</div>
         <p className="text-xl mb-4">{error}</p>
         <button 
           onClick={() => navigate('/')}
@@ -204,8 +206,8 @@ export default function SessionDetailsPage() {
               <div className="flex items-center gap-3 flex-wrap">
                 <StatusBadge status={currentSession.status} />
                 <span className="text-[#4D774E]">
-                  🏰 {currentSession.campaign?.title}
-                </span>
+                    {currentSession.campaign?.title}
+                  </span>
               </div>
             </div>
             
@@ -214,7 +216,7 @@ export default function SessionDetailsPage() {
                 onClick={() => navigate(`/session/${id}/edit`)}
                 className="px-4 py-2 bg-[#164A41] text-white rounded-xl hover:bg-[#1f5c52] transition-colors"
               >
-                ✏️ Редагувати
+                Редагувати
               </button>
             )}
           </div>
@@ -222,7 +224,7 @@ export default function SessionDetailsPage() {
           {/* Дата і час */}
           <div className="flex flex-wrap items-center gap-6 p-4 bg-[#9DC88D]/20 rounded-xl mb-4">
             <div className="flex items-center gap-2">
-              <span className="text-2xl">📅</span>
+              <Data className="w-7 h-7 text-[#164A41]" />
               <div>
                 <DateTimeDisplay value={currentSession.date} format="full" className="font-bold text-[#164A41]" as="div" />
                 <DateTimeDisplay value={currentSession.date} format="time" className="text-sm text-[#4D774E]" as="div" />
@@ -231,7 +233,7 @@ export default function SessionDetailsPage() {
             
             {currentSession.duration && (
               <div className="flex items-center gap-2">
-                <span className="text-2xl">⏱️</span>
+                <Timer className="w-7 h-7 text-[#164A41]" />
                 <div>
                   <div className="font-bold text-[#164A41]">{currentSession.duration} хв</div>
                   <div className="text-sm text-[#4D774E]">Тривалість</div>
@@ -240,7 +242,7 @@ export default function SessionDetailsPage() {
             )}
             
             <div className="flex items-center gap-2">
-              <span className="text-2xl">👥</span>
+              <GroupPeople className="w-7 h-7 text-[#164A41]" />
               <div>
                 <div className="font-bold text-[#164A41]">
                   {currentSession.participants?.length || 0}
@@ -252,7 +254,6 @@ export default function SessionDetailsPage() {
 
             {currentSession.location && (
               <div className="flex items-center gap-2">
-                <span className="text-2xl">📍</span>
                 <div>
                   <div className="font-bold text-[#164A41]">{currentSession.location}</div>
                   <div className="text-sm text-[#4D774E]">Локація</div>
@@ -272,7 +273,7 @@ export default function SessionDetailsPage() {
           {/* Нотатки для гравців */}
           {currentSession.notes && (
             <div className="p-4 bg-[#F1B24A]/10 rounded-xl border-2 border-[#F1B24A]/30">
-              <h3 className="font-bold text-[#164A41] mb-2">📝 Нотатки від GM</h3>
+              <h3 className="font-bold text-[#164A41] mb-2">Нотатки від GM</h3>
               <p className="text-[#4D774E] whitespace-pre-wrap">{currentSession.notes}</p>
             </div>
           )}
@@ -288,7 +289,7 @@ export default function SessionDetailsPage() {
                   onClick={() => setShowJoinModal(true)}
                   className="w-full py-3 bg-[#F1B24A] text-[#164A41] rounded-xl hover:bg-[#e0a340] transition-colors font-bold"
                 >
-                  ⚔️ Приєднатися до сесії
+                  Приєднатися до сесії
                 </button>
               )}
 
@@ -310,7 +311,7 @@ export default function SessionDetailsPage() {
                         onClick={() => handleStatusChange('ACTIVE')}
                         className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
                       >
-                        🎮 Розпочати
+                        Розпочати
                       </button>
                     )}
                     {currentSession.status === 'ACTIVE' && (
@@ -318,7 +319,7 @@ export default function SessionDetailsPage() {
                         onClick={() => handleStatusChange('FINISHED')}
                         className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
                       >
-                        ✅ Завершити
+                        Завершити
                       </button>
                     )}
                     {currentSession.status === 'PLANNED' && (
@@ -326,7 +327,7 @@ export default function SessionDetailsPage() {
                         onClick={() => handleStatusChange('CANCELLED')}
                         className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
                       >
-                        ❌ Скасувати
+                        Скасувати
                       </button>
                     )}
                   </div>
@@ -360,7 +361,7 @@ export default function SessionDetailsPage() {
         <DashboardCard title={`Учасники сесії (${currentSession.participants?.length || 0})`}>
           {currentSession.participants?.length === 0 ? (
             <EmptyState
-              icon="👥"
+              icon={<GroupPeople className="w-10 h-10" />}
               title="Ще ніхто не приєднався"
               description={canJoin() ? 'Будьте першим!' : undefined}
             />
@@ -386,8 +387,8 @@ export default function SessionDetailsPage() {
                       </Link>
                       {participant.characterName && (
                         <div className="text-sm text-[#4D774E]">
-                          🎭 {participant.characterName}
-                        </div>
+                            {participant.characterName}
+                          </div>
                       )}
                     </div>
                   </div>

@@ -8,6 +8,10 @@ import {
   BackButton,
 } from '@/components/shared';
 import { getSystemIcon } from '@/constants/gameSystems';
+import Data from '@/components/ui/icons/Data';
+import Timer from '@/components/ui/icons/Timer';
+import GroupPeople from '@/components/ui/icons/GroupPeople';
+import Dice20 from '@/components/ui/icons/Dice20';
 
 /**
  * SessionPreviewWidget — лівий віджет для не-учасників на /session/:id.
@@ -83,21 +87,21 @@ export default function SessionPagePreviewWidget({
         {/* Інформаційна сітка */}
         <div className="grid grid-cols-2 gap-3 p-4 bg-[#9DC88D]/10 rounded-xl">
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>📅</span>
+            <Data className="w-4 h-4" />
             <DateTimeDisplay value={session.date} format="long" />
           </div>
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>🕐</span>
+            <Timer className="w-4 h-4" />
             <DateTimeDisplay value={session.date} format="time" />
           </div>
           {session.duration && (
             <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>⏱️</span>
+              <Timer className="w-4 h-4" />
               <span>{formatDuration(session.duration)}</span>
             </div>
           )}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>👥</span>
+            <GroupPeople className="w-4 h-4" />
             <span>
               {getPlayerCount()}
               {session.maxPlayers ? ` / ${session.maxPlayers}` : ''} гравців
@@ -110,18 +114,15 @@ export default function SessionPagePreviewWidget({
             </div>
           )}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>🪑</span>
             <span>Вільних: {getFreeSpots()}</span>
           </div>
           {session.creator && (
             <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>🎭</span>
               <span>{session.creator.displayName || session.creator.username || 'GM'}</span>
             </div>
           )}
           {session.location && (
             <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>📍</span>
               <span>{session.location}</span>
             </div>
           )}
@@ -130,7 +131,7 @@ export default function SessionPagePreviewWidget({
         {/* Опис */}
         {session.description && (
           <div className="border-t border-[#9DC88D]/20 pt-4">
-            <h4 className="text-sm font-bold text-[#164A41] mb-2">📝 Опис</h4>
+            <h4 className="text-sm font-bold text-[#164A41] mb-2">Опис</h4>
             <p className="text-sm text-[#4D774E] whitespace-pre-wrap">
               {session.description}
             </p>
@@ -141,7 +142,7 @@ export default function SessionPagePreviewWidget({
         <div className="border-t border-[#9DC88D]/20 pt-4">
           {session.campaign ? (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold text-[#164A41]">📚 Кампанія:</span>
+              <span className="text-sm font-bold text-[#164A41]">Кампанія:</span>
               <button
                 onClick={() => navigate(`/campaign/${session.campaign.id}`)}
                 className="text-sm text-[#4D774E] hover:text-[#164A41] underline transition-colors"
@@ -151,7 +152,7 @@ export default function SessionPagePreviewWidget({
             </div>
           ) : (
             <div className="flex items-center gap-2 text-sm text-[#4D774E]">
-              <span>🎲</span>
+              <Dice20 className="w-4 h-4" />
               <span>One-shot сесія</span>
             </div>
           )}
@@ -160,7 +161,7 @@ export default function SessionPagePreviewWidget({
         {/* Ціна */}
         {session.price > 0 && (
           <div className="text-sm font-bold text-[#164A41]">
-            💰 {session.price} грн
+            {session.price} грн
           </div>
         )}
 
@@ -177,7 +178,7 @@ export default function SessionPagePreviewWidget({
             onClick={() => setShowJoinModal(true)}
             variant="primary"
           >
-            ⚔️ Приєднатися до сесії
+            Приєднатися до сесії
           </Button>
         )}
 

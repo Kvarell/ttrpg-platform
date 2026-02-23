@@ -13,6 +13,10 @@ import useSessionStore from '@/features/sessions/store/useSessionStore';
 import useCalendarStore from '@/stores/useCalendarStore';
 import useAuthStore from '@/stores/useAuthStore';
 import { getSystemIcon } from '@/constants/gameSystems';
+import Data from '@/components/ui/icons/Data';
+import Timer from '@/components/ui/icons/Timer';
+import GroupPeople from '@/components/ui/icons/GroupPeople';
+import Dice20 from '@/components/ui/icons/Dice20';
 
 /**
  * SessionPreviewWidget — лівий віджет inline preview на Dashboard.
@@ -161,24 +165,24 @@ export default function SessionPreviewWidget() {
         <div className="grid grid-cols-2 gap-3 text-sm">
           {/* Дата */}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>📅</span>
+            <Data className="w-4 h-4" />
             <DateTimeDisplay value={session.date} format="long" />
           </div>
           {/* Час */}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>🕐</span>
+            <Timer className="w-4 h-4" />
             <DateTimeDisplay value={session.date} format="time" />
           </div>
           {/* Тривалість */}
           {session.duration && (
             <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>⏱️</span>
+              <Timer className="w-4 h-4" />
               <span>{formatDuration(session.duration)}</span>
             </div>
           )}
           {/* Гравці */}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>👥</span>
+            <GroupPeople className="w-4 h-4" />
             <span>
               {currentPlayers}/{session.maxPlayers} гравців
             </span>
@@ -192,7 +196,6 @@ export default function SessionPreviewWidget() {
           )}
           {/* GM */}
           <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>🎭</span>
             <span>{session.creator?.displayName || session.creator?.username || 'GM'}</span>
           </div>
         </div>
@@ -211,7 +214,7 @@ export default function SessionPreviewWidget() {
         <div className="border-t border-[#9DC88D]/20 pt-4">
           {session.campaign ? (
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-[#164A41]">📚 Кампанія:</span>
+              <span className="text-sm font-bold text-[#164A41]">Кампанія:</span>
               <button
                 onClick={() => navigate(`/campaign/${session.campaign.id}`)}
                 className="text-sm text-[#4D774E] hover:text-[#164A41] underline transition-colors"
@@ -226,7 +229,7 @@ export default function SessionPreviewWidget() {
             </div>
           ) : (
             <div className="flex items-center gap-2 text-sm text-[#4D774E]">
-              <span>🎲</span>
+              <Dice20 className="w-4 h-4" />
               <span>One-shot сесія</span>
             </div>
           )}
@@ -235,7 +238,7 @@ export default function SessionPreviewWidget() {
         {/* Ціна */}
         {session.price > 0 && (
           <div className="text-sm font-bold text-[#164A41]">
-            💰 {session.price} грн
+            {session.price} грн
           </div>
         )}
 

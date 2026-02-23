@@ -22,11 +22,11 @@ export default function ParticipantCard({
   const displayName = user.displayName || user.username || 'Невідомий';
 
   const PARTICIPANT_STATUS = {
-    PENDING: { label: '⏳ Очікує', class: 'bg-yellow-100 text-yellow-800' },
-    CONFIRMED: { label: '✅ Підтверджено', class: 'bg-green-100 text-green-800' },
-    DECLINED: { label: '❌ Відхилено', class: 'bg-red-100 text-red-800' },
-    ATTENDED: { label: '✅ Був присутній', class: 'bg-blue-100 text-blue-800' },
-    NO_SHOW: { label: '🚫 Не з\'явився', class: 'bg-gray-100 text-gray-600' },
+    PENDING: { label: 'Очікує', class: 'bg-yellow-100 text-yellow-800' },
+    CONFIRMED: { label: 'Підтверджено', class: 'bg-green-100 text-green-800' },
+    DECLINED: { label: 'Відхилено', class: 'bg-red-100 text-red-800' },
+    ATTENDED: { label: 'Був присутній', class: 'bg-blue-100 text-blue-800' },
+    NO_SHOW: { label: 'Не з\'\u044fвився', class: 'bg-gray-100 text-gray-600' },
   };
 
   const statusInfo = PARTICIPANT_STATUS[participant.status];
@@ -61,7 +61,7 @@ export default function ParticipantCard({
               <span className="text-xs text-[#4D774E]">@{user.username}</span>
             )}
             {participant.characterName && (
-              <span className="text-xs text-[#4D774E]">🎭 {participant.characterName}</span>
+              <span className="text-xs text-[#4D774E]">{participant.characterName}</span>
             )}
           </div>
         </div>
