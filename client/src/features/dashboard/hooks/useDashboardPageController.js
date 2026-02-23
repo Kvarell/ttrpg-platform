@@ -25,10 +25,7 @@ export default function useDashboardPageController() {
 
   const viewMode = useDashboardStore((state) => state.viewMode);
   const setViewMode = useDashboardStore((state) => state.setViewMode);
-  const leftPanelMode = useDashboardStore((state) => state.leftPanelMode);
   const rightPanelMode = useDashboardStore((state) => state.rightPanelMode);
-  const selectedSessionId = useDashboardStore((state) => state.selectedSessionId);
-  const previewUserId = useDashboardStore((state) => state.previewUserId);
 
   const [profileSection, setProfileSection] = useState(PROFILE_SECTIONS.INFO);
 
@@ -64,10 +61,7 @@ export default function useDashboardPageController() {
     // Стан
     viewMode,
     setViewMode,
-    leftPanelMode,
     rightPanelMode,
-    selectedSessionId,
-    previewUserId,
     profileSection,
     setProfileSection,
 

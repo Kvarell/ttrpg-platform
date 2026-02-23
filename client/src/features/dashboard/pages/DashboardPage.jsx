@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { VIEW_MODES, LEFT_PANEL_MODES, PANEL_MODES } from '@/stores/useDashboardStore';
+import { VIEW_MODES, PANEL_MODES } from '@/stores/useDashboardStore';
 import useDashboardStore from '@/stores/useDashboardStore';
 
 // Controller hook — вся логіка сторінки інкапсульована тут
@@ -17,9 +17,6 @@ import {
 } from '../components/widgets/ProfilePageWidget';
 import CalendarWidget from '../components/widgets/CalendarWidget';
 import HomeRightWidget from '../components/widgets/HomeRightWidget';
-import SessionPreviewWidget from '../components/widgets/SessionPreviewWidget';
-import SessionParticipantsWidget from '../components/widgets/SessionParticipantsWidget';
-import UserProfilePreviewWidget from '../components/widgets/UserProfilePreviewWidget';
 import MyGamesListWidget from '../components/widgets/MyGamesListWidget';
 import MyCampaignsWidget from '../components/widgets/MyCampaignsWidget';
 import CreateCampaignWidget from '@/features/campaigns/components/widgets/CreateCampaignWidget';
@@ -46,7 +43,6 @@ export default function DashboardPage() {
     user,
     viewMode,
     setViewMode,
-    leftPanelMode,
     rightPanelMode,
     profileSection,
     setProfileSection,
@@ -63,15 +59,7 @@ export default function DashboardPage() {
   // === Left panel ===
   const renderLeftPanel = () => {
     if (viewMode === VIEW_MODES.HOME) {
-      switch (leftPanelMode) {
-        case LEFT_PANEL_MODES.SESSION_PREVIEW:
-          return <SessionPreviewWidget />;
-        case LEFT_PANEL_MODES.USER_PROFILE:
-          return <UserProfilePreviewWidget />;
-        case LEFT_PANEL_MODES.CALENDAR:
-        default:
-          return <CalendarWidget />;
-      }
+      return <CalendarWidget />;
     }
     if (viewMode === VIEW_MODES.MY_GAMES) return <MyGamesListWidget />;
     if (viewMode === VIEW_MODES.PROFILE) {
@@ -89,14 +77,7 @@ export default function DashboardPage() {
   // === Right panel ===
   const renderRightPanel = () => {
     if (viewMode === VIEW_MODES.HOME) {
-      switch (rightPanelMode) {
-        case PANEL_MODES.PARTICIPANTS:
-          return <SessionParticipantsWidget />;
-        case PANEL_MODES.LIST:
-        case PANEL_MODES.CREATE:
-        default:
-          return <HomeRightWidget />;
-      }
+      return <HomeRightWidget />;
     }
     if (viewMode === VIEW_MODES.MY_GAMES) {
       if (rightPanelMode === PANEL_MODES.CREATE_CAMPAIGN) {

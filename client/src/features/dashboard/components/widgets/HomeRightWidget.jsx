@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardCard from '@/components/ui/DashboardCard';
 import useDashboardStore, { PANEL_MODES } from '@/stores/useDashboardStore';
 import useCalendarStore from '@/stores/useCalendarStore';
@@ -18,10 +19,11 @@ import Dice20 from '@/components/ui/icons/Dice20';
  * Features:
  * - Sticky footer з кнопкою "Створити сесію"
  * - Акордеон для розгортання деталей сесії
- * - Кнопка "Деталі" для inline preview на Dashboard
+ * - Кнопка "Деталі" веде до сторінки сесії
  * - Автоматично показує сесії на сьогодні при першому завантаженні
  */
 export default function HomeRightWidget() {
+  const navigate = useNavigate();
   const {
     selectedDate,
     currentMonth,
@@ -32,7 +34,6 @@ export default function HomeRightWidget() {
     expandedSessionId,
     setRightPanelMode,
     toggleSessionExpanded,
-    openSessionPreview,
   } = useDashboardStore();
 
   const {
@@ -53,11 +54,6 @@ export default function HomeRightWidget() {
   const getDateTitle = (dateStr) => {
     if (!dateStr) return 'Оберіть день';
     return formatDate(dateStr, 'dayMonth');
-  };
-
-  // Обробник перегляду деталей сесії (inline preview)
-  const handleDetails = (sessionId) => {
-    openSessionPreview(sessionId);
   };
 
   // Перехід до форми створення
@@ -131,7 +127,6 @@ return (
                     session={session}
                     isExpanded={isExpanded}
                     onToggle={() => toggleSessionExpanded(session.id)}
-                    onDetails={handleDetails}
                   />
                 );
               })}

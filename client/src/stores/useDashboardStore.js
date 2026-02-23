@@ -39,13 +39,6 @@ export const PANEL_MODES = {
   // Search view
   FILTER: 'filter',       // Filter form (default)
   RESULTS: 'results',     // Search results
-  PARTICIPANTS: 'participants',
-};
-
-export const LEFT_PANEL_MODES = {
-  CALENDAR: 'calendar',
-  SESSION_PREVIEW: 'session-preview',
-  USER_PROFILE: 'user-profile',
 };
 
 /**
@@ -68,15 +61,6 @@ const useDashboardStore = create((set, get) => ({
   /** Режим правої панелі */
   rightPanelMode: PANEL_MODES.LIST,
 
-  /** Режим лівої панелі */
-  leftPanelMode: LEFT_PANEL_MODES.CALENDAR,
-
-  /** Обрана сесія для preview */
-  selectedSessionId: null,
-
-  /** Обраний юзер для preview */
-  previewUserId: null,
-    
   /** Поточний місяць для календаря (Date object) */
   currentMonth: new Date(),
   
@@ -144,9 +128,6 @@ const useDashboardStore = create((set, get) => ({
     set({ 
       viewMode: mode, 
       rightPanelMode: defaultPanelModes[mode] || PANEL_MODES.LIST,
-      leftPanelMode: LEFT_PANEL_MODES.CALENDAR,
-      selectedSessionId: null,
-      previewUserId: null,
       selectedDate: initialDate,
       expandedSessionId: null,
       hasSearched: false,
@@ -252,31 +233,6 @@ const useDashboardStore = create((set, get) => ({
     get().selectDate(dateStr);
   },
 
-  openSessionPreview: (sessionId) => {
-    set({
-      selectedSessionId: sessionId,
-      previewUserId: null,
-      leftPanelMode: LEFT_PANEL_MODES.SESSION_PREVIEW,
-      rightPanelMode: PANEL_MODES.PARTICIPANTS,
-    });
-  },
-
-  openUserProfile: (userId) => {
-    set({
-      previewUserId: userId,
-      leftPanelMode: LEFT_PANEL_MODES.USER_PROFILE,
-    });
-  },
-
-  closePreview: () => {
-    set({
-      leftPanelMode: LEFT_PANEL_MODES.CALENDAR,
-      rightPanelMode: PANEL_MODES.LIST,
-      selectedSessionId: null,
-      previewUserId: null,
-    });
-  },
-  
   /**
    * Розгорнути/згорнути сесію (акордеон)
    */
@@ -488,9 +444,6 @@ const useDashboardStore = create((set, get) => ({
     set({
       viewMode: VIEW_MODES.HOME,
       rightPanelMode: PANEL_MODES.LIST,
-      leftPanelMode: LEFT_PANEL_MODES.CALENDAR,
-      selectedSessionId: null,
-      previewUserId: null,
       selectedDate: todayStr,
       currentMonth: new Date(),
       expandedSessionId: null,

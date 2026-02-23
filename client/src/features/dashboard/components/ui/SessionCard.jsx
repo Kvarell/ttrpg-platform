@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { StatusBadge, RoleBadge, DateTimeDisplay } from '@/components/shared';
 import GroupPeople from '@/components/ui/icons/GroupPeople';
 import Dice20 from '@/components/ui/icons/Dice20';
@@ -14,20 +15,19 @@ import Timer from '@/components/ui/icons/Timer';
  * - Інформацію про кампанію
  * - Ім'я Майстра
  * - Ціну (якщо є)
- * - Кнопку "Деталі" для preview на Dashboard
+ * - Кнопку "Деталі" для переходу до сторінки сесії
  * 
  * @param {Object} props
  * @param {Object} props.session - Об'єкт сесії
  * @param {boolean} props.isExpanded - Чи розгорнута картка
  * @param {Function} props.onToggle - Функція для розгортання/згортання
- * @param {Function} props.onDetails - Функція для перегляду деталей (inline preview)
  */
 export default function SessionCard({ 
   session, 
   isExpanded, 
-  onToggle, 
-  onDetails,
+  onToggle,
 }) {
+  const navigate = useNavigate();
   // Форматування тривалості
   const formatDuration = (minutes) => {
     const hours = Math.floor(minutes / 60);
@@ -128,11 +128,11 @@ export default function SessionCard({
             </div>
           )}
 
-          {/* Кнопка "Деталі" — відкриває inline preview на Dashboard */}
+          {/* Кнопка "Деталі" — перехід до сторінки сесії */}
           <button 
             onClick={(e) => {
               e.stopPropagation();
-              onDetails(session.id);
+              navigate(`/session/${session.id}`);
             }}
             className="w-full py-2 px-4 bg-[#F1B24A] text-[#164A41] rounded-lg font-bold hover:bg-[#4D774E] hover:text-white transition-colors"
           >
