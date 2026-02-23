@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { searchCampaigns, searchSessions } from '@/features/search/api/searchApi';
+import { apiAction } from '@/utils/apiAction';
 import useCalendarStore from './useCalendarStore';
 
 /**
@@ -30,8 +31,9 @@ export const PANEL_MODES = {
   LIST: 'list',           // Session list (default)
   CREATE: 'create',       // Create session form
   
-  // My Games view
+  // My Games / Campaigns view
   CAMPAIGNS: 'campaigns', // Campaign list (default)
+  CREATE_CAMPAIGN: 'create-campaign', // Create campaign widget
   USER_SESSIONS: 'user-sessions', // User sessions for selected day
   
   // Search view
@@ -383,11 +385,10 @@ const useDashboardStore = create((set, get) => ({
       }
     });
 
-    set({ isSearchLoading: true, error: null });
-    try {
-      const response = await searchCampaigns(searchParams);
-      if (response.success) {
-        const data = response.data;
+    const result = await apiAction(set, {
+      loadingKey: 'isSearchLoading',
+      apiCall: () => searchCampaigns(searchParams),
+      onSuccess: (data) =>
         set({
           campaignResults: {
             campaigns:
@@ -397,18 +398,11 @@ const useDashboardStore = create((set, get) => ({
             total: data.total,
             hasMore: data.hasMore,
           },
-        });
-        return data;
-      } else {
-        set({ error: response.message });
-        return null;
-      }
-    } catch (error) {
-      set({ error: error.message || 'Помилка при пошуку кампаній' });
-      return null;
-    } finally {
-      set({ isSearchLoading: false });
-    }
+        }),
+      defaultError: 'Помилка при пошуку кампаній',
+    });
+
+    return result.success ? result.data : null;
   },
 
   /**
@@ -441,11 +435,10 @@ const useDashboardStore = create((set, get) => ({
       }
     });
 
-    set({ isSearchLoading: true, error: null });
-    try {
-      const response = await searchSessions(searchParams);
-      if (response.success) {
-        const data = response.data;
+    const result = await apiAction(set, {
+      loadingKey: 'isSearchLoading',
+      apiCall: () => searchSessions(searchParams),
+      onSuccess: (data) =>
         set({
           sessionResults: {
             sessions:
@@ -455,18 +448,11 @@ const useDashboardStore = create((set, get) => ({
             total: data.total,
             hasMore: data.hasMore,
           },
-        });
-        return data;
-      } else {
-        set({ error: response.message });
-        return null;
-      }
-    } catch (error) {
-      set({ error: error.message || 'Помилка при пошуку сесій' });
-      return null;
-    } finally {
-      set({ isSearchLoading: false });
-    }
+        }),
+      defaultError: 'Помилка при пошуку сесій',
+    });
+
+    return result.success ? result.data : null;
   },
 
   /**

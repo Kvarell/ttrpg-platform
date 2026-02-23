@@ -3,6 +3,7 @@ import {
   getCalendarStats,
   getSessionsByDayFiltered,
 } from '@/features/sessions/api/sessionApi';
+import { apiAction } from '@/utils/apiAction';
 
 const resolveScope = (viewMode, hasSearched) => {
   if (viewMode === 'my-games') return 'user';
@@ -47,22 +48,14 @@ const useCalendarStore = create((set) => ({
       }
     }
 
-    set({ isCalendarLoading: true, error: null });
-    try {
-      const response = await getCalendarStats(params);
-      if (response.success) {
-        set({ calendarStats: response.data });
-        return response.data;
-      }
+    const result = await apiAction(set, {
+      loadingKey: 'isCalendarLoading',
+      apiCall: () => getCalendarStats(params),
+      onSuccess: (data) => set({ calendarStats: data }),
+      defaultError: 'Помилка завантаження календаря',
+    });
 
-      set({ error: response.message || 'Помилка завантаження календаря' });
-      return null;
-    } catch (error) {
-      set({ error: error.message || 'Помилка завантаження календаря' });
-      return null;
-    } finally {
-      set({ isCalendarLoading: false });
-    }
+    return result.success ? result.data : null;
   },
 
   fetchDaySessions: async (
@@ -77,22 +70,14 @@ const useCalendarStore = create((set) => ({
     const scope = resolveScope(viewMode, hasSearched);
     const filters = scope === 'search' ? buildSearchFilters(searchFilters) : null;
 
-    set({ isDaySessionsLoading: true, error: null });
-    try {
-      const response = await getSessionsByDayFiltered(date, scope, filters);
-      if (response.success) {
-        set({ daySessions: response.data });
-        return response.data;
-      }
+    const result = await apiAction(set, {
+      loadingKey: 'isDaySessionsLoading',
+      apiCall: () => getSessionsByDayFiltered(date, scope, filters),
+      onSuccess: (data) => set({ daySessions: data }),
+      defaultError: 'Помилка завантаження сесій',
+    });
 
-      set({ error: response.message || 'Помилка завантаження сесій' });
-      return null;
-    } catch (error) {
-      set({ error: error.message || 'Помилка завантаження сесій' });
-      return null;
-    } finally {
-      set({ isDaySessionsLoading: false });
-    }
+    return result.success ? result.data : null;
   },
 
   clearDaySessions: () => set({ daySessions: [] }),

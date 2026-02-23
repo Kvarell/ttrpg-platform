@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useCampaignStore from '@/features/campaigns/store/useCampaignStore';
+import useDashboardStore, { PANEL_MODES } from '@/stores/useDashboardStore';
 import DashboardCard from '@/components/ui/DashboardCard';
 import { RoleBadge, VisibilityBadge, EmptyState } from '@/components/shared';
-import CreateCampaignModal from '../../../campaigns/components/CreateCampaignModal';
 import { getSystemIcon } from '@/constants/gameSystems';
 import useAuthStore from '@/stores/useAuthStore';
 
@@ -14,8 +14,8 @@ export default function MyCampaignsWidget() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const { campaigns, fetchMyCampaigns, error } = useCampaignStore();
+  const { setRightPanelMode } = useDashboardStore();
   const [filter, setFilter] = useState('all'); // all, owner, member
-  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     fetchMyCampaigns(filter);
@@ -33,8 +33,13 @@ export default function MyCampaignsWidget() {
     navigate(`/campaign/${campaignId}`);
   };
 
+  const handleCreateClick = () => {
+    setRightPanelMode(PANEL_MODES.CREATE_CAMPAIGN);
+  };
+
   const handleCreateSuccess = (newCampaign) => {
-    setShowCreateModal(false);
+    // Перезавантажуємо список кампаній
+    fetchMyCampaigns(filter);
     // Переходимо на сторінку нової кампанії
     if (newCampaign?.id) {
       navigate(`/campaign/${newCampaign.id}`);
@@ -93,7 +98,7 @@ export default function MyCampaignsWidget() {
           icon="📚"
           title="Немає кампаній"
           description="Створіть нову або приєднайтесь до існуючої"
-          action={{ label: '+ Створити кампанію', onClick: () => setShowCreateModal(true) }}
+          action={{ label: '+ Створити кампанію', onClick: handleCreateClick }}
           className="h-full"
         />
       ) : (
@@ -143,20 +148,13 @@ export default function MyCampaignsWidget() {
           
           {/* Кнопка створення */}
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={handleCreateClick}
             className="p-4 border-2 border-dashed border-[#9DC88D]/50 rounded-xl text-[#4D774E] hover:border-[#164A41] hover:text-[#164A41] transition-colors font-medium"
           >
             + Створити нову кампанію
           </button>
         </div>
       )}
-
-      {/* Модалка створення */}
-      <CreateCampaignModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={handleCreateSuccess}
-      />
     </DashboardCard>
   );
 }
