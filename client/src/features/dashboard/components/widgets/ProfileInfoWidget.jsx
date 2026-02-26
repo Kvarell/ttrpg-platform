@@ -1,9 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
+import { ViewProfileButton } from '@/components/shared';
 import { getProfileByUsername } from '@/features/profile/api/profileApi';
+import ProfilePublicCard from '@/features/profile/components/ProfilePublicCard';
 import useAuthStore from '@/stores/useAuthStore';
-import { UserAvatar, CopyProfileLinkButton } from '@/components/shared';
 
+/**
+ * ProfileInfoWidget — «Перегляд профілю» у власному кабінеті.
+ *
+ * Відповідає виключно за логіку отримання даних:
+ *   - mode='me'       → бере профіль з authStore (без фетчу)
+ *   - mode='username' → завантажує публічний профіль за username
+ *
+ * Рендер повністю делегується ProfilePublicCard, щоб власник
+ * бачив свій профіль так само, як його бачать інші.
+ *
+ * @param {'me'|'username'} mode
+ * @param {string}  [username]
+ * @param {Object}  [profile]   — зовнішній профіль (пропускає фетч)
+ * @param {string}  [title]
+ */
 export default function ProfileInfoWidget({
   mode = 'me',
   username,
@@ -15,21 +31,24 @@ export default function ProfileInfoWidget({
   const [isInitialLoading, setIsInitialLoading] = useState(mode === 'username' && !profileProp);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(Boolean(profileProp));
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
 
+  // Зовнішній profileProp має пріоритет
   useEffect(() => {
     if (profileProp) {
       setProfile(profileProp);
       setHasLoadedOnce(true);
-      setError('');
+      setError(null);
     }
   }, [profileProp]);
 
+  // mode='me': синхронізуємо з authStore
   useEffect(() => {
     if (mode !== 'me') return;
     setProfile(profileProp || authUser || null);
   }, [mode, authUser, profileProp]);
 
+  // mode='username': завантажуємо по мережі
   useEffect(() => {
     if (mode !== 'username' || profileProp) return;
     if (!username) {
@@ -40,7 +59,7 @@ export default function ProfileInfoWidget({
 
     let isCancelled = false;
 
-    const loadPublicProfile = async () => {
+    const load = async () => {
       if (!hasLoadedOnce) {
         setIsInitialLoading(true);
       } else {
@@ -51,16 +70,16 @@ export default function ProfileInfoWidget({
         const { profile: data } = await getProfileByUsername(username);
         if (!isCancelled) {
           setProfile(data);
-          setError('');
+          setError(null);
           setHasLoadedOnce(true);
         }
       } catch (err) {
         if (!isCancelled) {
-          if (err.response?.status === 404) {
-            setError('Користувача не знайдено');
-          } else {
-            setError('Не вдалося завантажити профіль');
-          }
+          setError(
+            err.response?.status === 404
+              ? 'Користувача не знайдено'
+              : 'Не вдалося завантажити профіль',
+          );
         }
       } finally {
         if (!isCancelled) {
@@ -70,87 +89,27 @@ export default function ProfileInfoWidget({
       }
     };
 
-    loadPublicProfile();
-
-    return () => {
-      isCancelled = true;
-    };
+    load();
+    return () => { isCancelled = true; };
   }, [mode, username, profileProp, hasLoadedOnce]);
-
-  if (isInitialLoading && !profile) {
-    return (
-      <DashboardCard title={title}>
-        <div className="animate-pulse">
-          <div className="flex items-center gap-6">
-            <div className="w-24 h-24 bg-gray-200 rounded-full"></div>
-            <div className="flex-1 space-y-3">
-              <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          </div>
-        </div>
-      </DashboardCard>
-    );
-  }
-
-  if (error) {
-    return (
-      <DashboardCard title={title}>
-        <p className="text-red-500">{error}</p>
-      </DashboardCard>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <DashboardCard title={title}>
-        <p className="text-gray-500">Профіль недоступний</p>
-      </DashboardCard>
-    );
-  }
 
   return (
     <DashboardCard title={title}>
       {isRefreshing && (
         <div className="mb-3 text-xs text-[#4D774E]">Оновлюємо профіль...</div>
       )}
-      <div className="flex items-center gap-6">
-        {/* Аватар */}
-        <UserAvatar
-          src={profile.avatarUrl}
-          name={profile.displayName || profile.username}
-          size="lg"
-        />
-        
-        {/* Інформація */}
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold text-[#164A41]">
-            {profile.displayName || profile.username}
-          </h2>
-          <p className="text-[#4D774E]">@{profile.username}</p>
-          
-          {/* Статистика */}
-          <div className="mt-3 flex gap-4 text-sm">
-            <div className="bg-[#9DC88D]/20 px-3 py-1 rounded-full text-[#164A41]">
-              🎮 {profile.stats?.sessionsPlayed || 0} сесій
-            </div>
-            <div className="bg-[#9DC88D]/20 px-3 py-1 rounded-full text-[#164A41]">
-              ⏱️ {profile.stats?.hoursPlayed || 0} годин
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Біо */}
-      {profile.bio && (
-        <div className="mt-4 pt-4 border-t border-[#9DC88D]/20">
-          <p className="text-[#164A41] text-sm">{profile.bio}</p>
-        </div>
-      )}
-
-      <div className="mt-4 pt-4 border-t border-[#9DC88D]/20">
-        <CopyProfileLinkButton username={profile.username} />
-      </div>
+      <ProfilePublicCard
+        profile={profile}
+        isLoading={isInitialLoading && !profile}
+        error={error}
+        showStats
+        showContactInfo
+        shareButton={
+          profile?.username
+            ? <ViewProfileButton username={profile.username} />
+            : null
+        }
+      />
     </DashboardCard>
   );
 }

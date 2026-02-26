@@ -1,15 +1,18 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { UserAvatar, RoleBadge } from '@/components/shared';
 
 /**
  * MemberCard — картка учасника кампанії.
+ * Вся картка є кліком — відкриває профіль або переходить на публічну сторінку.
+ * Контроли (select ролі, кнопка ✕) не тригерять перехід (stopPropagation).
  *
- * @param {Object} member — об'єкт учасника (з user, role, joinedAt)
- * @param {boolean} isOwner — чи є поточний юзер власником кампанії
- * @param {number} currentUserId — ID поточного юзера
- * @param {Function} onRemove — колбек видалення (memberId)
- * @param {Function} onChangeRole — колбек зміни ролі (memberId, newRole)
- * @param {Function} onViewProfile — колбек перегляду профілю (userId)
+ * @param {Object}   member        — об'єкт учасника (з user, role, joinedAt)
+ * @param {boolean}  isOwner       — чи є поточний юзер власником кампанії
+ * @param {number}   currentUserId — ID поточного юзера
+ * @param {Function} onRemove      — колбек видалення (memberId)
+ * @param {Function} onChangeRole  — колбек зміни ролі (memberId, newRole)
+ * @param {Function} [onViewProfile] — якщо передано, показує вбудований прев'ю замість переходу
  */
 export default function MemberCard({
   member,
@@ -19,30 +22,39 @@ export default function MemberCard({
   onChangeRole,
   onViewProfile,
 }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const user = member.user || {};
   const displayName = user.displayName || user.username || 'Невідомий';
   const isSelf = member.userId === currentUserId;
   const isMemberOwner = member.role === 'OWNER';
 
+  const handleCardClick = () => {
+    if (onViewProfile) {
+      onViewProfile(user.id);
+    } else if (user.username) {
+      navigate(`/user/${user.username}`, { state: { fromPath: location.pathname } });
+    }
+  };
+
+  const stopProp = (e) => e.stopPropagation();
+
   return (
-    <div className="flex items-center justify-between p-3 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#9DC88D]/60 transition-colors">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleCardClick}
+      onKeyDown={(e) => e.key === 'Enter' && handleCardClick()}
+      className="flex items-center justify-between p-3 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#9DC88D]/60 hover:bg-[#9DC88D]/5 transition-colors cursor-pointer"
+    >
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <UserAvatar src={user.avatarUrl} name={displayName} size="sm" />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            {onViewProfile ? (
-              <button
-                onClick={() => onViewProfile(user.id)}
-                className="font-medium text-[#164A41] hover:underline truncate text-left"
-              >
-                {displayName}
-              </button>
-            ) : (
-              <span className="font-medium text-[#164A41] truncate">
-                {displayName}
-              </span>
-            )}
+            <span className="font-medium text-[#164A41] truncate">
+              {displayName}
+            </span>
             <RoleBadge role={member.role} />
           </div>
 
@@ -54,8 +66,7 @@ export default function MemberCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {/* Зміна ролі (тільки для Owner, не для себе і не для інших Owner) */}
+      <div role="presentation" className="flex items-center gap-2 flex-shrink-0" onClick={stopProp} onKeyDown={stopProp}>
         {isOwner && !isSelf && !isMemberOwner && onChangeRole && (
           <select
             value={member.role}
@@ -67,7 +78,6 @@ export default function MemberCard({
           </select>
         )}
 
-        {/* Кнопка видалення (для Owner, не для себе і не для інших Owner) */}
         {isOwner && !isSelf && !isMemberOwner && onRemove && (
           <button
             onClick={() => onRemove(member.id)}

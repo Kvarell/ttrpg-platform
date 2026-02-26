@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import DashboardCard from '@/components/ui/DashboardCard';
 import useDashboardStore, { PANEL_MODES } from '@/stores/useDashboardStore';
 import useCalendarStore from '@/stores/useCalendarStore';
@@ -23,7 +22,6 @@ import Dice20 from '@/components/ui/icons/Dice20';
  * - Автоматично показує сесії на сьогодні при першому завантаженні
  */
 export default function HomeRightWidget() {
-  const navigate = useNavigate();
   const {
     selectedDate,
     currentMonth,

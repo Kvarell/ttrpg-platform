@@ -137,6 +137,19 @@ class ProfileController {
       next(error);
     }
   }
+  /**
+   * GET /api/profile/user/:id
+   * Отримати публічний профіль за userId
+   */
+  async getProfileByUserId(req, res, next) {
+    try {
+      const { id } = req.params;
+      const profile = await profileService.getProfileByUserId(id);
+      res.json({ success: true, profile });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new ProfileController();

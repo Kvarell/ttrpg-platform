@@ -9,20 +9,50 @@ import {
 } from '@/components/shared';
 import useCampaignStore from '@/features/campaigns/store/useCampaignStore';
 import useSessionStore from '@/features/sessions/store/useSessionStore';
-import { getSystemIcon } from '@/constants/gameSystems';
 import Dice20 from '@/components/ui/icons/Dice20';
 import GroupPeople from '@/components/ui/icons/GroupPeople';
 import Data from '@/components/ui/icons/Data';
 import Timer from '@/components/ui/icons/Timer';
 
+/** Картка сесії — використовується і для one-shot і для сесій кампанії */
+function SessionCard({ session, navigate, formatDuration }) {
+  return (
+    <button
+      onClick={() => navigate(`/session/${session.id}`)}
+      className="w-full text-left p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/40 hover:shadow-md transition-all"
+    >
+      <div className="flex items-start justify-between mb-1">
+        <h4 className="font-bold text-[#164A41] truncate">{session.title}</h4>
+        <StatusBadge status={session.status} size="sm" />
+      </div>
+      <div className="flex items-center gap-3 text-sm text-[#4D774E] mt-1 flex-wrap">
+        {session.myRole && <RoleBadge role={session.myRole} />}
+        <span className="flex items-center gap-1">
+          <Data className="w-4 h-4" /> <DateTimeDisplay value={session.date} format="short" />
+        </span>
+        <span className="flex items-center gap-1">
+          <Timer className="w-4 h-4" /> <DateTimeDisplay value={session.date} format="time" />
+        </span>
+        {session.duration && (
+          <span className="flex items-center gap-1">
+            <Timer className="w-4 h-4" /> {formatDuration(session.duration)}
+          </span>
+        )}
+        <span className="flex items-center gap-1">
+          <GroupPeople className="w-4 h-4" /> {session.currentPlayers}/{session.maxPlayers}
+        </span>
+      </div>
+    </button>
+  );
+}
+
 /**
  * MyGamesListWidget — ліва панель для "Мої ігри" view.
  *
- * Два розділи:
- * 1. Мої кампанії — список кампаній, де юзер є учасником
- * 2. Мої сесії (one-shot) — сесії без campaignId
- *
- * Клік → navigate('/session/:id') або navigate('/campaign/:id')
+ * Три розділи:
+ * 1. Мої кампанії
+ * 2. Сесії в кампаніях (згруповані по кампанії)
+ * 3. Мої сесії (one-shot)
  */
 export default function MyGamesListWidget() {
   const navigate = useNavigate();
@@ -52,11 +82,22 @@ export default function MyGamesListWidget() {
     load();
   }, [fetchMySessions]);
 
-  // Фільтруємо one-shot сесії (без кампанії)
+  // Розбиваємо сесії на one-shot та сесії всередині кампаній
   const oneShotSessions = sessions.filter((s) => !s.campaignId);
+  const campaignSessions = sessions.filter((s) => !!s.campaignId);
 
-  // const isLoading = isLoadingCampaigns && isLoadingSessions;
-  const isEmpty = campaigns.length === 0 && oneShotSessions.length === 0;
+  // Групуємо сесії кампаній за кампанією
+  const sessionsByCampaign = campaignSessions.reduce((acc, session) => {
+    const key = session.campaignId;
+    if (!acc[key]) {
+      acc[key] = { id: key, title: session.campaign?.title || `Кампанія #${key}`, sessions: [] };
+    }
+    acc[key].sessions.push(session);
+    return acc;
+  }, {});
+  const campaignGroups = Object.values(sessionsByCampaign);
+
+  const isEmpty = campaigns.length === 0 && oneShotSessions.length === 0 && campaignSessions.length === 0;
 
   // Форматування тривалості
   const formatDuration = (minutes) => {
@@ -107,9 +148,8 @@ export default function MyGamesListWidget() {
             </h3>
             <div className="flex flex-col gap-2">
               {campaigns.map((campaign) => {
-                const myRole = campaign.myRole || 'PLAYER';
+                const myRole = campaign.myRole;
                 const membersCount = campaign.membersCount || campaign.members?.length || 0;
-                const icon = getSystemIcon(campaign.system);
 
                 return (
                   <button
@@ -119,7 +159,6 @@ export default function MyGamesListWidget() {
                   >
                     <div className="flex items-start justify-between mb-1">
                       <h4 className="font-bold text-[#164A41] flex items-center gap-2">
-                        <span>{icon}</span>
                         <span className="truncate">{campaign.title}</span>
                       </h4>
                       <StatusBadge status={campaign.status || 'ACTIVE'} size="sm" />
@@ -142,6 +181,27 @@ export default function MyGamesListWidget() {
           </section>
         )}
 
+        {/* === Розділ: Сесії в кампаніях === */}
+        {campaignGroups.length > 0 && (
+          <section>
+            <h3 className="text-lg font-bold text-[#164A41] mb-3">
+              Сесії в кампаніях
+            </h3>
+            <div className="flex flex-col gap-4">
+              {campaignGroups.map((group) => (
+                <div key={group.id}>
+                  <p className="text-sm font-semibold text-[#4D774E] mb-2 pl-1">{group.title}</p>
+                  <div className="flex flex-col gap-2">
+                    {group.sessions.map((session) => (
+                      <SessionCard key={session.id} session={session} navigate={navigate} formatDuration={formatDuration} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* === Розділ: Мої сесії (one-shot) === */}
         {oneShotSessions.length > 0 && (
           <section>
@@ -149,43 +209,9 @@ export default function MyGamesListWidget() {
               <Dice20 className="w-5 h-5" /> Мої сесії (one-shot)
             </h3>
             <div className="flex flex-col gap-2">
-              {oneShotSessions.map((session) => {
-                const myRole = session.myRole || 'PLAYER';
-                const icon = getSystemIcon(session.system);
-
-                return (
-                  <button
-                    key={session.id}
-                    onClick={() => navigate(`/session/${session.id}`)}
-                    className="w-full text-left p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/40 hover:shadow-md transition-all"
-                  >
-                    <div className="flex items-start justify-between mb-1">
-                      <h4 className="font-bold text-[#164A41] flex items-center gap-2">
-                        <span>{icon}</span>
-                        <span className="truncate">{session.title}</span>
-                      </h4>
-                      <StatusBadge status={session.status} size="sm" />
-                    </div>
-                    <div className="flex items-center gap-3 text-sm text-[#4D774E] mt-1 flex-wrap">
-                      <RoleBadge role={myRole} />
-                      <span className="flex items-center gap-1">
-                        <Data className="w-4 h-4" /> <DateTimeDisplay value={session.date} format="short" />
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Timer className="w-4 h-4" /> <DateTimeDisplay value={session.date} format="time" />
-                      </span>
-                      {session.duration && (
-                        <span className="flex items-center gap-1">
-                          <Timer className="w-4 h-4" /> {formatDuration(session.duration)}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1">
-                        <GroupPeople className="w-4 h-4" /> {session.currentPlayers}/{session.maxPlayers}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+              {oneShotSessions.map((session) => (
+                <SessionCard key={session.id} session={session} navigate={navigate} formatDuration={formatDuration} />
+              ))}
             </div>
           </section>
         )}

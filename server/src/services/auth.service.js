@@ -231,8 +231,30 @@ class AuthService {
     
     const refreshToken = crypto.randomBytes(64).toString('hex');
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 днів
-    
-    // Зберігаємо refresh token
+
+    const MAX_SESSIONS = 5;
+    const now = new Date();
+
+    // Видаляємо всі прострочені токени цього юзера
+    await prismaClient.refreshToken.deleteMany({
+      where: { userId: user.id, expiresAt: { lt: now } }
+    });
+
+    // Якщо активних сесій >= MAX_SESSIONS — видаляємо найстаріші
+    const activeSessions = await prismaClient.refreshToken.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+
+    if (activeSessions.length >= MAX_SESSIONS) {
+      const toDelete = activeSessions.slice(0, activeSessions.length - MAX_SESSIONS + 1);
+      await prismaClient.refreshToken.deleteMany({
+        where: { id: { in: toDelete.map(t => t.id) } }
+      });
+    }
+
+    // Зберігаємо новий refresh token
     await prismaClient.refreshToken.create({
       data: { token: refreshToken, userId: user.id, expiresAt }
     });
@@ -269,12 +291,11 @@ class AuthService {
       select: {
         id: true,
         userId: true,
-        revoked: true,
         expiresAt: true
       }
     });
     
-    if (!stored || stored.revoked) {
+    if (!stored) {
       throw createError.refreshTokenInvalid();
     }
 
@@ -297,14 +318,19 @@ class AuthService {
         select: {
           id: true,
           userId: true,
-          revoked: true,
           expiresAt: true
         }
       });
 
-      if (!storedAgain || storedAgain.revoked) {
+      if (!storedAgain) {
         throw createError.refreshTokenInvalid();
       }
+
+      // Очищаємо прострочені токени цього користувача (щоб не накопичувались між cron-запусками)
+      const now = new Date();
+      await prismaClient.refreshToken.deleteMany({
+        where: { userId: storedAgain.userId, expiresAt: { lt: now } },
+      });
 
       // Завантажуємо користувача (тільки потрібні поля)
       const user = await prismaClient.user.findUnique({ 
@@ -320,10 +346,9 @@ class AuthService {
         throw createError.userNotFound();
       }
 
-      // Відкликаємо старий refresh token
-      await prismaClient.refreshToken.update({ 
-        where: { id: storedAgain.id }, 
-        data: { revoked: true } 
+      // Видаляємо старий refresh token (замість revoke, щоб не накопичувалися)
+      await prismaClient.refreshToken.delete({ 
+        where: { id: storedAgain.id }
       });
 
       // Створюємо нові токени
@@ -359,13 +384,10 @@ class AuthService {
       return;
     }
     try {
-      const stored = await prismaClient.refreshToken.findUnique({ 
-        where: { token: refreshToken },
-        select: { id: true, revoked: true }
+      // Видаляємо токен напряму (deleteMany не кидає помилку якщо не знайдено)
+      await prismaClient.refreshToken.deleteMany({ 
+        where: { token: refreshToken }
       });
-      if (stored && !stored.revoked) {
-        await prismaClient.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } });
-      }
     } catch (e) {
       // ignore errors here; caller will still clear cookies
     }

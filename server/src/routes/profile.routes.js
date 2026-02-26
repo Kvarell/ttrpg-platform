@@ -58,6 +58,9 @@ router.delete('/me/avatar',
 
 // ===== ПУБЛІЧНІ РОУТИ =====
 
+// Отримати профіль за userId (публічний) — до /:username щоб не конфліктував
+router.get('/user/:id', publicProfileLimiter, profileController.getProfileByUserId);
+
 // Отримати профіль за username (публічний)
 router.get('/:username', publicProfileLimiter, profileController.getProfileByUsername);
 

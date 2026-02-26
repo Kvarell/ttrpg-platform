@@ -162,7 +162,15 @@ class SessionService {
       take: limit,
     });
 
-    return sessions;
+    return sessions.map((session) => {
+      const myParticipation = session.participants.find((p) => p.userId === userId);
+      return {
+        ...session,
+        myRole: myParticipation?.role || null,
+        myStatus: myParticipation?.status || null,
+        currentPlayers: session.participants.filter((p) => p.role === 'PLAYER').length,
+      };
+    });
   }
 
   /**

@@ -1,8 +1,7 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useCallback, useMemo } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import useCampaignStore from '../store/useCampaignStore';
 import useAuthStore from '@/stores/useAuthStore';
-import useEntityTabs from '@/hooks/useEntityTabs';
 import usePreviewMode from '@/hooks/usePreviewMode';
 import { TABS } from '../components/navigation/CampaignNavigation';
 
@@ -39,22 +38,37 @@ export default function useCampaignPageController() {
     clearCurrentCampaign,
   } = useCampaignStore();
 
-  // Перегляд профілю
-  const [viewingUserId, setViewingUserId] = useState(null);
+  // Таби та перегляд профілю — обидва в URL, щоб перемикання було атомарним (без миготіння)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || TABS.SESSIONS;
+  const viewingUserId = Number(searchParams.get('viewing')) || null;
 
-  // Таби
-  const { activeTab, setTab: setActiveTab } = useEntityTabs({
-    defaultTab: TABS.SESSIONS,
-  });
+  const setActiveTab = useCallback(
+    (tab) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('viewing');
+          if (tab === TABS.SESSIONS) {
+            next.delete('tab');
+          } else {
+            next.set('tab', tab);
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
-  // Завантаження; скидання viewingUserId при зміні id — у cleanup, щоб не викликати setState синхронно в effect
+  // Завантаження; скидання viewing при зміні id
   useEffect(() => {
     if (id) {
       fetchCampaignById(id);
       fetchCampaignMembers(id);
     }
     return () => {
-      setViewingUserId(null);
       clearCurrentCampaign();
     };
   }, [id, fetchCampaignById, fetchCampaignMembers, clearCurrentCampaign]);
@@ -123,12 +137,26 @@ export default function useCampaignPageController() {
   }, [id, deleteCampaignData, navigate]);
 
   const handleViewProfile = useCallback((userId) => {
-    setViewingUserId(userId);
-  }, []);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('viewing', userId);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
 
   const handleBackFromProfile = useCallback(() => {
-    setViewingUserId(null);
-  }, []);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('viewing');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
 
   return {
     // Дані

@@ -111,7 +111,16 @@ class CampaignService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return campaigns;
+    return campaigns.map((campaign) => {
+      let myRole = null;
+      if (campaign.ownerId === userId) {
+        myRole = 'OWNER';
+      } else {
+        const myMembership = campaign.members?.find((m) => m.userId === userId);
+        myRole = myMembership?.role || null;
+      }
+      return { ...campaign, myRole };
+    });
   }
 
   async getCampaignById(campaignId, userId = null) {

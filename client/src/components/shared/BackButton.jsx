@@ -8,13 +8,17 @@ import Arrow from '@/components/ui/icons/Arrow';
  *  - light  — білий текст на темному фоні (для topBar / session pages)
  *  - dark   — темний текст на світлому фоні (для панелей Dashboard)
  *
- * @param {string} [to] — шлях навігації (якщо не вказано — navigate(-1))
- * @param {string} [label] — текст кнопки (за замовчуванням "Назад")
- * @param {'light'|'dark'} [variant]
- * @param {Function} [onClick] — кастомний обробник (замість navigate)
+ * @param {string}            [to]         — шлях навігації (якщо не вказано — navigate(-1))
+ * @param {string}            [fallbackTo] — якщо вказано, при прямому відкритті (немає
+ *                                           попередньої сторінки на цьому сайті) перейде
+ *                                           сюди замість navigate(-1)
+ * @param {string}            [label]      — текст кнопки (за замовчуванням "Назад")
+ * @param {'light'|'dark'}    [variant]
+ * @param {Function}          [onClick]    — кастомний обробник (замість navigate)
  */
 export default function BackButton({
   to,
+  fallbackTo,
   label = 'Назад',
   variant = 'dark',
   onClick,
@@ -23,13 +27,17 @@ export default function BackButton({
   const navigate = useNavigate();
 
   const handleClick = () => {
-    if (onClick) {
-      onClick();
-    } else if (to) {
-      navigate(to);
-    } else {
-      navigate(-1);
+    if (onClick) return onClick();
+    if (to) return navigate(to);
+
+    if (fallbackTo) {
+      const fromSameSite =
+        document.referrer &&
+        new URL(document.referrer).origin === window.location.origin;
+      return fromSameSite ? navigate(-1) : navigate(fallbackTo);
     }
+
+    navigate(-1);
   };
 
   const variants = {

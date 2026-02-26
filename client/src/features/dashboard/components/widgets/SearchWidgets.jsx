@@ -5,7 +5,6 @@ import useSessionStore from '@/features/sessions/store/useSessionStore';
 import DashboardCard from '@/components/ui/DashboardCard';
 import SessionCard from '../ui/SessionCard';
 import { VisibilityBadge } from '@/components/shared';
-import { getSystemIcon } from '@/constants/gameSystems';
 import Dice20 from '@/components/ui/icons/Dice20';
 import GroupPeople from '@/components/ui/icons/GroupPeople';
 import Data from '@/components/ui/icons/Data';
@@ -346,7 +345,6 @@ export function SearchResultsWidget() {
 
           {/* Кампанії */}
           {searchActiveTab === 'campaigns' && items.map((campaign) => {
-            const icon = getSystemIcon(campaign.system);
             return (
               <button
                 key={campaign.id}
@@ -355,7 +353,6 @@ export function SearchResultsWidget() {
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="text-lg flex-shrink-0">{icon}</span>
                     <h4 className="font-bold text-[#164A41] truncate">{campaign.title}</h4>
                   </div>
                   <VisibilityBadge visibility={campaign.visibility} iconOnly />

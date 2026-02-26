@@ -52,11 +52,12 @@ class TokenCleanupService {
   }
 
   /**
-   * Видаляє також відкликані (revoked) токени, які старші за 30 днів
-   * (опція для ще більшої очистки)
+   * Видаляє відкликані (revoked) токени як страховка.
+   * З поточною логікою токени видаляються одразу при logout/refresh,
+   * тому ця функція збирає лише залишки (напр. після збоїв).
    * @returns {Object} Результат операції
    */
-  async cleanupRevokedTokens(daysOld = 30) {
+  async cleanupRevokedTokens(daysOld = 1) {
     const timestamp = new Date().toISOString();
     
     try {

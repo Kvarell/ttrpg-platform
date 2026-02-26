@@ -4,7 +4,6 @@ import useCampaignStore from '@/features/campaigns/store/useCampaignStore';
 import useDashboardStore, { PANEL_MODES } from '@/stores/useDashboardStore';
 import DashboardCard from '@/components/ui/DashboardCard';
 import { RoleBadge, VisibilityBadge, EmptyState } from '@/components/shared';
-import { getSystemIcon } from '@/constants/gameSystems';
 import useAuthStore from '@/stores/useAuthStore';
 import Dice20 from '@/components/ui/icons/Dice20';
 import GroupPeople from '@/components/ui/icons/GroupPeople';
@@ -99,7 +98,6 @@ export default function MyCampaignsWidget() {
         <div className="flex flex-col gap-3">
           {campaigns.map((campaign) => {
             const role = getUserRole(campaign);
-            const icon = getSystemIcon(campaign.system);
 
             return (
               <button
@@ -110,7 +108,6 @@ export default function MyCampaignsWidget() {
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <VisibilityBadge visibility={campaign.visibility} iconOnly />
-                    <span className="text-lg flex-shrink-0">{icon}</span>
                     <h4 className="font-bold text-[#164A41] truncate">{campaign.title}</h4>
                   </div>
                   {role && <RoleBadge role={role} />}

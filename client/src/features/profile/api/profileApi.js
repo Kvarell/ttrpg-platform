@@ -10,10 +10,21 @@ export const getMyProfile = async () => {
 
 /**
  * Отримати публічний профіль за username
- * @param {string} username 
+ * @param {string} username
+ * @returns {Promise<{ profile: import('../profileModel').ProfileShape }>}
  */
 export const getProfileByUsername = async (username) => {
   const response = await api.get(`/profile/${username}`);
+  return response.data;
+};
+
+/**
+ * Отримати публічний профіль за userId
+ * @param {number} userId
+ * @returns {Promise<{ profile: import('../profileModel').ProfileShape }>}
+ */
+export const getProfileByUserId = async (userId) => {
+  const response = await api.get(`/profile/user/${userId}`);
   return response.data;
 };
 

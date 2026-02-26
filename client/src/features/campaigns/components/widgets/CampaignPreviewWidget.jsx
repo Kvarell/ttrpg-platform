@@ -6,7 +6,6 @@ import {
   DateTimeDisplay,
   BackButton,
 } from '@/components/shared';
-import { getSystemIcon } from '@/constants/gameSystems';
 import Data from '@/components/ui/icons/Data';
 import GroupPeople from '@/components/ui/icons/GroupPeople';
 
@@ -67,7 +66,6 @@ export default function CampaignPreviewWidget({
           {/* Система */}
           {campaign.system && (
             <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>{getSystemIcon(campaign.system)}</span>
               <span>{campaign.system}</span>
             </div>
           )}

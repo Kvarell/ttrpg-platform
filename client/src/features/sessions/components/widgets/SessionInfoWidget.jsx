@@ -8,7 +8,6 @@ import {
   DateTimeDisplay,
   ConfirmModal,
 } from '@/components/shared';
-import { getSystemIcon } from '@/constants/gameSystems';
 import Data from '@/components/ui/icons/Data';
 import Timer from '@/components/ui/icons/Timer';
 import GroupPeople from '@/components/ui/icons/GroupPeople';
@@ -151,7 +150,6 @@ export default function SessionInfoWidget({
           {/* Система */}
           {session.system && (
             <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>{getSystemIcon(session.system)}</span>
               <span>{session.system}</span>
             </div>
           )}

@@ -90,6 +90,33 @@ async function getProfileByUsername(username) {
   return user;
 }
 
+async function getProfileByUserId(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: parseInt(userId) },
+    select: {
+      ...PUBLIC_PROFILE_FIELDS,
+      stats: {
+        select: {
+          hoursPlayed: true,
+          sessionsPlayed: true,
+        },
+      },
+      _count: {
+        select: {
+          campaignsOwned: true,
+          sessionsJoined: true,
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    throw createError.userNotFound();
+  }
+
+  return user;
+}
+
 /**
  * Оновити профіль користувача
  * @param {number} userId - ID користувача
@@ -205,6 +232,7 @@ async function deleteAvatar(userId) {
 module.exports = {
   getMyProfile,
   getProfileByUsername,
+  getProfileByUserId,
   updateProfile,
   updateUsername,
   updateLastActive,
