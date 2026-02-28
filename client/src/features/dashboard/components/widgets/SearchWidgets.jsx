@@ -8,6 +8,7 @@ import { VisibilityBadge } from '@/components/shared';
 import Dice20 from '@/components/ui/icons/Dice20';
 import GroupPeople from '@/components/ui/icons/GroupPeople';
 import Data from '@/components/ui/icons/Data';
+import { GAME_SYSTEMS } from '@/constants/gameSystems';
 
 function mapSearchFiltersToLocal(searchFilters) {
   return {
@@ -19,6 +20,7 @@ function mapSearchFiltersToLocal(searchFilters) {
     maxPrice: searchFilters.maxPrice ?? '',
     hasAvailableSlots: searchFilters.hasAvailableSlots || false,
     oneShot: searchFilters.oneShot || false,
+    sortBy: searchFilters.sortBy || '',
   };
 }
 
@@ -67,14 +69,24 @@ export function SearchFiltersWidget({ onSearch }) {
     setLocalFilters(mapSearchFiltersToLocal({}));
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       handleSearch();
     }
   };
 
-  // Популярні системи для швидкого вибору
-  const popularSystems = ['D&D 5e', 'Pathfinder 2e', 'Call of Cthulhu', 'Cyberpunk RED'];
+  // Опції сортування залежно від вкладки
+  const sortOptions = searchActiveTab === 'sessions'
+    ? [
+        { value: 'date', label: 'За датою' },
+        { value: 'newest', label: 'Найновіші' },
+        { value: 'price', label: 'За ціною' },
+      ]
+    : [
+        { value: 'newest', label: 'Найновіші' },
+        { value: 'popular', label: 'Популярні' },
+        { value: 'title', label: 'За назвою' },
+      ];
 
   return (
     <DashboardCard title="Пошук ігор">
@@ -110,7 +122,7 @@ export function SearchFiltersWidget({ onSearch }) {
             name="q"
             value={localFilters.q}
             onChange={handleInputChange}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             placeholder="Пошук за назвою або описом..."
             className="w-full px-4 py-2 border-2 border-[#9DC88D]/30 rounded-xl focus:border-[#164A41] focus:outline-none transition-colors"
           />
@@ -119,26 +131,34 @@ export function SearchFiltersWidget({ onSearch }) {
         {/* Система */}
         <div>
           <label htmlFor="filter-system" className="block text-sm font-medium text-[#164A41] mb-1">Система</label>
-          <input
+          <select
             id="filter-system"
-            type="text"
             name="system"
             value={localFilters.system}
             onChange={handleInputChange}
-            placeholder="D&D 5e, Pathfinder..."
-            className="w-full px-4 py-2 border-2 border-[#9DC88D]/30 rounded-xl focus:border-[#164A41] focus:outline-none transition-colors"
-          />
-          <div className="flex gap-2 mt-2 flex-wrap">
-            {popularSystems.map(sys => (
-              <button
-                key={sys}
-                onClick={() => setLocalFilters(prev => ({ ...prev, system: sys }))}
-                className="px-2 py-1 text-xs bg-gray-100 text-[#164A41] rounded-lg hover:bg-[#9DC88D]/30 transition-colors"
-              >
-                {sys}
-              </button>
+            className="w-full px-4 py-2 border-2 border-[#9DC88D]/30 rounded-xl focus:border-[#164A41] focus:outline-none transition-colors bg-white"
+          >
+            <option value="">Всі системи</option>
+            {GAME_SYSTEMS.map(sys => (
+              <option key={sys.value} value={sys.value}>{sys.label}</option>
             ))}
-          </div>
+          </select>
+        </div>
+
+        {/* Сортування */}
+        <div>
+          <label htmlFor="filter-sortBy" className="block text-sm font-medium text-[#164A41] mb-1">Сортування</label>
+          <select
+            id="filter-sortBy"
+            name="sortBy"
+            value={localFilters.sortBy || (searchActiveTab === 'sessions' ? 'date' : 'newest')}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 border-2 border-[#9DC88D]/30 rounded-xl focus:border-[#164A41] focus:outline-none transition-colors bg-white"
+          >
+            {sortOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         </div>
 
         {/* Фільтри для сесій */}
@@ -309,12 +329,11 @@ export function SearchResultsWidget() {
     <DashboardCard 
       title={`Результати (${results.total || 0})`}
     >
-      {/* {isSearchLoading && items.length === 0 ? (
+      {isSearchLoading && items.length === 0 ? (
         <div className="flex items-center justify-center h-full">
           <div className="animate-pulse text-[#164A41]">Шукаємо...</div>
         </div>
-      ) : */}
-      {error ? (
+      ) : error ? (
         <div className="flex flex-col items-center justify-center h-full text-red-500">
           <p>{error}</p>
         </div>

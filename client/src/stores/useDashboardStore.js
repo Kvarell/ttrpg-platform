@@ -331,7 +331,7 @@ const useDashboardStore = create((set, get) => ({
       system: params.system ?? searchFilters.system,
       limit: params.limit ?? searchFilters.limit,
       offset: params.offset ?? searchFilters.offset,
-      sortBy: params.sortBy ?? 'newest',
+      sortBy: params.sortBy ?? searchFilters.sortBy ?? 'newest',
     };
 
     // Видаляємо пусті параметри

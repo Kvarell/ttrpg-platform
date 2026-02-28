@@ -71,6 +71,9 @@ export default function DashboardPage() {
         />
       );
     }
+    if (viewMode === VIEW_MODES.SEARCH) {
+      return <SearchResultsWidget />;
+    }
     return null;
   };
 
@@ -101,6 +104,9 @@ export default function DashboardPage() {
           user={user}
         />
       );
+    }
+    if (viewMode === VIEW_MODES.SEARCH) {
+      return <SearchFiltersWidget />;
     }
     return null;
   };
