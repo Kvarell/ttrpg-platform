@@ -31,6 +31,7 @@ export default function SessionDetailsPage() {
     joinSessionAction,
     leaveSessionAction,
     updateSessionStatusAction,
+    cancelSessionAction,
     removeParticipantAction,
     error,
     clearCurrentSession,
@@ -116,7 +117,11 @@ export default function SessionDetailsPage() {
   };
 
   const handleStatusChange = async (newStatus) => {
-    await updateSessionStatusAction(id, newStatus);
+    if (newStatus === 'CANCELED') {
+      await cancelSessionAction(id);
+    } else {
+      await updateSessionStatusAction(id, newStatus);
+    }
     fetchSessionById(id);
   };
 
@@ -324,7 +329,7 @@ export default function SessionDetailsPage() {
                     )}
                     {currentSession.status === 'PLANNED' && (
                       <button
-                        onClick={() => handleStatusChange('CANCELLED')}
+                        onClick={() => handleStatusChange('CANCELED')}
                         className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
                       >
                         Скасувати

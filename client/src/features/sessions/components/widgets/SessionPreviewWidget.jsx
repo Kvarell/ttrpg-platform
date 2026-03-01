@@ -187,7 +187,7 @@ export default function SessionPagePreviewWidget({
               ? 'вже завершена'
               : session.status === 'ACTIVE'
               ? 'вже в процесі'
-              : session.status === 'CANCELLED'
+              : session.status === 'CANCELED'
               ? 'скасована'
               : 'недоступна'}
           </div>

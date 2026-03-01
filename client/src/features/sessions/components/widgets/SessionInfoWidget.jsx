@@ -90,13 +90,13 @@ export default function SessionInfoWidget({
     const statusLabels = {
       ACTIVE: 'розпочати',
       FINISHED: 'завершити',
-      CANCELLED: 'скасувати',
+      CANCELED: 'скасувати',
     };
     setConfirmModal({
       isOpen: true,
       title: `Змінити статус?`,
       message: `Ви впевнені, що хочете ${statusLabels[newStatus] || 'змінити статус'} сесії?`,
-      variant: newStatus === 'CANCELLED' ? 'danger' : 'primary',
+      variant: newStatus === 'CANCELED' ? 'danger' : 'primary',
       onConfirm: () => {
         closeConfirmModal();
         onStatusChange?.(newStatus);
@@ -246,7 +246,7 @@ export default function SessionInfoWidget({
                 Управління статусом
               </h4>
               <div className="flex gap-2 flex-wrap">
-                {session.status !== 'ACTIVE' && session.status !== 'FINISHED' && session.status !== 'CANCELLED' && (
+                {session.status !== 'ACTIVE' && session.status !== 'FINISHED' && session.status !== 'CANCELED' && (
                   <button
                     onClick={() => handleStatusChange('ACTIVE')}
                     className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
@@ -264,7 +264,7 @@ export default function SessionInfoWidget({
                 )}
                 {session.status === 'PLANNED' && (
                   <button
-                    onClick={() => handleStatusChange('CANCELLED')}
+                    onClick={() => handleStatusChange('CANCELED')}
                     className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
                   >
                     Скасувати

@@ -1,4 +1,4 @@
-﻿import api from '@/lib/axios';
+import api from '@/lib/axios';
 
 // === CRUD Сесії ===
 
@@ -49,6 +49,15 @@ export const updateSession = async (sessionId, sessionData) => {
  */
 export const deleteSession = async (sessionId) => {
   const response = await api.delete(`/sessions/${sessionId}`);
+  return response.data;
+};
+
+/**
+ * Скасувати сесію (soft delete)
+ * @param {number} sessionId
+ */
+export const cancelSession = async (sessionId) => {
+  const response = await api.post(`/sessions/${sessionId}/cancel`);
   return response.data;
 };
 

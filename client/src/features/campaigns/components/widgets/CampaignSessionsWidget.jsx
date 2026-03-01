@@ -24,7 +24,7 @@ export default function CampaignSessionsWidget({
 
   const sessions = campaign.sessions || [];
 
-  // Сортуємо: спочатку PLANNED/ACTIVE (за датою desc), потім FINISHED/CANCELLED
+  // Сортуємо: спочатку PLANNED/ACTIVE (за датою desc), потім FINISHED/CANCELED
   const sortedSessions = [...sessions].sort((a, b) => {
     const activeStatuses = ['PLANNED', 'ACTIVE'];
     const aIsActive = activeStatuses.includes(a.status);

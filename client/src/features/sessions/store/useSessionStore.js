@@ -6,6 +6,7 @@ import {
   getSessionById,
   updateSession,
   deleteSession,
+  cancelSession,
   getCampaignSessions,
   getSessionParticipants,
   joinSession,
@@ -86,6 +87,44 @@ const useSessionStore = create((set, get) => ({
               : state.currentSession,
         })),
       defaultError: 'Помилка при видаленні сесії',
+    }),
+
+  /**
+   * Оновити статус сесії (PLANNED | ACTIVE | FINISHED | CANCELED)
+   */
+  updateSessionStatusAction: async (sessionId, status) =>
+    apiAction(set, {
+      apiCall: () => updateSession(sessionId, { status }),
+      onSuccess: (data) =>
+        set((state) => ({
+          sessions: state.sessions.map((s) =>
+            s.id === sessionId ? data : s
+          ),
+          currentSession:
+            state.currentSession?.id === sessionId
+              ? data
+              : state.currentSession,
+        })),
+      defaultError: 'Помилка при оновленні статусу сесії',
+    }),
+
+  /**
+   * Скасувати сесію (soft delete через /sessions/:id/cancel)
+   */
+  cancelSessionAction: async (sessionId) =>
+    apiAction(set, {
+      apiCall: () => cancelSession(sessionId),
+      onSuccess: (data) =>
+        set((state) => ({
+          sessions: state.sessions.map((s) =>
+            s.id === sessionId ? data : s
+          ),
+          currentSession:
+            state.currentSession?.id === sessionId
+              ? data
+              : state.currentSession,
+        })),
+      defaultError: 'Помилка при скасуванні сесії',
     }),
 
   fetchCampaignSessions: async (campaignId, params = {}) =>
