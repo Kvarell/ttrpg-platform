@@ -1,5 +1,7 @@
 import api from '@/lib/axios';
 
+const normalizeEmail = (email) => (typeof email === 'string' ? email.trim().toLowerCase() : email);
+
 /**
  * Змінити пароль
  * @param {Object} data - { currentPassword, newPassword, confirmPassword }
@@ -14,7 +16,10 @@ export const changePassword = async (data) => {
  * @param {Object} data - { password, newEmail }
  */
 export const requestEmailChange = async (data) => {
-  const response = await api.post('/security/email', data);
+  const response = await api.post('/security/email', {
+    ...data,
+    newEmail: normalizeEmail(data?.newEmail),
+  });
   return response.data;
 };
 

@@ -6,7 +6,7 @@
 // Завантажуємо конфігурацію (перевіряє змінні оточення)
 require('./src/config/config');
 
-const prisma = require('./src/lib/prisma');
+const { prisma } = require('./src/lib/prisma');
 const { port } = require('./src/config/config');
 const { createApp } = require('./src/app');
 

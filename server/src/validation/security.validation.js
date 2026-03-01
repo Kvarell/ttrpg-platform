@@ -44,7 +44,9 @@ const changePasswordSchema = Joi.object({
 const requestEmailChangeSchema = Joi.object({
   password: currentPasswordRule.required(),
   newEmail: Joi.string()
-    .email()
+    .trim()
+    .lowercase()
+    .email({ tlds: { allow: false } })
     .required()
     .messages({
       'string.email': 'Невірний формат email',

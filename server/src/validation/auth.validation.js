@@ -16,11 +16,23 @@ const usernameRule = Joi.string()
   });
 
 const emailRule = Joi.string()
-  .email()
+  .trim()
+  .lowercase()
+  .email({ tlds: { allow: false } })
   .messages({
     'string.email': 'Невірний формат email',
     'string.empty': 'Email обов\'язковий',
     'any.required': 'Email обов\'язковий',
+  });
+
+const loginPasswordRule = Joi.string()
+  .min(1)
+  .max(128)
+  .messages({
+    'string.empty': 'Пароль обов\'язковий',
+    'string.min': 'Пароль обов\'язковий',
+    'string.max': 'Максимум 128 символів',
+    'any.required': 'Пароль обов\'язковий',
   });
 
 // Pattern для пароля: хоча б одна мала літера (латинська або українська), хоча б одна велика літера, хоча б одна цифра
@@ -44,7 +56,7 @@ const registerSchema = Joi.object({
 
 const loginSchema = Joi.object({
   email: emailRule.required(),
-  password: passwordRule.required(),
+  password: loginPasswordRule.required(),
 });
 
 // 🔐 Валідація для забутого пароля

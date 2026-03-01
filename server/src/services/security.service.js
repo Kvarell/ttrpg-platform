@@ -84,6 +84,7 @@ async function changePassword(userId, currentPassword, newPassword) {
  */
 async function requestEmailChange(userId, password, newEmail) {
   const emailService = require('./email.service');
+  const normalizedNewEmail = typeof newEmail === 'string' ? newEmail.trim().toLowerCase() : newEmail;
   
   // Отримуємо користувача
   const user = await prisma.user.findUnique({
@@ -102,13 +103,13 @@ async function requestEmailChange(userId, password, newEmail) {
   }
 
   // Перевіряємо, що новий email відрізняється
-  if (user.email.toLowerCase() === newEmail.toLowerCase()) {
+  if (user.email.toLowerCase() === normalizedNewEmail) {
     throw createError.emailSameAsCurrent();
   }
 
   // Перевіряємо, чи email не зайнятий іншим користувачем
   const existingUser = await prisma.user.findUnique({
-    where: { email: newEmail.toLowerCase() },
+    where: { email: normalizedNewEmail },
   });
 
   if (existingUser) {
@@ -128,7 +129,7 @@ async function requestEmailChange(userId, password, newEmail) {
     data: {
       token,
       userId,
-      newEmail: newEmail.toLowerCase(),
+      newEmail: normalizedNewEmail,
       expiresAt,
     },
   });
@@ -138,7 +139,7 @@ async function requestEmailChange(userId, password, newEmail) {
 
   // Надсилаємо лист на НОВИЙ email
   const emailResult = await emailService.sendEmailChangeConfirmation(
-    newEmail,
+    normalizedNewEmail,
     confirmUrl,
     user.username
   );

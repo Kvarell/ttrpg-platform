@@ -2,7 +2,7 @@ export const VALIDATION_RULES = {
     email: {
       required: 'Email обов\'язковий',
       pattern: {
-        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/i,
         message: 'Невірний формат email',
       },
     },

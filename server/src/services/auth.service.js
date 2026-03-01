@@ -7,6 +7,10 @@ const emailService = require('./email.service');
 const { checkRefreshRateLimit } = require('./rateLimit.service');
 const { createError, AppError, ERROR_CODES } = require('../constants/errors');
 
+function normalizeEmail(email) {
+  return typeof email === 'string' ? email.trim().toLowerCase() : email;
+}
+
 // Mutex для запобігання race conditions при refresh токенів
 // Зберігає блокування для кожного userId
 const refreshMutexes = new Map();
@@ -67,9 +71,10 @@ class AuthService {
 // 📩 Повторна відправка листа верифікації (ОНОВЛЕНО: Smart Logic)
   async resendVerificationEmail(email) {
     const prismaClient = prisma;
+    const normalizedEmail = normalizeEmail(email);
 
     const user = await prismaClient.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
       select: { id: true, email: true, username: true, emailVerified: true }
     });
 
@@ -129,6 +134,7 @@ class AuthService {
   // Функція реєстрації
   async registerUser(username, email, password) {
     const prismaClient = prisma;
+    const normalizedEmail = normalizeEmail(email);
         
     // 1. Перевіряємо Username
 
@@ -143,7 +149,7 @@ class AuthService {
 
     // 2. Перевіряємо Email
     const existingUserByEmail = await prismaClient.user.findUnique({ 
-      where: { email },
+      where: { email: normalizedEmail },
       select: { id: true }
     });
 
@@ -160,7 +166,7 @@ class AuthService {
     const newUser = await prismaClient.user.create({
       data: {
         username,
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
         wallet: {
           create: { balance: 0.0 }
@@ -191,10 +197,11 @@ class AuthService {
   // Функція входу
   async loginUser(email, password) {
     const prismaClient = prisma;
+    const normalizedEmail = normalizeEmail(email);
     
     // 1. Оптимізація: Вибираємо тільки ті поля, які нам потрібні для перевірки та відповіді
     const user = await prismaClient.user.findUnique({ 
-      where: { email },
+      where: { email: normalizedEmail },
       select: {
         id: true,
         email: true, // Обов'язково додаємо, бо повертаємо його в об'єкті user
@@ -400,10 +407,11 @@ class AuthService {
   // 🔐 Запит на ресет пароля
   async requestPasswordReset(email) {
     const prismaClient = prisma;
+    const normalizedEmail = normalizeEmail(email);
     
     // 1. Перевіряємо, чи існує користувач з таким email
     const user = await prismaClient.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
       select: { id: true, email: true, username: true }
     });
 
