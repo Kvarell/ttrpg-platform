@@ -15,6 +15,7 @@ const PUBLIC_PROFILE_FIELDS = {
 const PRIVATE_PROFILE_FIELDS = {
   ...PUBLIC_PROFILE_FIELDS,
   email: true,
+  role: true,
   timezone: true,
   language: true,
   lastActiveAt: true,

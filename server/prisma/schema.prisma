@@ -9,11 +9,17 @@ datasource db {
 
 // --- КОРИСТУВАЧІ ТА ПРОФІЛЬ---
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 model User {
   id                      Int       @id @default(autoincrement())
   email                   String    @unique
   username                String    @unique
   password                String    // Зберігаємо хеш пароля
+  role                    UserRole  @default(USER)
   
   // --- ПРОФІЛЬ ---
   avatarUrl               String?

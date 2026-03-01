@@ -144,6 +144,12 @@ export const selectUser = (state) => state.user;
 export const selectIsAuthenticated = (state) => state.isAuthenticated;
 
 /**
+ * Селектор для перевірки ролі адміністратора
+ * Використовуйте: const isAdmin = useAuthStore(selectIsAdmin)
+ */
+export const selectIsAdmin = (state) => state.user?.role === 'ADMIN';
+
+/**
  * Селектор для стану завантаження
  */
 export const selectIsLoading = (state) => state.isLoading;

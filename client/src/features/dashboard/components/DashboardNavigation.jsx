@@ -1,9 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { VIEW_MODES } from '@/stores/useDashboardStore';
 import NavButton from '@/components/ui/NavButton';
+import { selectIsAdmin } from '@/stores/useAuthStore';
+import useAuthStore from '@/stores/useAuthStore';
 
 // Додаємо props: user та onLogout
 export default function DashboardNavigation({ currentView, onNavigate, user, onLogout }) {
+  const navigate = useNavigate();
+  const isAdmin = useAuthStore(selectIsAdmin);
 
   return (
     <nav className="flex items-center gap-4 justify-between w-full">
@@ -40,6 +45,15 @@ export default function DashboardNavigation({ currentView, onNavigate, user, onL
 
       {/* Права частина: Інфо про юзера та Логаут */}
       <div className="flex items-center gap-3">
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/admin')}
+            title="Адмін-панель"
+            className="px-4 py-2 rounded-xl border-2 border-[#F1B24A] bg-[#F1B24A] text-[#164A41] hover:bg-[#164A41] hover:text-[#F1B24A] transition-all font-bold shadow-lg"
+          >
+            ⚙ Адмін
+          </button>
+        )}
         {user && (
           <span className="text-white font-medium drop-shadow-md hidden sm:block">
             {user.username}

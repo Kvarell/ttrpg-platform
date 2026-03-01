@@ -17,10 +17,24 @@ import CampaignPage from "../features/campaigns/pages/CampaignPage";
 import SessionPage from "../features/sessions/pages/SessionPage";
 
 import ProtectedRoute from "./ProtectedRoute";
+import AdminRoute from "./AdminRoute";
+import AdminPage from "../features/admin/pages/AdminPage";
 
 const AppRoutes = () => {
   return (
     <Routes>
+      {/* === ADMIN ROUTES === */}
+      <Route 
+        path="/admin" 
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        } 
+      />
+
       {/* === PRIVATE ROUTES === */}
       <Route 
         path="/" 

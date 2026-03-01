@@ -200,7 +200,8 @@ class AuthService {
         email: true, // Обов'язково додаємо, бо повертаємо його в об'єкті user
         username: true,
         password: true,
-        emailVerified: true
+        emailVerified: true,
+        role: true,
       }
     });
     
@@ -224,7 +225,7 @@ class AuthService {
 
     // 4. Генерація токенів
     const accessToken = jwt.sign(
-      { id: user.id, username: user.username }, 
+      { id: user.id, username: user.username, role: user.role }, 
       jwtSecret, 
       { expiresIn: '15m' }
     );
@@ -266,7 +267,8 @@ class AuthService {
       user: { 
         id: user.id, 
         username: user.username, 
-        email: user.email 
+        email: user.email,
+        role: user.role,
       } 
     };
   }
@@ -338,7 +340,8 @@ class AuthService {
         select: {
           id: true,
           username: true,
-          email: true
+          email: true,
+          role: true,
         }
       });
       
@@ -352,7 +355,7 @@ class AuthService {
       });
 
       // Створюємо нові токени
-      const accessToken = jwt.sign({ id: user.id, username: user.username }, jwtSecret, { expiresIn: '15m' });
+      const accessToken = jwt.sign({ id: user.id, username: user.username, role: user.role }, jwtSecret, { expiresIn: '15m' });
       const newRefreshToken = crypto.randomBytes(64).toString('hex');
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 днів
 
@@ -364,6 +367,7 @@ class AuthService {
         id: user.id,
         username: user.username,
         email: user.email,
+        role: user.role,
         createdAt: new Date(),
       };
 
