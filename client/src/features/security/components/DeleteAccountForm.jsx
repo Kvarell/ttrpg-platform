@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deleteAccount } from '../api/securityApi';
-import AlertMessage from '@/components/ui/AlertMessage';
 import Button from '@/components/ui/Button';
+import { toast } from '@/stores/useToastStore';
 
 export default function DeleteAccountForm() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1); // 1 - попередження, 2 - форма
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
     password: '',
@@ -20,16 +19,15 @@ export default function DeleteAccountForm() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    setError('');
   };
 
   const validateForm = () => {
     if (!formData.password) {
-      setError('Введіть пароль');
+      toast.error('Введіть пароль');
       return false;
     }
     if (formData.confirmation !== 'ВИДАЛИТИ') {
-      setError('Введіть "ВИДАЛИТИ" для підтвердження');
+      toast.error('Введіть "ВИДАЛИТИ" для підтвердження');
       return false;
     }
     return true;
@@ -43,7 +41,6 @@ export default function DeleteAccountForm() {
     }
 
     setDeleting(true);
-    setError('');
 
     try {
       await deleteAccount(formData);
@@ -58,7 +55,7 @@ export default function DeleteAccountForm() {
       });
     } catch (err) {
       const message = err.response?.data?.message || err.response?.data?.error || 'Помилка при видаленні акаунту';
-      setError(message);
+      toast.error(message);
       setDeleting(false);
     }
   };
@@ -101,8 +98,6 @@ export default function DeleteAccountForm() {
   // Крок 2: Форма підтвердження
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {error && <AlertMessage type="error" message={error} />}
-
       <div className="bg-red-50 border border-red-300 rounded-xl p-4 text-center">
         <p className="text-red-700 font-medium">
           Для підтвердження видалення введіть пароль та слово "ВИДАЛИТИ"

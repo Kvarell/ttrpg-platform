@@ -1,6 +1,7 @@
 import { BrowserRouter } from "react-router-dom";
 import AppRoutes from "./routes/AppRoutes";
 import { useCsrfInit } from "./hooks/useCsrfInit"; 
+import ToastViewport from "./components/ui/toast/ToastViewport";
 
 function App() {
   const { isInitialized } = useCsrfInit();
@@ -16,6 +17,7 @@ function App() {
   return (
     <BrowserRouter>
       <AppRoutes />
+      <ToastViewport />
     </BrowserRouter>
   );
 }

@@ -3,6 +3,7 @@ import DashboardCard from '@/components/ui/DashboardCard';
 import { ViewProfileButton } from '@/components/shared';
 import { getProfileByUsername } from '@/features/profile/api/profileApi';
 import ProfilePublicCard from '@/features/profile/components/ProfilePublicCard';
+import { toast } from '@/stores/useToastStore';
 import useAuthStore from '@/stores/useAuthStore';
 
 /**
@@ -52,7 +53,9 @@ export default function ProfileInfoWidget({
   useEffect(() => {
     if (mode !== 'username' || profileProp) return;
     if (!username) {
-      setError('Не вказано username');
+      const message = 'Не вказано username';
+      setError(message);
+      toast.error(message);
       setIsInitialLoading(false);
       return;
     }
@@ -75,11 +78,12 @@ export default function ProfileInfoWidget({
         }
       } catch (err) {
         if (!isCancelled) {
-          setError(
+          const message =
             err.response?.status === 404
               ? 'Користувача не знайдено'
-              : 'Не вдалося завантажити профіль',
-          );
+              : 'Не вдалося завантажити профіль';
+          setError(message);
+          toast.error(message);
         }
       } finally {
         if (!isCancelled) {

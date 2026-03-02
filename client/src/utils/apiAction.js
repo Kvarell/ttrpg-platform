@@ -1,3 +1,5 @@
+import { toast } from '@/stores/useToastStore';
+
 /**
  * apiAction — helper для зменшення boilerplate в Zustand stores.
  *
@@ -11,6 +13,11 @@
  * @param {string} [options.loadingKey='isLoading'] — ключ завантаження в сторі
  * @param {string} [options.defaultError='Щось пішло не так'] — fallback повідомлення
  * @param {Function} [options.onSuccess] — callback(data, set) при успіху, може бути async
+ * @param {string} [options.successMessage] — кастомне повідомлення для success toast
+ * @param {string} [options.errorMessage] — кастомне повідомлення для error toast
+ * @param {boolean} [options.toastOnSuccess=false] — показувати toast при успіху
+ * @param {boolean} [options.toastOnError=true] — показувати toast при помилці
+ * @param {boolean} [options.silent=false] — вимкнути всі toasts для цього виклику
  * @returns {Promise<{ success: boolean, data?: any, error?: string }>}
  *
  * @example
@@ -36,6 +43,11 @@ export async function apiAction(set, {
   loadingKey = 'isLoading',
   defaultError = 'Щось пішло не так',
   onSuccess,
+  successMessage,
+  errorMessage,
+  toastOnSuccess = false,
+  toastOnError = true,
+  silent = false,
 }) {
   set({ [loadingKey]: true, error: null });
   try {
@@ -44,14 +56,31 @@ export async function apiAction(set, {
       if (onSuccess) {
         await onSuccess(response.data, set);
       }
+
+      if (!silent && (toastOnSuccess || successMessage)) {
+        toast.success(successMessage || response.message || 'Успішно виконано');
+      }
+
       return { success: true, data: response.data };
     }
-    set({ error: response.message });
-    return { success: false, error: response.message };
+
+    const message = response.message || defaultError;
+    set({ error: message });
+
+    if (!silent && toastOnError) {
+      toast.error(errorMessage || message);
+    }
+
+    return { success: false, error: message };
   } catch (err) {
     const message =
       err.response?.data?.error || err.message || defaultError;
     set({ error: message });
+
+    if (!silent && toastOnError) {
+      toast.error(errorMessage || message);
+    }
+
     return { success: false, error: message };
   } finally {
     set({ [loadingKey]: false });

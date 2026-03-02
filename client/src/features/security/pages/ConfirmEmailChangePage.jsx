@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { confirmEmailChange } from '../api/securityApi';
 import AuthLayout from '@/features/auth/components/AuthLayout';
-import AlertMessage from '@/components/ui/AlertMessage';
 import Button from '@/components/ui/Button';
+import { toast } from '@/stores/useToastStore';
 
 export default function ConfirmEmailChangePage() {
   const [searchParams] = useSearchParams();
@@ -11,7 +11,6 @@ export default function ConfirmEmailChangePage() {
   const token = searchParams.get('token');
 
   const [status, setStatus] = useState(token ? 'loading' : 'error'); // loading, success, error
-  const [message, setMessage] = useState(token ? '' : 'Токен не знайдено. Перевірте посилання.');
   const [newEmail, setNewEmail] = useState('');
 
   useEffect(() => {
@@ -21,12 +20,12 @@ export default function ConfirmEmailChangePage() {
       try {
         const result = await confirmEmailChange(token);
         setStatus('success');
-        setMessage('Email успішно змінено!');
+        toast.success('Email успішно змінено!');
         setNewEmail(result.profile?.email || '');
       } catch (err) {
         setStatus('error');
         const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Помилка підтвердження';
-        setMessage(errorMsg);
+        toast.error(errorMsg);
       }
     };
 
@@ -49,7 +48,7 @@ export default function ConfirmEmailChangePage() {
         {status === 'success' && (
           <div className="space-y-6">
             <div className="text-6xl">✅</div>
-            <AlertMessage type="success" message={message} />
+            <p className="text-[#4D774E] font-medium">Email успішно змінено!</p>
             {newEmail && (
               <div className="bg-[#9DC88D]/20 rounded-xl p-4">
                 <p className="text-sm text-[#4D774E]">Новий email:</p>
@@ -68,7 +67,7 @@ export default function ConfirmEmailChangePage() {
         {status === 'error' && (
           <div className="space-y-6">
             <div className="text-6xl">❌</div>
-            <AlertMessage type="error" message={message} />
+            <p className="text-red-600 font-medium">Не вдалося підтвердити зміну email.</p>
             <p className="text-sm text-[#4D774E]">
               Можливо, посилання прострочене або вже було використане.
             </p>

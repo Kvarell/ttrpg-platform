@@ -5,20 +5,17 @@ import { loginUser } from "../api/authApi";
 
 import AuthInput from "../ui/AuthInput";
 import AuthButton from "../ui/AuthButton";
-import AlertMessage from "../../../components/ui/AlertMessage";
 import { VALIDATION_RULES } from "../../../utils/validationRules";
+import { toast } from "@/stores/useToastStore";
 function LoginForm({ onSuccess }) {
   const { 
     register, 
     handleSubmit, 
     formState: { isSubmitting, errors } 
   } = useForm();
-  const [serverError, setServerError] = useState(null);
   const navigate = useNavigate();
 
   const onSubmit = async (formData) => { // data -> formData для ясності
-    setServerError(null);
-
     try {
       // ❌ Було: const res = await api.post("/api/auth/login", data);
       // ✅ Стало: Викликаємо чисту функцію. URL схований всередині.
@@ -45,30 +42,26 @@ function LoginForm({ onSuccess }) {
       // Якщо 403 CSRF стається постійно - це проблема налаштування axios, а не форми.
       
       if (error.response?.status === 429) {
-        setServerError(errorMessage || 'Занадто багато спроб. Спробуйте пізніше.');
+        toast.error(errorMessage || 'Занадто багато спроб. Спробуйте пізніше.');
         return;
       }
       
       if (error.response?.status === 400) {
-        setServerError('Невірний email або пароль');
+        toast.error('Невірний email або пароль');
         return;
       }
 
       if (!error.response) {
-        setServerError('Помилка з\'єднання з сервером.');
+        toast.error('Помилка з\'єднання з сервером.');
         return;
       }
 
-      setServerError(errorMessage || 'Помилка сервера.');
+      toast.error(errorMessage || 'Помилка сервера.');
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      {serverError && (
-        <AlertMessage type="error" message={serverError} />
-      )}
-
       {/* Поле Email */}
       <AuthInput
         name="email"

@@ -15,7 +15,6 @@ export default function SessionLayout({ topBar, leftPanel, rightPanel }) {
       topBar={topBar}
       leftPanel={leftPanel}
       rightPanel={rightPanel}
-      snowfallCount={50}
     />
   );
 }

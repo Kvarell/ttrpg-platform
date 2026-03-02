@@ -7,7 +7,6 @@ export default function DashboardLayout({ topBar, leftPanel, rightPanel }) {
       topBar={topBar}
       leftPanel={leftPanel}
       rightPanel={rightPanel}
-      snowfallCount={100}
     />
   );
 }

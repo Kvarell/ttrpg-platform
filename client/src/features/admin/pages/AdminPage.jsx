@@ -8,6 +8,7 @@ import AdminSearchBar from '../components/AdminSearchBar';
 import AdminPagination from '../components/AdminPagination';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import NavButton from '@/components/ui/NavButton';
+import { toast } from '@/stores/useToastStore';
 
 // Вкладки адмін-панелі
 const TABS = {
@@ -25,7 +26,6 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState(TABS.DASHBOARD);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   // Users state
   const [users, setUsers] = useState([]);
@@ -57,7 +57,7 @@ export default function AdminPage() {
       const data = await getAdminStats();
       setStats(data);
     } catch {
-      setError('Помилка завантаження статистики');
+      toast.error('Помилка завантаження статистики');
     }
   }, []);
 
@@ -68,7 +68,7 @@ export default function AdminPage() {
       setUsers(data?.users ?? []);
       setUsersPagination(data?.pagination ?? null);
     } catch {
-      setError('Помилка завантаження користувачів');
+      toast.error('Помилка завантаження користувачів');
     } finally {
       setLoading(false);
     }
@@ -81,7 +81,7 @@ export default function AdminPage() {
       setCampaigns(data?.campaigns ?? []);
       setCampaignsPagination(data?.pagination ?? null);
     } catch {
-      setError('Помилка завантаження кампаній');
+      toast.error('Помилка завантаження кампаній');
     } finally {
       setLoading(false);
     }
@@ -94,7 +94,7 @@ export default function AdminPage() {
       setSessions(data?.sessions ?? []);
       setSessionsPagination(data?.pagination ?? null);
     } catch {
-      setError('Помилка завантаження сесій');
+      toast.error('Помилка завантаження сесій');
     } finally {
       setLoading(false);
     }
@@ -102,7 +102,6 @@ export default function AdminPage() {
 
   // Завантаження при зміні вкладки
   useEffect(() => {
-    setError('');
     if (activeTab === TABS.DASHBOARD) loadStats();
     if (activeTab === TABS.USERS) loadUsers();
     if (activeTab === TABS.CAMPAIGNS) loadCampaigns();
@@ -117,13 +116,15 @@ export default function AdminPage() {
       if (deleteModal.type === 'campaign') {
         await deleteAdminCampaign(deleteModal.id);
         loadCampaigns();
+        toast.success('Кампанію видалено');
       } else if (deleteModal.type === 'session') {
         await deleteAdminSession(deleteModal.id);
         loadSessions();
+        toast.success('Сесію видалено');
       }
       setDeleteModal({ open: false, type: '', id: null, title: '' });
     } catch {
-      setError('Помилка видалення');
+      toast.error('Помилка видалення');
     } finally {
       setDeleting(false);
     }
@@ -464,12 +465,6 @@ export default function AdminPage() {
 
   const mainContent = (
     <div className="bg-white border-2 border-[#9DC88D]/30 rounded-2xl shadow-xl h-full overflow-y-auto p-6">
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-          {error}
-          <button onClick={() => setError('')} className="ml-2 font-bold">×</button>
-        </div>
-      )}
       {renderTabContent()}
     </div>
   );

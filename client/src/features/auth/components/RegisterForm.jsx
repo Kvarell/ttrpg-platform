@@ -7,8 +7,8 @@ import { registerUser } from "../api/authApi";
 import AuthInput from "../ui/AuthInput";
 import AuthButton from "../ui/AuthButton";
 import PasswordStrength from "../ui/PasswordStrength";
-import AlertMessage from "../../../components/ui/AlertMessage";
 import { VALIDATION_RULES } from "../../../utils/validationRules";
+import { toast } from "@/stores/useToastStore";
 
 function RegisterForm({ onSuccess }) {
   const { 
@@ -19,13 +19,10 @@ function RegisterForm({ onSuccess }) {
     formState: { isSubmitting, errors } // errors тут є
   } = useForm({ mode: 'onChange' });
   
-  const [serverError, setServerError] = useState(null);
-  
   // Стежимо за паролем для шкали сили пароля
   const password = useWatch({ control, name: 'password', defaultValue: '' });
 
   const onSubmit = async (data) => {
-    setServerError(null);
     try {
       await registerUser(data);
       if (onSuccess) onSuccess(data.email);
@@ -36,7 +33,7 @@ function RegisterForm({ onSuccess }) {
 
       // 1. Обробка ліміту запитів
       if (error.response?.status === 429) {
-        setServerError(resp?.error || 'Занадто багато спроб. Спробуйте пізніше.');
+        toast.error(resp?.error || 'Занадто багато спроб. Спробуйте пізніше.');
         return;
       }
       
@@ -65,21 +62,16 @@ function RegisterForm({ onSuccess }) {
 
          if (handled) return;
 
-         setServerError(resp.error);
+         toast.error(resp.error);
          return;
       }
       
-      setServerError('Помилка реєстрації. Спробуйте пізніше.');
+      toast.error('Помилка реєстрації. Спробуйте пізніше.');
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      {/* Повідомлення про помилку сервера */}
-      {serverError && (
-        <AlertMessage type="error" message={serverError} />
-      )}
-
       {/* Поле Нікнейм */}
       <AuthInput
         name="username"

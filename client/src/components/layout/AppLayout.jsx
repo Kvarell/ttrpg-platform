@@ -1,23 +1,12 @@
 import React from 'react';
-import Snowfall from 'react-snowfall';
 
 export default function AppLayout({
   topBar,
   leftPanel,
   rightPanel,
-  showSnowfall = true,
-  snowfallCount = 50,
 }) {
   return (
     <div className="h-screen bg-[#164A41] p-3 lg:p-4 flex flex-col gap-3 relative overflow-hidden">
-      {showSnowfall ? (
-        <Snowfall
-          style={{ position: 'fixed', width: '100vw', height: '100vh', zIndex: 0 }}
-          snowflakeCount={snowfallCount}
-          radius={[0.5, 2]}
-        />
-      ) : null}
-
       <header className="relative z-10 w-full">
         {topBar}
       </header>

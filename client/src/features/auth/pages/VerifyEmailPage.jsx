@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { verifyEmail } from "../api/authApi"; 
 import AuthLayout from "../components/AuthLayout";
-import AlertMessage from "../../../components/ui/AlertMessage";
+import { toast } from "@/stores/useToastStore";
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -26,12 +26,16 @@ export default function VerifyEmailPage() {
     verifyEmail(token)
       .then(data => { 
         setStatus("success");
-        setMessage(data.message || "Email успішно підтверджено! Тепер ви можете увійти.");
+        const successMessage = data.message || "Email успішно підтверджено! Тепер ви можете увійти.";
+        setMessage(successMessage);
+        toast.success(successMessage);
         setTimeout(() => navigate("/login"), 4000);
       })
       .catch(err => {
         setStatus("error");
-        setMessage(err.response?.data?.error || err.response?.data?.message || "Помилка під час підтвердження email.");
+        const errorMessage = err.response?.data?.error || err.response?.data?.message || "Помилка під час підтвердження email.";
+        setMessage(errorMessage);
+        toast.error(errorMessage);
       });
   }, [token, navigate]);
   
@@ -45,12 +49,10 @@ export default function VerifyEmailPage() {
             </div>
         )}
 
-        {/* Використовуємо універсальний компонент повідомлень */}
         {status !== "loading" && (
-            <AlertMessage 
-                type={status} // "success" або "error"
-                message={message} 
-            />
+          <p className={`font-medium ${status === "success" ? "text-[#4D774E]" : "text-red-600"}`}>
+            {message}
+          </p>
         )}
 
         {status !== "loading" && (

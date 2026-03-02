@@ -21,7 +21,6 @@ export default function CreateCampaignWidget({ onSuccess, onCancel }) {
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [serverError, setServerError] = useState(null);
 
   // Валідація
   const validate = () => {
@@ -44,7 +43,6 @@ export default function CreateCampaignWidget({ onSuccess, onCancel }) {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
-    if (serverError) setServerError(null);
   };
 
   const handleSubmit = async (e) => {
@@ -52,7 +50,6 @@ export default function CreateCampaignWidget({ onSuccess, onCancel }) {
     if (!validate()) return;
 
     setIsSubmitting(true);
-    setServerError(null);
 
     try {
       const payload = {
@@ -68,11 +65,7 @@ export default function CreateCampaignWidget({ onSuccess, onCancel }) {
         setFormData({ title: '', description: '', system: '', visibility: 'PUBLIC' });
         setErrors({});
         onSuccess?.(result.data);
-      } else {
-        setServerError(result.error || 'Помилка створення кампанії');
       }
-    } catch (err) {
-      setServerError(err.message || 'Помилка створення кампанії');
     } finally {
       setIsSubmitting(false);
     }
@@ -98,13 +91,6 @@ export default function CreateCampaignWidget({ onSuccess, onCancel }) {
           ✕
         </button>
       </div>
-
-      {/* Server error */}
-      {serverError && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-          {serverError}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Назва */}

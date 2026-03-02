@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { requestEmailChange } from '../api/securityApi';
-import AlertMessage from '@/components/ui/AlertMessage';
 import Button from '@/components/ui/Button';
+import { toast } from '@/stores/useToastStore';
 
 export default function EmailChangeForm({ currentEmail }) {
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   
   const [formData, setFormData] = useState({
     password: '',
@@ -18,8 +16,6 @@ export default function EmailChangeForm({ currentEmail }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    setError('');
-    setSuccess('');
   };
 
   // Валідація email
@@ -29,19 +25,19 @@ export default function EmailChangeForm({ currentEmail }) {
 
   const validateForm = () => {
     if (!formData.password) {
-      setError('Введіть поточний пароль');
+      toast.error('Введіть поточний пароль');
       return false;
     }
     if (!formData.newEmail) {
-      setError('Введіть новий email');
+      toast.error('Введіть новий email');
       return false;
     }
     if (!isValidEmail(formData.newEmail)) {
-      setError('Невірний формат email');
+      toast.error('Невірний формат email');
       return false;
     }
     if (formData.newEmail.toLowerCase() === currentEmail?.toLowerCase()) {
-      setError('Новий email має відрізнятися від поточного');
+      toast.error('Новий email має відрізнятися від поточного');
       return false;
     }
     return true;
@@ -55,18 +51,16 @@ export default function EmailChangeForm({ currentEmail }) {
     }
 
     setSaving(true);
-    setError('');
-    setSuccess('');
 
     try {
       const result = await requestEmailChange(formData);
-      setSuccess(result.message || 'Лист для підтвердження надіслано на новий email!');
+      toast.success(result.message || 'Лист для підтвердження надіслано на новий email!');
       
       // Очищаємо форму
       setFormData({ password: '', newEmail: '' });
     } catch (err) {
       const message = err.response?.data?.message || err.response?.data?.error || 'Помилка при зміні email';
-      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -76,10 +70,6 @@ export default function EmailChangeForm({ currentEmail }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Повідомлення */}
-      {error && <AlertMessage type="error" message={error} />}
-      {success && <AlertMessage type="success" message={success} />}
-
       {/* Поточний email (інформаційно) */}
       <div className="bg-[#9DC88D]/10 rounded-xl p-4">
         <div className="text-sm text-[#4D774E]">Поточний email:</div>

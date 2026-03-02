@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { changePassword } from '../api/securityApi';
-import AlertMessage from '@/components/ui/AlertMessage';
 import Button from '@/components/ui/Button';
 import PasswordStrength from '@/features/auth/ui/PasswordStrength';
+import { toast } from '@/stores/useToastStore';
 
 export default function PasswordChangeForm() {
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   
   const [formData, setFormData] = useState({
     currentPassword: '',
@@ -26,8 +24,6 @@ export default function PasswordChangeForm() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    setError('');
-    setSuccess('');
   };
 
   const togglePassword = (field) => {
@@ -37,35 +33,35 @@ export default function PasswordChangeForm() {
   // Валідація перед відправкою
   const validateForm = () => {
     if (!formData.currentPassword) {
-      setError('Введіть поточний пароль');
+      toast.error('Введіть поточний пароль');
       return false;
     }
     if (!formData.newPassword) {
-      setError('Введіть новий пароль');
+      toast.error('Введіть новий пароль');
       return false;
     }
     if (formData.newPassword.length < 8) {
-      setError('Новий пароль має містити мінімум 8 символів');
+      toast.error('Новий пароль має містити мінімум 8 символів');
       return false;
     }
     if (!/[a-zа-яіїєґ]/.test(formData.newPassword)) {
-      setError('Пароль має містити малу літеру');
+      toast.error('Пароль має містити малу літеру');
       return false;
     }
     if (!/[A-ZА-ЯІЇЄҐ]/.test(formData.newPassword)) {
-      setError('Пароль має містити велику літеру');
+      toast.error('Пароль має містити велику літеру');
       return false;
     }
     if (!/\d/.test(formData.newPassword)) {
-      setError('Пароль має містити цифру');
+      toast.error('Пароль має містити цифру');
       return false;
     }
     if (formData.newPassword !== formData.confirmPassword) {
-      setError('Паролі не співпадають');
+      toast.error('Паролі не співпадають');
       return false;
     }
     if (formData.currentPassword === formData.newPassword) {
-      setError('Новий пароль має відрізнятися від поточного');
+      toast.error('Новий пароль має відрізнятися від поточного');
       return false;
     }
     return true;
@@ -79,12 +75,10 @@ export default function PasswordChangeForm() {
     }
 
     setSaving(true);
-    setError('');
-    setSuccess('');
 
     try {
       await changePassword(formData);
-      setSuccess('Пароль успішно змінено!');
+      toast.success('Пароль успішно змінено!');
       
       // Очищаємо форму після успіху
       setFormData({
@@ -94,7 +88,7 @@ export default function PasswordChangeForm() {
       });
     } catch (err) {
       const message = err.response?.data?.message || err.response?.data?.error || 'Помилка при зміні пароля';
-      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -104,10 +98,6 @@ export default function PasswordChangeForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Повідомлення */}
-      {error && <AlertMessage type="error" message={error} />}
-      {success && <AlertMessage type="success" message={success} />}
-
       {/* Поточний пароль */}
       <div>
         <label htmlFor="currentPassword" className="block text-sm font-medium text-[#164A41] mb-2">

@@ -2,10 +2,10 @@ import React, { useState, useRef } from 'react';
 import { uploadAvatar, deleteAvatar } from '../api/profileApi';
 import Button from '@/components/ui/Button';
 import { UserAvatar } from '@/components/shared';
+import { toast } from '@/stores/useToastStore';
 
 export default function AvatarUpload({ currentAvatarUrl, username, onUpdate }) {
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
   const handleFileSelect = async (e) => {
@@ -14,16 +14,15 @@ export default function AvatarUpload({ currentAvatarUrl, username, onUpdate }) {
 
     // Валідація
     if (!file.type.startsWith('image/')) {
-      setError('Виберіть зображення');
+      toast.error('Виберіть зображення');
       return;
     }
     if (file.size > 5 * 1024 * 1024) { // 5MB
-      setError('Файл занадто великий (макс. 5MB)');
+      toast.error('Файл занадто великий (макс. 5MB)');
       return;
     }
 
     setUploading(true);
-    setError('');
 
     try {
       const result = await uploadAvatar(file);
@@ -31,7 +30,7 @@ export default function AvatarUpload({ currentAvatarUrl, username, onUpdate }) {
         onUpdate(result.profile);
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Помилка завантаження');
+      toast.error(err.response?.data?.error || 'Помилка завантаження');
     } finally {
       setUploading(false);
       // Очищуємо input для можливості повторного вибору того ж файлу
@@ -44,7 +43,6 @@ export default function AvatarUpload({ currentAvatarUrl, username, onUpdate }) {
   const handleDelete = async () => {
     if (!currentAvatarUrl) return;
     setUploading(true);
-    setError('');
 
     try {
       const result = await deleteAvatar();
@@ -52,7 +50,7 @@ export default function AvatarUpload({ currentAvatarUrl, username, onUpdate }) {
         onUpdate(result.profile);
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Помилка видалення');
+      toast.error(err.response?.data?.error || 'Помилка видалення');
     } finally {
       setUploading(false);
     }
@@ -101,11 +99,6 @@ export default function AvatarUpload({ currentAvatarUrl, username, onUpdate }) {
         </Button>
       )}
 
-      {/* Помилка */}
-      {error && (
-        <p className="text-sm text-red-500">{error}</p>
-      )}
-      
       <p className="text-xs text-[#4D774E] text-center">
         JPG, PNG або GIF. Макс. 5MB
       </p>

@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import useSessionStore from '../store/useSessionStore';
 import useAuthStore from '@/stores/useAuthStore';
 import DashboardCard from '@/components/ui/DashboardCard';
-import Snowfall from 'react-snowfall';
 import {
   StatusBadge,
   DateTimeDisplay,
@@ -178,12 +177,6 @@ export default function SessionDetailsPage() {
 
   return (
     <div className="min-h-screen bg-[#164A41] p-4 lg:p-6 relative overflow-auto">
-      <Snowfall 
-        style={{ position: 'fixed', width: '100vw', height: '100vh', zIndex: 0 }}
-        snowflakeCount={50}
-        radius={[0.5, 2]}
-      />
-
       <div className="relative z-10 max-w-4xl mx-auto">
         {/* Навігація */}
         <div className="mb-6 flex items-center gap-4">

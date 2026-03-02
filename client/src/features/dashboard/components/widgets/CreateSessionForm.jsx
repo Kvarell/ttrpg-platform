@@ -17,7 +17,6 @@ export default function CreateSessionForm({ initialDate, campaignId, onSuccess, 
   const { createNewSession } = useSessionStore();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
   
   // Форматуємо початкову дату для input datetime-local
   const getDefaultDateTime = () => {
@@ -101,7 +100,6 @@ export default function CreateSessionForm({ initialDate, campaignId, onSuccess, 
     }
     
     setIsSubmitting(true);
-    setError(null);
     
     try {
       const result = await createNewSession({
@@ -112,11 +110,7 @@ export default function CreateSessionForm({ initialDate, campaignId, onSuccess, 
       
       if (result.success) {
         onSuccess?.();
-      } else {
-        setError(result.error || 'Помилка створення сесії');
       }
-    } catch (err) {
-      setError(err.message || 'Помилка створення сесії');
     } finally {
       setIsSubmitting(false);
     }
@@ -134,13 +128,6 @@ export default function CreateSessionForm({ initialDate, campaignId, onSuccess, 
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      {/* Загальна помилка */}
-      {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-          {error}
-        </div>
-      )}
-      
       {/* Назва */}
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-[#164A41] mb-1">

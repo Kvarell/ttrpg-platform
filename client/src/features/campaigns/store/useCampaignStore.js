@@ -47,6 +47,7 @@ const useCampaignStore = create((set) => ({
       apiCall: () => getMyCampaigns(role),
       onSuccess: (data) => set({ campaigns: data }),
       defaultError: 'Помилка при отриманні кампаній',
+      silent: true,
     }),
 
   fetchCampaignById: async (campaignId) =>
@@ -55,6 +56,7 @@ const useCampaignStore = create((set) => ({
       onSuccess: (data) =>
         set({ currentCampaign: data, campaignMembers: [], joinRequests: [] }),
       defaultError: 'Помилка при отриманні деталей кампанії',
+      silent: true,
     }),
 
   createNewCampaign: async (campaignData) =>
@@ -63,6 +65,8 @@ const useCampaignStore = create((set) => ({
       onSuccess: (data) =>
         set((state) => ({ campaigns: [...state.campaigns, data] })),
       defaultError: 'Помилка при створенні кампанії',
+      toastOnSuccess: true,
+      successMessage: 'Кампанію успішно створено',
     }),
 
   updateCampaignData: async (campaignId, campaignData) =>
@@ -79,6 +83,8 @@ const useCampaignStore = create((set) => ({
               : state.currentCampaign,
         })),
       defaultError: 'Помилка при оновленні кампанії',
+      toastOnSuccess: true,
+      successMessage: 'Кампанію оновлено',
     }),
 
   deleteCampaignData: async (campaignId) =>
@@ -93,6 +99,8 @@ const useCampaignStore = create((set) => ({
               : state.currentCampaign,
         })),
       defaultError: 'Помилка при видаленні кампанії',
+      toastOnSuccess: true,
+      successMessage: 'Кампанію видалено',
     }),
 
   // === ЧЛЕНИ КАМПАНІЇ ===
@@ -103,6 +111,7 @@ const useCampaignStore = create((set) => ({
       apiCall: () => getCampaignMembers(campaignId),
       onSuccess: (data) => set({ campaignMembers: data }),
       defaultError: 'Помилка при отриманні членів кампанії',
+      silent: true,
     }),
 
   addMember: async (campaignId, newMemberId, role = 'PLAYER') =>
@@ -114,6 +123,8 @@ const useCampaignStore = create((set) => ({
           campaignMembers: [...state.campaignMembers, data],
         })),
       defaultError: 'Помилка при додаванні члена',
+      toastOnSuccess: true,
+      successMessage: 'Учасника додано до кампанії',
     }),
 
   removeMember: async (campaignId, memberId) =>
@@ -127,6 +138,8 @@ const useCampaignStore = create((set) => ({
           ),
         })),
       defaultError: 'Помилка при видаленні члена',
+      toastOnSuccess: true,
+      successMessage: 'Учасника видалено з кампанії',
     }),
 
   changeMemberRole: async (campaignId, memberId, role) =>
@@ -140,6 +153,8 @@ const useCampaignStore = create((set) => ({
           ),
         })),
       defaultError: 'Помилка при зміні ролі члена',
+      toastOnSuccess: true,
+      successMessage: 'Роль учасника оновлено',
     }),
 
   // === КОДИ ЗАПРОШЕНЬ ===
@@ -161,6 +176,8 @@ const useCampaignStore = create((set) => ({
           ),
         })),
       defaultError: 'Помилка при регенерації коду запрошення',
+      toastOnSuccess: true,
+      successMessage: 'Код запрошення оновлено',
     }),
 
   joinByCode: async (inviteCode) =>
@@ -168,6 +185,8 @@ const useCampaignStore = create((set) => ({
       loadingKey: 'isLoadingAction',
       apiCall: () => joinByInviteCode(inviteCode),
       defaultError: 'Помилка при приєднанні за кодом',
+      toastOnSuccess: true,
+      successMessage: 'Ви приєдналися до кампанії',
     }),
 
   // === ЗАПИТИ НА ПРИЄДНАННЯ ===
@@ -178,6 +197,7 @@ const useCampaignStore = create((set) => ({
       apiCall: () => getJoinRequests(campaignId),
       onSuccess: (data) => set({ joinRequests: data }),
       defaultError: 'Помилка при отриманні запитів на приєднання',
+      silent: true,
     }),
 
   submitRequest: async (campaignId, message = '') =>
@@ -185,6 +205,8 @@ const useCampaignStore = create((set) => ({
       loadingKey: 'isLoadingAction',
       apiCall: () => submitJoinRequest(campaignId, message),
       defaultError: 'Помилка при надсиланні запиту',
+      toastOnSuccess: true,
+      successMessage: 'Запит на приєднання надіслано',
     }),
 
   approveRequest: async (requestId, role = 'PLAYER') =>
@@ -196,6 +218,8 @@ const useCampaignStore = create((set) => ({
           joinRequests: state.joinRequests.filter((r) => r.id !== requestId),
         })),
       defaultError: 'Помилка при схвалюванні запиту',
+      toastOnSuccess: true,
+      successMessage: 'Запит схвалено',
     }),
 
   rejectRequest: async (requestId) =>
@@ -207,6 +231,8 @@ const useCampaignStore = create((set) => ({
           joinRequests: state.joinRequests.filter((r) => r.id !== requestId),
         })),
       defaultError: 'Помилка при відхиленні запиту',
+      toastOnSuccess: true,
+      successMessage: 'Запит відхилено',
     }),
 
   // === УТИЛИТИ ===

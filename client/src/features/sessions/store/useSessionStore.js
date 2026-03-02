@@ -42,6 +42,7 @@ const useSessionStore = create((set, get) => ({
       apiCall: () => getMySessions(params),
       onSuccess: (data) => set({ sessions: data }),
       defaultError: 'Помилка при отриманні сесій',
+      silent: true,
     }),
 
   fetchSessionById: async (sessionId) =>
@@ -49,6 +50,7 @@ const useSessionStore = create((set, get) => ({
       apiCall: () => getSessionById(sessionId),
       onSuccess: (data) => set({ currentSession: data }),
       defaultError: 'Помилка при отриманні деталей сесії',
+      silent: true,
     }),
 
   createNewSession: async (sessionData) =>
@@ -57,6 +59,8 @@ const useSessionStore = create((set, get) => ({
       onSuccess: (data) =>
         set((state) => ({ sessions: [...state.sessions, data] })),
       defaultError: 'Помилка при створенні сесії',
+      toastOnSuccess: true,
+      successMessage: 'Сесію успішно створено',
     }),
 
   updateSessionData: async (sessionId, sessionData) =>
@@ -73,6 +77,8 @@ const useSessionStore = create((set, get) => ({
               : state.currentSession,
         })),
       defaultError: 'Помилка при оновленні сесії',
+      toastOnSuccess: true,
+      successMessage: 'Сесію оновлено',
     }),
 
   deleteSessionById: async (sessionId) =>
@@ -87,6 +93,8 @@ const useSessionStore = create((set, get) => ({
               : state.currentSession,
         })),
       defaultError: 'Помилка при видаленні сесії',
+      toastOnSuccess: true,
+      successMessage: 'Сесію видалено',
     }),
 
   /**
@@ -106,6 +114,8 @@ const useSessionStore = create((set, get) => ({
               : state.currentSession,
         })),
       defaultError: 'Помилка при оновленні статусу сесії',
+      toastOnSuccess: true,
+      successMessage: 'Статус сесії оновлено',
     }),
 
   /**
@@ -125,12 +135,15 @@ const useSessionStore = create((set, get) => ({
               : state.currentSession,
         })),
       defaultError: 'Помилка при скасуванні сесії',
+      toastOnSuccess: true,
+      successMessage: 'Сесію скасовано',
     }),
 
   fetchCampaignSessions: async (campaignId, params = {}) =>
     apiAction(set, {
       apiCall: () => getCampaignSessions(campaignId, params),
       defaultError: 'Помилка при отриманні сесій кампанії',
+      silent: true,
     }),
 
   // === УЧАСНИКИ ===
@@ -140,6 +153,7 @@ const useSessionStore = create((set, get) => ({
       apiCall: () => getSessionParticipants(sessionId),
       onSuccess: (data) => set({ participants: data }),
       defaultError: 'Помилка при отриманні учасників',
+      silent: true,
     }),
 
   joinSessionAction: async (sessionId, payload = {}) =>
@@ -155,6 +169,8 @@ const useSessionStore = create((set, get) => ({
         }
       },
       defaultError: 'Помилка при приєднанні до сесії',
+      toastOnSuccess: true,
+      successMessage: 'Ви приєдналися до сесії',
     }),
 
   leaveSessionAction: async (sessionId) =>
@@ -169,6 +185,8 @@ const useSessionStore = create((set, get) => ({
         }
       },
       defaultError: 'Помилка при виході з сесії',
+      toastOnSuccess: true,
+      successMessage: 'Ви покинули сесію',
     }),
 
   updateParticipantStatusAction: async (sessionId, participantId, status) =>
@@ -181,6 +199,8 @@ const useSessionStore = create((set, get) => ({
           ),
         })),
       defaultError: 'Помилка при оновленні статусу',
+      toastOnSuccess: true,
+      successMessage: 'Статус учасника оновлено',
     }),
 
   removeParticipantAction: async (sessionId, participantId) =>
@@ -193,6 +213,8 @@ const useSessionStore = create((set, get) => ({
           ),
         })),
       defaultError: 'Помилка при видаленні учасника',
+      toastOnSuccess: true,
+      successMessage: 'Учасника видалено',
     }),
 
   reset: () =>

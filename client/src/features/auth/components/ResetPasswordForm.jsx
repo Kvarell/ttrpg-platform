@@ -7,8 +7,8 @@ import Arrow from '@/components/ui/icons/Arrow';
 import AuthInput from "../ui/AuthInput";
 import AuthButton from "../ui/AuthButton";
 import PasswordStrength from "../ui/PasswordStrength";
-import AlertMessage from "../../../components/ui/AlertMessage";
 import { VALIDATION_RULES } from "../../../utils/validationRules";
+import { toast } from '@/stores/useToastStore';
 
 export default function ResetPasswordForm() {
   const [searchParams] = useSearchParams();
@@ -16,7 +16,6 @@ export default function ResetPasswordForm() {
   const resetToken = searchParams.get('token') || '';
   const tokenError = resetToken ? '' : 'Невалідне посилання для скидання. Токен не знайдений.';
   const [success, setSuccess] = useState(false);
-  const [serverError, setServerError] = useState('');
 
   const { 
     register, 
@@ -28,7 +27,6 @@ export default function ResetPasswordForm() {
   const password = useWatch({ control, name: 'password', defaultValue: '' });
 
   const onSubmit = async (data) => {
-    setServerError('');
     try {
       await resetPassword({
         resetToken,
@@ -36,12 +34,13 @@ export default function ResetPasswordForm() {
       });
 
       setSuccess(true);
+      toast.success('✓ Пароль успішно скинуто! Перенаправляємо на вхід...');
       setTimeout(() => {
         navigate('/login');
       }, 3000);
     } catch (err) {
       const message = err.response?.data?.error || err.response?.data?.message || 'Помилка при скиданні пароля';
-      setServerError(message);
+      toast.error(message);
     }
   };
 
@@ -62,17 +61,6 @@ export default function ResetPasswordForm() {
   
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      
-      <AlertMessage 
-        type="success" 
-        message={success ? "✓ Пароль успішно скинуто! Перенаправляємо на вхід..." : null} 
-      />
-
-      <AlertMessage 
-        type="error" 
-        message={serverError} 
-      />
-
       {/* Поле нового пароля */}
       <div>
         <AuthInput

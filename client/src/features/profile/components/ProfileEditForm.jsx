@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getMyProfile, updateProfile } from '../api/profileApi';
-import AlertMessage from '@/components/ui/AlertMessage';
 import Button from '@/components/ui/Button';
 import Dropdown from '@/components/ui/Dropdown';
+import { toast } from '@/stores/useToastStore';
 
 // Список часових поясів для вибору
 const TIMEZONES = [
@@ -17,8 +17,6 @@ const LANGUAGES = [
 export default function ProfileEditForm({ onSuccess }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   
   // Форма
   const [formData, setFormData] = useState({
@@ -40,7 +38,7 @@ export default function ProfileEditForm({ onSuccess }) {
           language: profile.language || 'uk',
         });
       } catch (err) {
-        setError('Не вдалося завантажити профіль');
+        toast.error('Не вдалося завантажити профіль');
         console.error(err);
       } finally {
         setLoading(false);
@@ -53,15 +51,11 @@ export default function ProfileEditForm({ onSuccess }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    setError('');
-    setSuccess('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setError('');
-    setSuccess('');
 
     try {
       // Фільтруємо пусті значення
@@ -73,7 +67,7 @@ export default function ProfileEditForm({ onSuccess }) {
       });
 
       const result = await updateProfile(dataToSend);
-      setSuccess('Профіль успішно оновлено!');
+  toast.success('Профіль успішно оновлено!');
       
       // Викликаємо onSuccess з оновленим профілем
       if (onSuccess && result.profile) {
@@ -82,7 +76,7 @@ export default function ProfileEditForm({ onSuccess }) {
     } catch (err) {
       // Підтримуємо новий формат помилок (error замість message)
       const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Помилка при збереженні';
-      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -98,10 +92,6 @@ export default function ProfileEditForm({ onSuccess }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Повідомлення */}
-      {error && <AlertMessage type="error" message={error} />}
-      {success && <AlertMessage type="success" message={success} />}
-
       {/* ===== Секція: Публічний профіль ===== */}
       <section className="space-y-5">
         <div className="pb-2 border-b border-[#9DC88D]/30">
@@ -165,8 +155,6 @@ export default function ProfileEditForm({ onSuccess }) {
             value={formData.timezone}
             onChange={(option) => {
               setFormData(prev => ({ ...prev, timezone: option.value }));
-              setError('');
-              setSuccess('');
             }}
           />
           <p className="text-xs text-[#4D774E] mt-1">
@@ -182,8 +170,6 @@ export default function ProfileEditForm({ onSuccess }) {
             value={formData.language}
             onChange={(option) => {
               setFormData(prev => ({ ...prev, language: option.value }));
-              setError('');
-              setSuccess('');
             }}
           />
         </div>

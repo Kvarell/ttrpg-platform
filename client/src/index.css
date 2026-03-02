@@ -43,3 +43,43 @@
   scrollbar-width: thin;
   scrollbar-color: #9DC88D transparent;
 }
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+}
+
+.toast-enter {
+  animation: toast-enter 220ms ease-out;
+}
+
+.toast-exit {
+  animation: toast-exit 180ms ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-enter {
+    animation: none;
+  }
+
+  .toast-exit {
+    animation: none;
+  }
+}

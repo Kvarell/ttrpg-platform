@@ -7,13 +7,12 @@ import { forgotPassword } from '../api/authApi';
 // Імпорти UI компонентів
 import AuthInput from "../ui/AuthInput";
 import AuthButton from "../ui/AuthButton";
-import AlertMessage from "../../../components/ui/AlertMessage";
 import { VALIDATION_RULES } from "../../../utils/validationRules";
+import { toast } from '@/stores/useToastStore';
 
 export default function ForgotPasswordForm() {
   // Нам все ще потрібен useState для статусів відповіді API (успіх/помилка),
   // але станом інпуту (email) тепер керує useForm.
-  const [serverError, setServerError] = useState('');
   const [success, setSuccess] = useState(false);
 
   const { 
@@ -23,7 +22,6 @@ export default function ForgotPasswordForm() {
   } = useForm();
 
   const onSubmit = async (data) => {
-    setServerError('');
     setSuccess(false);
 
     try {
@@ -31,6 +29,7 @@ export default function ForgotPasswordForm() {
       await forgotPassword(data.email);
       
       setSuccess(true);
+      toast.success('✓ Посилання надіслано! Перевірте вашу пошту.');
       
       // Автоматично ховаємо повідомлення про успіх через 5 секунд (опціонально)
       setTimeout(() => {
@@ -39,21 +38,11 @@ export default function ForgotPasswordForm() {
 
     } catch (err) {
       const message = err.response?.data?.error || err.response?.data?.message || 'Помилка при запиті відновлення пароля';
-      setServerError(message);
+      toast.error(message);
     }
   };
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      <AlertMessage 
-          type="success" 
-          message={success ? "✓ Посилання надіслано! Перевірте вашу пошту." : null} 
-      />
-        
-      <AlertMessage 
-          type="error" 
-          message={serverError} 
-      />
-
       {/* Поле Email */}
       <AuthInput
         name="email"

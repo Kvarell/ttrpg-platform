@@ -4,8 +4,8 @@ import { resendVerification } from "../api/authApi";
 import AuthLayout from "../components/AuthLayout";
 import AuthButton from "../ui/AuthButton";
 import AuthInput from "../ui/AuthInput";
-import AlertMessage from "../../../components/ui/AlertMessage";
 import Arrow from '@/components/ui/icons/Arrow';
+import { toast } from '@/stores/useToastStore';
 
 export default function VerifyEmailNoticePage() {
   const location = useLocation();
@@ -13,22 +13,20 @@ export default function VerifyEmailNoticePage() {
 
   const [email, setEmail] = useState(initialEmail);
   const [status, setStatus] = useState("idle"); 
-  const [message, setMessage] = useState("");
 
   const handleResend = async (e) => {
     if (e?.preventDefault) e.preventDefault();
     if (!email) return;
 
     setStatus("loading");
-    setMessage("");
 
     try {
       await resendVerification(email);
       setStatus("success");
-      setMessage("Лист успішно відправлено повторно!");
+      toast.success("Лист успішно відправлено повторно!");
     } catch (err) {
       setStatus("error");
-      setMessage(err.response?.data?.error || err.response?.data?.message || "Помилка відправки.");
+      toast.error(err.response?.data?.error || err.response?.data?.message || "Помилка відправки.");
     }
   };
 
@@ -51,8 +49,6 @@ export default function VerifyEmailNoticePage() {
           (Не забудьте перевірити папку "Спам")
         </span>
       </p>
-
-      <AlertMessage type={status === "success" ? "success" : "error"} message={message} />
 
       <div className="space-y-4">
         {status !== "success" && (

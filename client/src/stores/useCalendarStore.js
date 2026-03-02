@@ -53,6 +53,7 @@ const useCalendarStore = create((set) => ({
       apiCall: () => getCalendarStats(params),
       onSuccess: (data) => set({ calendarStats: data }),
       defaultError: 'Помилка завантаження календаря',
+      silent: true,
     });
 
     return result.success ? result.data : null;
@@ -75,6 +76,7 @@ const useCalendarStore = create((set) => ({
       apiCall: () => getSessionsByDayFiltered(date, scope, filters),
       onSuccess: (data) => set({ daySessions: data }),
       defaultError: 'Помилка завантаження сесій',
+      silent: true,
     });
 
     return result.success ? result.data : null;
