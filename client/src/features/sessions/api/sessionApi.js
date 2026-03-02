@@ -14,7 +14,7 @@ export const createSession = async (sessionData) => {
 /**
  * Отримати мої сесії
  * @param {Object} params - Параметри фільтрації
- * @param {string} [params.status] - PLANNED | ACTIVE | FINISHED
+ * @param {string} [params.status] - PLANNED | ACTIVE | FINISHED | CANCELED
  * @param {string} [params.role] - GM | PLAYER | ALL
  * @param {number} [params.limit]
  * @param {number} [params.offset]

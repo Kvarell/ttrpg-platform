@@ -22,7 +22,7 @@ export default function DashboardNavigation({ currentView, onNavigate, user, onL
         </div>
 
         <NavButton 
-          label="Головна" 
+          label="Календар" 
           isActive={currentView === VIEW_MODES.HOME}
           onClick={() => onNavigate(VIEW_MODES.HOME)}
         />

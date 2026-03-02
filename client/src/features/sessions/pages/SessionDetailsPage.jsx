@@ -311,7 +311,7 @@ export default function SessionDetailsPage() {
                 <div className="pt-4 border-t">
                   <h4 className="font-medium text-[#164A41] mb-2">Управління статусом</h4>
                   <div className="flex gap-2 flex-wrap">
-                    {currentSession.status !== 'ACTIVE' && currentSession.status !== 'FINISHED' && (
+                    {currentSession.status !== 'ACTIVE' && currentSession.status !== 'FINISHED' && currentSession.status !== 'CANCELED' && (
                       <button
                         onClick={() => handleStatusChange('ACTIVE')}
                         className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"

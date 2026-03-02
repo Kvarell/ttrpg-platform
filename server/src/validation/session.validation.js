@@ -148,7 +148,7 @@ const validateGetMySessions = [
   query('status')
     .optional()
     .trim()
-    .isIn(['PLANNED', 'ACTIVE', 'FINISHED']).withMessage('Невірний статус фільтра'),
+    .isIn(['PLANNED', 'ACTIVE', 'FINISHED', 'CANCELED']).withMessage('Невірний статус фільтра'),
 
   query('role')
     .optional()

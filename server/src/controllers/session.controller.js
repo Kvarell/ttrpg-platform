@@ -71,7 +71,7 @@ class SessionController {
    * GET /api/sessions
    * 
    * Query params:
-   * @param {string} status - PLANNED | ACTIVE | FINISHED (opcional)
+    * @param {string} status - PLANNED | ACTIVE | FINISHED | CANCELED (opcional)
    * @param {string} role - GM | PLAYER | ALL (default: ALL)
    * @param {number} limit - Кількість результатів (default: 20)
    * @param {number} offset - Paginationля (default: 0)
