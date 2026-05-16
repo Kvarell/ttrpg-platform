@@ -1,45 +1,138 @@
 stages:
   - build
   - test
+  - sonar
 
-# Кешування папок node_modules для швидкості
+variables:
+  GIT_CLEAN_FLAGS: "-ffdx -e .npm/ -e .ci-tools/"
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: "core.longpaths"
+  GIT_CONFIG_VALUE_0: "true"
+
 cache:
-  key: "$CI_COMMIT_REF_SLUG"
+  key:
+    files:
+      - package-lock.json
   paths:
-    - server/node_modules/
-    - client/node_modules/
+    - .npm/
 
 # --- ЕТАП BUILD ---
+
 build_server:
   stage: build
   tags: [student]
   script:
+    - npm ci --cache "$CI_PROJECT_DIR/.npm" --prefer-offline
     - cd server
-    - npm install
     - npx prisma generate
   artifacts:
     paths:
-      - server/prisma/
+      - server/node_modules/.prisma/
     expire_in: 1 hour
 
 build_client:
   stage: build
   tags: [student]
   script:
-    - cd client
-    - npm install
-    - npm run build
-  artifacts:
-    paths:
-      - client/dist/
-    expire_in: 1 hour
+    - npm ci --cache "$CI_PROJECT_DIR/.npm" --prefer-offline
+    - npm run build --workspace=client
 
 # --- ЕТАП TEST ---
 lint_client:
   stage: test
   tags: [student]
-  dependencies:
-    - build_client
+  dependencies: []
   script:
-    - cd client
-    - npm run lint
+    - npm ci --cache "$CI_PROJECT_DIR/.npm" --prefer-offline
+    - npm run lint --workspace=client
+
+lint_server:
+  stage: test
+  tags: [student]
+  dependencies: []
+  script:
+    - npm ci --cache "$CI_PROJECT_DIR/.npm" --prefer-offline
+    - npm run lint --workspace=server
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+coverage_client:
+  stage: test
+  tags: [student]
+  dependencies: []
+  script:
+    - npm ci --cache "$CI_PROJECT_DIR/.npm" --prefer-offline
+    - npm run test:coverage --workspace=client
+  coverage: '/Lines\s*:\s*([0-9.]+)%/'
+  artifacts:
+    paths:
+      - client/coverage/
+    expire_in: 7 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+coverage_server:
+  stage: test
+  tags: [student]
+  dependencies: []
+  variables:
+    # 1. Справжні підключення для тестового прогону
+    DATABASE_URL: "postgresql://testuser:testpass@localhost:5433/ttrpg_test?schema=public"
+    REDIS_URL: "redis://localhost:6380"
+    
+    # 2. Фейкові значення-заглушки для парсингу docker-compose.yml
+    COOKIE_SECRET: "dummy_cookie"
+    JWT_SECRET: "dummy_jwt"
+    SHARE_TOKEN_SECRET: "dummy_share"
+    POSTGRES_USER: "dummy_user"
+    POSTGRES_PASSWORD: "dummy_pass"
+    POSTGRES_DB: "dummy_db"
+  script:
+    - npm ci --cache "$CI_PROJECT_DIR/.npm" --prefer-offline
+    - docker compose --profile test up -d db_test redis_test
+    - Start-Sleep -Seconds 10
+    - cd server
+    - npx prisma generate
+    - npx prisma db push --accept-data-loss
+    - npm run test:coverage --workspace=server
+  after_script:
+    - docker compose --profile test down -v
+  coverage: '/Lines\s*:\s*([0-9.]+)%/'
+  artifacts:
+    paths:
+      - server/coverage/
+    expire_in: 7 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+sonarcloud_scan:
+  stage: sonar
+  tags: [student]
+  dependencies:
+    - coverage_client
+    - coverage_server
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - $ErrorActionPreference = "Stop"
+    - $toolsDir = "$env:CI_PROJECT_DIR\.ci-tools"
+    - $javaHome = "$toolsDir\jdk-17"
+    - if (!(Test-Path "$javaHome\bin\java.exe")) { New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null }
+    - if (!(Test-Path "$javaHome\bin\java.exe")) { Invoke-WebRequest -Uri "https://aka.ms/download-jdk/microsoft-jdk-17.0.11-windows-x64.zip" -OutFile "$toolsDir\jdk17.zip" }
+    - if (!(Test-Path "$javaHome\bin\java.exe")) { Expand-Archive -Path "$toolsDir\jdk17.zip" -DestinationPath "$toolsDir\jdk17-unpacked" -Force }
+    - if (!(Test-Path "$javaHome\bin\java.exe")) { $extracted = Get-ChildItem -Path "$toolsDir\jdk17-unpacked" -Directory | Select-Object -First 1; Move-Item -Path $extracted.FullName -Destination $javaHome }
+    - $env:JAVA_HOME = $javaHome
+    - $env:Path = "$env:JAVA_HOME\bin;$env:Path"
+    - java -version
+    - $env:CI_MERGE_REQUEST_IID = ""
+    - npx sonarqube-scanner "-Dsonar.host.url=https://sonarcloud.io" "-Dsonar.token=$env:SONAR_TOKEN" "-Dsonar.branch.name=$env:CI_COMMIT_REF_NAME"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'

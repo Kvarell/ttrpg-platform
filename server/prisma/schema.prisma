@@ -12,6 +12,11 @@ enum UserRole {
   ADMIN
 }
 
+enum ChatMessageType {
+  USER
+  SYSTEM
+}
+
 model User {
   id                      Int                      @id @default(autoincrement())
   email                   String                   @unique
@@ -29,6 +34,8 @@ model User {
   isDeleted               Boolean                  @default(false)
   passwordResetToken      String?                  @unique
   passwordResetExpiry     DateTime?
+  telegramChatId          String?
+  telegramLinkedAt        DateTime?
   wallet                  Wallet?
   stats                   UserStats?
   campaignsOwned          Campaign[]               @relation("OwnerCampaigns")
@@ -37,11 +44,13 @@ model User {
   ownedSessions           Session[]                @relation("OwnedSessions")
   joinRequests            JoinRequest[]
   reviewedJoinRequests    JoinRequest[]            @relation("ReviewedBy")
-  messages                ChatMessage[]
+  chatMessages            ChatMessage[]
   emailVerified           Boolean                  @default(false)
   refreshTokens           RefreshToken[]
   emailVerificationTokens EmailVerificationToken[]
   emailChangeTokens       EmailChangeToken[]
+  notifications           NotificationRecipient[]
+  notificationPreference  NotificationPreference?
 }
 
 model Wallet {
@@ -61,24 +70,24 @@ model UserStats {
 }
 
 model Campaign {
-  id                 Int                @id @default(autoincrement())
-  title              String
-  description        String?
-  imageUrl           String?
-  system             String?
-  status             CampaignStatus     @default(ACTIVE)
-  visibility         CampaignVisibility @default(LINK_ONLY)
-  inviteCode         String?            @unique
-  shareTokenHash     String?            @unique
+  id                  Int                @id @default(autoincrement())
+  title               String
+  description         String?
+  imageUrl            String?
+  system              String?
+  status              CampaignStatus     @default(ACTIVE)
+  visibility          CampaignVisibility @default(LINK_ONLY)
+  shareTokenHash      String?            @unique
   shareTokenEncrypted String?
   shareTokenCreatedAt DateTime?
-  ownerId            Int
-  owner              User               @relation("OwnerCampaigns", fields: [ownerId], references: [id])
-  members            CampaignMember[]
-  sessions           Session[]
-  joinRequests       JoinRequest[]
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  ownerId             Int
+  owner               User               @relation("OwnerCampaigns", fields: [ownerId], references: [id])
+  members             CampaignMember[]
+  sessions            Session[]
+  joinRequests        JoinRequest[]
+  chat                Chat?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 }
 
 enum CampaignStatus {
@@ -129,7 +138,7 @@ model Session {
   ownerId             Int
   owner               User              @relation("OwnedSessions", fields: [ownerId], references: [id])
   participants        SessionParticipant[]
-  messages            ChatMessage[]
+  chat                Chat?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
@@ -210,14 +219,34 @@ model EmailChangeToken {
   createdAt DateTime @default(now())
 }
 
+// ─── New Chat Domain ───────────────────────────────────────────────────────────
+
+model Chat {
+  id         Int          @id @default(autoincrement())
+  campaignId Int?         @unique
+  sessionId  Int?         @unique
+  campaign   Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  session    Session?     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  messages   ChatMessage[]
+  createdAt  DateTime     @default(now())
+
+  @@index([campaignId])
+  @@index([sessionId])
+}
+
 model ChatMessage {
-  id        Int      @id @default(autoincrement())
-  text      String
-  createdAt DateTime @default(now())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  sessionId Int
-  session   Session  @relation(fields: [sessionId], references: [id])
+  id        Int             @id @default(autoincrement())
+  type      ChatMessageType @default(USER)
+  content   String
+  isDeleted Boolean         @default(false)
+  editedAt  DateTime?
+  chatId    Int
+  chat      Chat            @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  authorId  Int?
+  author    User?           @relation(fields: [authorId], references: [id])
+  createdAt DateTime        @default(now())
+
+  @@index([chatId, createdAt, id])
 }
 
 model Transaction {
@@ -236,6 +265,27 @@ enum SessionStatus {
   CANCELED
 }
 
+enum NotificationSeverity {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  CRITICAL
+  SECURITY
+}
+
+enum RecipientStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
 model RefreshToken {
   id        Int      @id @default(autoincrement())
   token     String   @unique
@@ -244,4 +294,95 @@ model RefreshToken {
   revoked   Boolean  @default(false)
   createdAt DateTime @default(now())
   expiresAt DateTime
+}
+
+model Notification {
+  id                Int                     @id @default(autoincrement())
+  eventKey          String
+  type              String
+  severity          NotificationSeverity
+  category          String
+  title             String
+  body              String
+  link              String?
+  metadata          Json?
+  dedupeKey         String?
+  aggregationKey    String?
+  expiresAt         DateTime?
+  source            String?
+  createdAt         DateTime                @default(now())
+
+  recipients        NotificationRecipient[]
+  outboxEvents      OutboxEvent[]
+
+  @@index([createdAt])
+  @@index([eventKey])
+  @@index([type])
+  @@index([dedupeKey])
+  @@index([aggregationKey])
+}
+
+model NotificationRecipient {
+  id                Int                @id @default(autoincrement())
+  notificationId    Int
+  userId            Int
+  status            RecipientStatus    @default(ACTIVE)
+  readAt            DateTime?
+  archivedAt        DateTime?
+  channelsDelivered Json?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId])
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}
+
+model NotificationPreference {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  enabledChannels Json
+  mutedCategories Json?
+  mutedSeverities Json?
+  quietHoursStart Int?
+  quietHoursEnd   Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OutboxEvent {
+  id             Int          @id @default(autoincrement())
+  notificationId Int?
+  type           String
+  payload        Json
+  status         OutboxStatus @default(PENDING)
+  attempts       Int          @default(0)
+  maxAttempts    Int          @default(3)
+  nextRunAt      DateTime     @default(now())
+  lastError      String?
+  processedAt    DateTime?
+  createdAt      DateTime     @default(now())
+
+  notification Notification?  @relation(fields: [notificationId], references: [id], onDelete: SetNull)
+  deliveries     DeliveryAttempt[]
+
+  @@index([status, nextRunAt])
+}
+
+model DeliveryAttempt {
+  id          Int      @id @default(autoincrement())
+  outboxId    Int
+  channel     String
+  status      String
+  error       String?
+  attemptedAt DateTime @default(now())
+
+  outbox OutboxEvent @relation(fields: [outboxId], references: [id], onDelete: Cascade)
+
+  @@index([outboxId, channel])
 }

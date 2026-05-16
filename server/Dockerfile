@@ -4,25 +4,28 @@ ARG INSTALL_DEV_DEPS=true
 
 WORKDIR /app
 
+# Copy root package files for workspaces
 COPY package*.json ./
-COPY prisma ./prisma/
+COPY server/package*.json ./server/
+COPY server/prisma ./server/prisma/
 
-RUN npm ci
+RUN apk add --no-cache su-exec dos2unix && npm ci
 
 COPY . .
 
-# --- ДОДАЄМО ЦЕЙ РЯДОК ---
-# Prisma вимагає, щоб змінна існувала під час білда, навіть якщо вона не правильна.
-# Це просто "заглушка", щоб npx prisma generate не падала.
-ENV DATABASE_URL="postgresql://johndoe:randompassword@localhost:5432/mydb?schema=public"
+# 1. Оголошуємо змінну оточення ДО того, як запускати команди
+# Це "заглушка", щоб npx prisma generate не падала під час білда
+ENV DATABASE_URL="postgresql://localhost:5432/dummy_db?schema=public"
 
-# Генеруємо Prisma Client
-RUN npx prisma generate
+# 2. Об'єднуємо всі дії в ОДИН великий RUN
+RUN dos2unix /app/server/docker-entrypoint.sh \
+    && chmod +x /app/server/docker-entrypoint.sh \
+    && cd /app/server && npx prisma generate \
+    && if [ "$INSTALL_DEV_DEPS" = "false" ]; then npm prune --omit=dev; fi
 
-# Опційно видаляємо dev-залежності для production image.
-# Для локального docker-compose (dev) залишаємо їх, щоб працював pino-pretty.
-RUN if [ "$INSTALL_DEV_DEPS" = "false" ]; then npm prune --omit=dev; fi
+WORKDIR /app/server
 
 EXPOSE 5000
 
+ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["node", "index.js"]

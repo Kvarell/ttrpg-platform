@@ -4,6 +4,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+client/package-lock.json
+server/package-lock.json
 
 # Environment variables
 .env
@@ -88,9 +90,17 @@ out/
 .nuxt/
 
 .env.*.local
+.env.prod
 
 postgres_data/
 mysql_data/
 db_data/
 
-docs/
+playwright-report/
+test-results/
+docs/plans/
+docs/legacy/
+
+.postman/
+.codex/
+.agents/

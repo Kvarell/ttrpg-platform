@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
 import Button from '@/components/ui/Button';
 import {
@@ -8,178 +8,118 @@ import {
   DateTimeDisplay,
   ConfirmModal,
 } from '@/components/shared';
+import useConfirmDialog from '@/hooks/useConfirmDialog';
 import Data from '@/components/ui/icons/Data';
 import GroupPeople from '@/components/ui/icons/GroupPeople';
 
+/**
+ * CampaignInfoWidget — ліва панель таба "Деталі".
+ *
+ * Чистий read-only віджет: назва, статус, система, статистика, опис.
+ * Для учасника тут є кнопка виходу з кампанії.
+ */
 export default function CampaignInfoWidget({
   campaign,
   myRole,
-  canManageShareLink = false,
-  currentShareLink = '',
   onLeave,
-  onRegenerateShareLink,
-  onCopyShareLink,
-  isLoading = false,
+  isCampaignFinished = false,
 }) {
-  const [confirmModal, setConfirmModal] = useState({
-    isOpen: false,
-    title: '',
-    message: '',
-    onConfirm: null,
-    variant: 'primary',
-  });
-
-  const closeConfirmModal = useCallback(() => {
-    setConfirmModal((prev) => ({ ...prev, isOpen: false }));
-  }, []);
-
-  const handleLeave = () => {
-    setConfirmModal({
-      isOpen: true,
-      title: 'Покинути кампанію?',
-      message: 'Ви впевнені, що хочете покинути цю кампанію? Ви втратите доступ до всіх сесій кампанії.',
-      variant: 'danger',
-      onConfirm: () => {
-        closeConfirmModal();
-        onLeave?.();
-      },
-    });
-  };
-
-  const handleRegenerateShareLink = () => {
-    setConfirmModal({
-      isOpen: true,
-      title: 'Оновити share-посилання?',
-      message: 'Старе share-посилання перестане працювати. Нове посилання буде згенеровано та скопійовано.',
-      variant: 'danger',
-      onConfirm: () => {
-        closeConfirmModal();
-        onRegenerateShareLink?.();
-      },
-    });
-  };
+  const { openConfirm, confirmModalProps } = useConfirmDialog();
 
   if (!campaign) return null;
 
+  const canLeaveCampaign = Boolean(myRole && myRole !== 'OWNER' && !isCampaignFinished && onLeave);
+
+  const handleLeave = () => {
+    openConfirm({
+      title: 'Покинути кампанію?',
+      message: 'Ви впевнені, що хочете покинути цю кампанію? Ви втратите доступ до всіх сесій цієї кампанії.',
+      variant: 'danger',
+      confirmText: 'Вийти',
+      onConfirm: onLeave,
+    });
+  };
+
   return (
-    <DashboardCard title="Інформація про кампанію">
-      <div className="flex flex-col gap-5">
-        <div>
-          <div className="flex items-start justify-between mb-2">
-            <h2 className="text-xl font-bold text-[#164A41] flex-1 pr-3">
-              {campaign.title}
-            </h2>
-            <div className="flex flex-col items-end gap-2">
-              <VisibilityBadge visibility={campaign.visibility} />
-              <StatusBadge status={campaign.status || 'ACTIVE'} size="sm" />
-            </div>
-          </div>
-          {myRole && <RoleBadge role={myRole} size="md" />}
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 p-4 bg-[#9DC88D]/10 rounded-xl">
-          {campaign.system && (
-            <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>{campaign.system}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-2 text-[#4D774E]">
-            <GroupPeople className="w-4 h-4" />
-            <span>{campaign.members?.length || 0} учасників</span>
-          </div>
-          <div className="flex items-center gap-2 text-[#4D774E]">
-            <Data className="w-4 h-4" />
-            <span>{campaign.sessions?.length || 0} сесій</span>
-          </div>
-          {campaign.owner && (
-            <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>{campaign.owner.displayName || campaign.owner.username || 'Власник'}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-2 text-[#4D774E] col-span-2">
-            <Data className="w-4 h-4" />
-            <span>Створено:</span>
-            <DateTimeDisplay value={campaign.createdAt} format="long" />
-          </div>
-        </div>
-
-        {campaign.imageUrl && (
-          <div className="w-full h-48 rounded-xl overflow-hidden">
-            <img
-              src={campaign.imageUrl}
-              alt={campaign.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-          </div>
-        )}
-
-        {campaign.description && (
-          <div className="border-t border-[#9DC88D]/20 pt-4">
-            <h4 className="text-sm font-bold text-[#164A41] mb-2">Опис кампанії</h4>
-            <p className="text-sm text-[#4D774E] whitespace-pre-wrap">
-              {campaign.description}
-            </p>
-          </div>
-        )}
-
-        {canManageShareLink && (
-          <div className="border-t border-[#9DC88D]/20 pt-4">
-            <h4 className="text-sm font-bold text-[#164A41] mb-3">Share-посилання</h4>
-            <div className="p-4 bg-[#9DC88D]/20 rounded-xl flex flex-col gap-3">
-              {currentShareLink ? (
-                <code className="px-3 py-2 bg-white rounded-lg font-mono text-[#164A41] text-xs break-all">
-                  {currentShareLink}
-                </code>
-              ) : (
-                <p className="text-sm text-[#4D774E]">
-                  Share-посилання буде доступне тут після завантаження або перевипуску.
-                </p>
-              )}
-
-              <div className="flex items-center gap-3 flex-wrap">
-                {currentShareLink && (
-                  <button
-                    onClick={onCopyShareLink}
-                    className="px-3 py-2 bg-[#164A41] text-white rounded-lg hover:bg-[#1f5c52] transition-colors text-sm"
-                  >
-                    Копіювати посилання
-                  </button>
-                )}
-                <button
-                  onClick={handleRegenerateShareLink}
-                  className="px-3 py-2 border border-[#164A41] text-[#164A41] rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                >
-                  Оновити share-посилання
-                </button>
+    <>
+      <DashboardCard title="Деталі кампанії">
+        <div className="flex h-full flex-col gap-5">
+          {/* Заголовок */}
+          <div>
+            <div className="flex items-start justify-between mb-2">
+              <h2 className="text-xl font-bold text-brand-dark flex-1 pr-3">
+                {campaign.title}
+              </h2>
+              <div className="flex flex-col items-end gap-2">
+                <VisibilityBadge visibility={campaign.visibility} entityType="campaign" />
+                <StatusBadge status={campaign.status || 'ACTIVE'} size="sm" />
               </div>
             </div>
+            {myRole && <RoleBadge role={myRole} size="md" />}
           </div>
-        )}
 
-        <div className="border-t border-[#9DC88D]/20 pt-4 flex flex-col gap-3">
-          {myRole && myRole !== 'OWNER' && campaign.status !== 'FINISHED' && onLeave && (
-            <Button
-              onClick={handleLeave}
-              variant="danger"
-              isLoading={isLoading}
-              loadingText="Вихід..."
-            >
-              Покинути кампанію
-            </Button>
+          {/* Статистика */}
+          <div className="grid grid-cols-2 gap-3 p-4 bg-brand-light/10 rounded-xl">
+            <div className="flex items-center gap-2 text-brand-medium text-sm">
+              <GroupPeople className="w-4 h-4" />
+              <span>{campaign.membersCount ?? campaign.members?.length ?? 0} учасників</span>
+            </div>
+            {campaign.system && (
+              <div className="flex items-center gap-2 text-brand-medium text-sm">
+                <span className="font-medium">Система:</span>
+                <span>{campaign.system}</span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 text-brand-medium text-sm">
+              <Data className="w-4 h-4" />
+              <span>{campaign.sessionsCount ?? campaign.sessions?.length ?? 0} сесій</span>
+            </div>
+            {campaign.owner && (
+              <div className="flex items-center gap-2 text-brand-medium text-sm">
+                <span className="font-medium">Власник:</span>
+                <span className="truncate">
+                  {campaign.owner.displayName || campaign.owner.username || 'Власник'}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-brand-medium text-sm">
+              <Data className="w-4 h-4" />
+              <span>Створено:</span>
+              <DateTimeDisplay value={campaign.createdAt} format="long" />
+            </div>
+          </div>
+
+          {/* Опис */}
+          {campaign.description ? (
+            <div className="border-t border-brand-light/20 pt-4">
+              <h4 className="text-sm font-bold text-brand-dark mb-2">Опис кампанії</h4>
+              <p className="text-sm text-brand-medium whitespace-pre-wrap leading-relaxed">
+                {campaign.description}
+              </p>
+            </div>
+          ) : (
+            <div className="border-t border-brand-light/20 pt-4">
+              <p className="text-sm text-brand-medium/60 italic">Опис відсутній</p>
+            </div>
+          )}
+
+          {canLeaveCampaign && (
+            <div className="mt-auto border-t border-brand-light/20 pt-4">
+              <Button
+                onClick={handleLeave}
+                variant="danger"
+                fullWidth={true}
+                className="w-full min-h-[44px]"
+              >
+                Покинути кампанію
+              </Button>
+            </div>
           )}
         </div>
-      </div>
+      </DashboardCard>
 
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        variant={confirmModal.variant}
-        onConfirm={confirmModal.onConfirm}
-        onCancel={closeConfirmModal}
-      />
-    </DashboardCard>
+      <ConfirmModal {...confirmModalProps} />
+    </>
   );
 }

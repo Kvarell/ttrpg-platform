@@ -1,294 +1,485 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import DashboardCard from '@/components/ui/DashboardCard';
-import Button from '@/components/ui/Button';
+import React, { useState } from "react";
+import PropTypes from "prop-types";
+import { Link } from "react-router-dom";
+import DashboardCard from "@/components/ui/DashboardCard";
+import Button from "@/components/ui/Button";
 import {
-  StatusBadge,
+  BaseModal,
+  SessionTimeBadge,
   DateTimeDisplay,
   BackButton,
-} from '@/components/shared';
-import Data from '@/components/ui/icons/Data';
-import Timer from '@/components/ui/icons/Timer';
-import GroupPeople from '@/components/ui/icons/GroupPeople';
-import Dice20 from '@/components/ui/icons/Dice20';
+  StatusBadge,
+  VisibilityBadge,
+} from "@/components/shared";
+import Data from "@/components/ui/icons/Data";
+import Timer from "@/components/ui/icons/Timer";
+import GroupPeople from "@/components/ui/icons/GroupPeople";
 
-/**
- * SessionPreviewWidget — лівий віджет для не-учасників на /session/:id.
- *
- * Відображає інформацію про сесію з кнопкою "Приєднатися".
- *
- * @param {Object} session — дані сесії
- * @param {Function} onJoin — колбек приєднання ({ role: 'PLAYER' | 'GM' })
- * @param {boolean} canJoin — чи може юзер приєднатися
- */
+function getEntityType(session) {
+  return session?.campaign ? 'campaignSession' : 'oneShot';
+}
+
+function getUnavailableJoinMessage(session) {
+  if (session.campaign?.status === 'FINISHED') {
+    return 'Кампанія завершена, приєднання до сесії недоступне';
+  }
+
+  if (session.status !== 'PLANNED') {
+    const statusMessages = {
+      FINISHED: 'вже завершена',
+      ACTIVE: 'вже в процесі',
+      CANCELED: 'скасована',
+    };
+
+    return `Ця сесія ${statusMessages[session.status] || 'нова'}`;
+  }
+
+  return 'Приєднання до цієї сесії зараз недоступне';
+}
+
+function getJoinModalMessage({ hasConfirmedGm, canApplyAsGm }) {
+  if (hasConfirmedGm) {
+    return 'Після підтвердження ви одразу приєднаєтесь як гравець.';
+  }
+
+  if (!canApplyAsGm) {
+    return 'Бажаєте приєднатися як гравець?';
+  }
+
+  return 'У сесії поки немає підтвердженого GM. Оберіть роль, на яку хочете податися.';
+}
+
+async function submitJoinRequest({ onJoin, role, setJoinError, setShowJoinModal }) {
+  setJoinError(null);
+
+  const result = await onJoin?.({ role });
+  if (result?.success) {
+    setShowJoinModal(false);
+    return;
+  }
+
+  setJoinError(
+    result?.error ||
+    (role === 'GM' ? 'Не вдалося подати заявку як GM' : 'Не вдалося приєднатися до сесії')
+  );
+}
+
+function SessionJoinModal({
+  hasConfirmedGm,
+  canJoin,
+  canApplyAsGm,
+  isJoining,
+  isApplyingGm,
+  handleJoin,
+  handleApplyAsGm,
+  closeModal,
+}) {
+  return (
+    <BaseModal
+      isOpen={true}
+      onClose={closeModal}
+      closeWhileLoading={false}
+      isLoading={isJoining || isApplyingGm}
+      panelClassName="max-w-md"
+    >
+      <div className="rounded-2xl bg-white p-6 shadow-xl">
+        <h3 className="mb-2 text-lg font-bold text-brand-dark">Приєднатись до сесії</h3>
+        <p className="mb-6 text-brand-medium">{getJoinModalMessage({ hasConfirmedGm, canApplyAsGm })}</p>
+        <div className="flex flex-row flex-wrap justify-center gap-3">
+          <Button
+            onClick={closeModal}
+            variant="outline"
+            fullWidth={false}
+            className="min-w-[170px]"
+          >
+            Скасувати
+          </Button>
+
+          {!hasConfirmedGm && canJoin && (
+            <Button
+              onClick={handleJoin}
+              isLoading={isJoining}
+              loadingText="Приєднання..."
+              variant="primary"
+              fullWidth={false}
+              className="min-w-[170px]"
+            >
+              Приєднатись як гравець
+            </Button>
+          )}
+
+          {!hasConfirmedGm && canApplyAsGm && (
+            <Button
+              onClick={handleApplyAsGm}
+              isLoading={isApplyingGm}
+              loadingText="Відправка..."
+              variant={canJoin ? 'outline' : 'primary'}
+              fullWidth={false}
+              className="min-w-[170px]"
+            >
+              Податися як GM
+            </Button>
+          )}
+
+          {hasConfirmedGm && (
+            <Button
+              onClick={handleJoin}
+              isLoading={isJoining}
+              loadingText="Приєднання..."
+              variant="primary"
+              fullWidth={false}
+              className="min-w-[170px]"
+            >
+              Приєднатися
+            </Button>
+          )}
+        </div>
+      </div>
+    </BaseModal>
+  );
+}
+
+SessionJoinModal.propTypes = {
+  hasConfirmedGm: PropTypes.bool.isRequired,
+  canJoin: PropTypes.bool.isRequired,
+  canApplyAsGm: PropTypes.bool.isRequired,
+  isJoining: PropTypes.bool.isRequired,
+  isApplyingGm: PropTypes.bool.isRequired,
+  handleJoin: PropTypes.func.isRequired,
+  handleApplyAsGm: PropTypes.func.isRequired,
+  closeModal: PropTypes.func.isRequired,
+};
+
 export default function SessionPagePreviewWidget({
   session,
+  viewer = {},
+  showCampaignInfo = true,
+  canNavigateToCampaignDirectly = false,
+  campaignNavigationTarget = null,
   onJoin,
+  onLeave,
   canJoin = false,
   canApplyAsGm = false,
-  showCampaignInfo = true,
-  canNavigateToCampaignDirectly = true,
+  canLeave = false,
 }) {
-  const navigate = useNavigate();
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinError, setJoinError] = useState(null);
   const [isJoining, setIsJoining] = useState(false);
   const [isApplyingGm, setIsApplyingGm] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
-  const formatDuration = (minutes) => {
-    if (!minutes) return '';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours === 0) return `${mins} хв`;
-    if (mins === 0) return `${hours} год`;
-    return `${hours} год ${mins} хв`;
-  };
+  if (!session) return null;
 
-  const getFreeSpots = () => {
-    if (!session?.maxPlayers) return '∞';
-    const currentPlayers =
-      session.participants?.filter((participant) => participant.role === 'PLAYER').length || 0;
-    return Math.max(0, session.maxPlayers - currentPlayers);
-  };
+  const organizerName = session.owner?.displayName || session.owner?.username || "Organizer";
+  const summaryPlayersCount = Number(session?.participantsSummaryCount);
+  const playersCount = Number.isFinite(summaryPlayersCount)
+    ? summaryPlayersCount
+    : (session.participants?.filter((participant) => participant.role === 'PLAYER').length || 0);
+  const confirmedGm = session.participants?.find(
+    (participant) => participant.role === "GM" && participant.status === "CONFIRMED"
+  );
+  const hasConfirmedGm = typeof session?.hasConfirmedGm === 'boolean'
+    ? session.hasConfirmedGm
+    : Boolean(confirmedGm);
+  const canRequestJoin = canJoin || canApplyAsGm;
+  const isPendingRequest = viewer?.pendingJoinRequestStatus === 'PENDING';
+  const canRenderCampaign = Boolean(showCampaignInfo && session?.campaign?.title);
+  const campaignLink = campaignNavigationTarget || (session?.campaign?.id ? `/campaign/${session.campaign.id}` : null);
+  const shouldRenderCampaignLink = Boolean(canRenderCampaign && campaignLink && canNavigateToCampaignDirectly);
 
-  const getPlayerCount = () => {
-    return session?.participants?.filter((participant) => participant.role === 'PLAYER').length || 0;
+  const closeJoinModal = () => {
+    setShowJoinModal(false);
+    setJoinError(null);
   };
 
   const handleJoin = async () => {
     setIsJoining(true);
-    setJoinError(null);
-    const result = await onJoin?.({
-      role: 'PLAYER',
-    });
-    if (result?.success) {
-      setShowJoinModal(false);
-    } else {
-      setJoinError(result?.error || 'Помилка при приєднанні');
+    try {
+      await submitJoinRequest({
+        onJoin,
+        role: "PLAYER",
+        setJoinError,
+        setShowJoinModal,
+      });
+    } finally {
+      setIsJoining(false);
     }
-    setIsJoining(false);
   };
 
   const handleApplyAsGm = async () => {
     setIsApplyingGm(true);
-    setJoinError(null);
-
-    const result = await onJoin?.({
-      role: 'GM',
-    });
-
-    if (result?.success) {
-      setShowJoinModal(false);
+    try {
+      await submitJoinRequest({
+        onJoin,
+        role: "GM",
+        setJoinError,
+        setShowJoinModal,
+      });
+    } finally {
+      setIsApplyingGm(false);
     }
-
-    if (!result?.success) {
-      setJoinError(result?.error || 'Помилка при подачі заявки як GM');
-    }
-
-    setIsApplyingGm(false);
   };
 
-  const organizerName = session?.owner?.displayName || session?.owner?.username || 'Організатор';
-  const confirmedGm = session?.participants?.find(
-    (participant) => participant.role === 'GM' && participant.status === 'CONFIRMED'
-  );
-  const hasConfirmedGm = Boolean(confirmedGm);
-  const confirmedGmName = confirmedGm?.user?.displayName || confirmedGm?.user?.username || null;
-  const canRequestJoin = canJoin || canApplyAsGm;
+  const handleCancelRequest = async () => {
+    if (!onLeave) {
+      return false;
+    }
 
-  if (!session) return null;
+    setIsLeaving(true);
+    setJoinError(null);
+    try {
+      const result = await onLeave({ redirect: false });
+      if (!result?.success) {
+        setJoinError(result?.error || result?.message || 'Не вдалося відкликати заявку');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      setJoinError(
+        error?.response?.data?.error
+        || error?.message
+        || 'Не вдалося відкликати заявку'
+      );
+      return false;
+    } finally {
+      setIsLeaving(false);
+    }
+  };
+
+  const closeCancelModal = () => {
+    setShowCancelModal(false);
+  };
+
+  let sessionActionContent;
+  if (isPendingRequest) {
+    sessionActionContent = (
+      <div className="flex flex-col gap-3">
+        {canLeave && (
+          <Button
+            onClick={() => setShowCancelModal(true)}
+            variant="danger"
+            fullWidth
+            isLoading={isLeaving}
+            loadingText="Відкликання..."
+            className="w-full min-h-[43px]"
+          >
+            Відкликати заявку
+          </Button>
+        )}
+      </div>
+    );
+  } else if (canRequestJoin) {
+    sessionActionContent = (
+      <Button onClick={() => setShowJoinModal(true)} variant="primary" fullWidth className="w-full min-h-[43px]">
+        Приєднатись до сесії
+      </Button>
+    );
+  } else {
+    sessionActionContent = (
+      <div className="text-sm text-brand-medium text-center p-3 bg-brand-light/10 rounded-lg">
+        {getUnavailableJoinMessage(session)}
+      </div>
+    );
+  }
 
   return (
     <DashboardCard
       title="Деталі сесії"
-      actions={<BackButton to="/" label="Dashboard" variant="dark" />}
+      actions={<BackButton to="/" label="Назад" variant="dark" />}
     >
-      <div className="flex flex-col gap-5">
-        {/* Заголовок + статус */}
-        <div>
-          <div className="flex items-start justify-between mb-2">
-            <h2 className="text-xl font-bold text-[#164A41] flex-1 pr-3">
+      <div className="flex flex-col gap-4 h-full">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-xl font-bold text-brand-dark leading-tight truncate flex-1 min-w-0">
               {session.title}
-            </h2>
-            <StatusBadge status={session.status} />
+            </h3>
+            <div className="flex items-center gap-2 shrink-0">
+              {viewer.pendingJoinRequestStatus === 'PENDING' && (
+                <span className="px-1.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded border border-yellow-200">
+                  Заявка на розгляді
+                </span>
+              )}
+              {['FINISHED', 'CANCELED'].includes(session.status)
+                ? <StatusBadge status={session.status} />
+                : <SessionTimeBadge session={session} />}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-brand-medium text-sm leading-tight truncate flex-1 min-w-0">
+              {canRenderCampaign ? (
+                <>
+                  <span className="font-medium">Кампанія:</span>{' '}
+                  {shouldRenderCampaignLink ? (
+                    <Link to={campaignLink} className="underline hover:no-underline">
+                      {session.campaign.title}
+                    </Link>
+                  ) : (
+                    session.campaign.title
+                  )}
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
 
-        {/* Інформаційна сітка */}
-        <div className="grid grid-cols-2 gap-3 p-4 bg-[#9DC88D]/10 rounded-xl">
-          <div className="flex items-center gap-2 text-[#4D774E]">
-            <Data className="w-4 h-4" />
-            <DateTimeDisplay value={session.date} format="long" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 p-4 bg-brand-light/10 rounded-xl">
+          <div className="flex items-center gap-2 text-brand-medium text-sm">
+            <Data className="w-4 h-4 shrink-0" />
+            <DateTimeDisplay value={session.startAt} format="long" />
           </div>
-          <div className="flex items-center gap-2 text-[#4D774E]">
-            <Timer className="w-4 h-4" />
-            <DateTimeDisplay value={session.date} format="time" />
+          <div className="flex items-center gap-2 text-brand-medium text-sm">
+            <span className="font-medium">Система:</span>
+            <span>{session.system || 'Не вказана'}</span>
           </div>
-          {session.duration && (
-            <div className="flex items-center gap-2 text-[#4D774E]">
-              <Timer className="w-4 h-4" />
-              <span>{formatDuration(session.duration)}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-2 text-[#4D774E]">
-            <GroupPeople className="w-4 h-4" />
+
+          <div className="flex items-center gap-2 text-brand-medium text-sm">
+            <Timer className="w-4 h-4 shrink-0" />
+            <time>{session.startAt ? new Date(session.startAt).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</time>
+          </div>
+          <div className="flex items-center gap-2 text-brand-medium text-sm">
+            <span className="font-medium">Доступність:</span>
+            <VisibilityBadge visibility={session?.visibility} entityType={getEntityType(session)} plainText />
+          </div>
+
+          <div className="flex items-center gap-2 text-brand-medium text-sm">
+            <GroupPeople className="w-4 h-4 shrink-0" />
             <span>
-              {getPlayerCount()}
+              {playersCount}
               {session.maxPlayers ? ` / ${session.maxPlayers}` : ''} гравців
             </span>
           </div>
-          {session.system && (
-            <div className="flex items-center gap-2 text-[#4D774E]">
-              <span>{session.system}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>Вільних: {getFreeSpots()}</span>
-          </div>
-          <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>Організатор: {organizerName}</span>
-          </div>
-          <div className="flex items-center gap-2 text-[#4D774E]">
-            <span>GM: {confirmedGmName || 'Шукаємо GM'}</span>
-          </div>
-        </div>
-
-        {/* Опис */}
-        {session.description && (
-          <div className="border-t border-[#9DC88D]/20 pt-4">
-            <h4 className="text-sm font-bold text-[#164A41] mb-2">Опис</h4>
-            <p className="text-sm text-[#4D774E] whitespace-pre-wrap">
-              {session.description}
-            </p>
-          </div>
-        )}
-
-        {/* Кампанія */}
-        <div className="border-t border-[#9DC88D]/20 pt-4">
-          {session.campaign && showCampaignInfo ? (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold text-[#164A41]">Кампанія:</span>
-              {canNavigateToCampaignDirectly ? (
-                <button
-                  onClick={() => navigate(`/campaign/${session.campaign.id}`)}
-                  className="text-sm text-[#4D774E] hover:text-[#164A41] underline transition-colors"
-                >
-                  {session.campaign.title}
-                </button>
-              ) : (
-                <span className="text-sm text-[#4D774E]">{session.campaign.title}</span>
-              )}
+          {organizerName ? (
+            <div className="flex items-center gap-2 text-brand-medium text-sm">
+              <span className="font-medium">Організатор:</span>
+              <span>{organizerName}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-sm text-[#4D774E]">
-              <Dice20 className="w-4 h-4" />
-              <span>{session.campaign ? 'Сесія кампанії' : 'One-shot сесія'}</span>
-            </div>
+            <div className="hidden sm:block" />
           )}
         </div>
 
-        {/* Ціна */}
-        {session.price > 0 && (
-          <div className="text-sm font-bold text-[#164A41]">
-            {session.price} грн
+        {session.description && (
+          <div className="border-t border-brand-light/20 pt-3">
+            <h4 className="text-sm font-bold text-brand-dark mb-3">Опис</h4>
+            <p className="text-sm text-brand-medium whitespace-pre-wrap leading-relaxed">
+              {session.description?.trim() || 'Опис відсутній'}
+            </p>
           </div>
         )}
 
-        {/* Помилка */}
         {joinError && (
-          <div className="text-sm text-red-600 p-3 bg-red-50 rounded-lg">
-            {joinError}
-          </div>
+          <div className="text-sm text-red-600 p-3 bg-red-50 rounded-lg">{joinError}</div>
         )}
 
-        {/* Кнопка приєднання */}
-        {canRequestJoin && (
-          <Button
-            onClick={() => setShowJoinModal(true)}
-            variant="primary"
-          >
-            Приєднатися до сесії
-          </Button>
-        )}
-
-        {!canRequestJoin && (
-          <div className="text-sm text-[#4D774E] text-center p-3 bg-[#9DC88D]/10 rounded-lg">
-            {session.campaign?.status === 'FINISHED'
-              ? 'Кампанія завершена, приєднання до сесії недоступне'
-              : session.status !== 'PLANNED'
-              ? `Ця сесія ${
-                  session.status === 'FINISHED'
-                    ? 'вже завершена'
-                    : session.status === 'ACTIVE'
-                    ? 'вже в процесі'
-                    : session.status === 'CANCELED'
-                    ? 'скасована'
-                    : 'недоступна'
-                }`
-              : 'Приєднання до цієї сесії зараз недоступне'}
-          </div>
-        )}
+        <div className="mt-auto">
+          {sessionActionContent}
+        </div>
       </div>
 
-      {/* Модалка приєднання */}
       {showJoinModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold text-[#164A41] mb-4">
-              Приєднатися до сесії
-            </h3>
-            <p className="text-sm text-[#4D774E] mb-4">
-              {hasConfirmedGm
-                ? 'Після підтвердження ви одразу приєднаєтесь до сесії як гравець.'
-                : 'У сесії поки немає підтвердженого GM. Оберіть роль, на яку хочете податися.'}
+        <SessionJoinModal
+          hasConfirmedGm={hasConfirmedGm}
+          canJoin={canJoin}
+          canApplyAsGm={canApplyAsGm}
+          isJoining={isJoining}
+          isApplyingGm={isApplyingGm}
+          handleJoin={handleJoin}
+          handleApplyAsGm={handleApplyAsGm}
+          closeModal={closeJoinModal}
+        />
+      )}
+
+      {showCancelModal && (
+        <BaseModal
+          isOpen={showCancelModal}
+          onClose={closeCancelModal}
+          closeWhileLoading={false}
+          isLoading={isLeaving}
+          panelClassName="max-w-md"
+        >
+          <div className="rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-lg font-bold text-brand-dark">Відкликати заявку?</h3>
+            <p className="mb-6 text-brand-medium">
+              Ваша заявка на участь буде видалена. Ви зможете подати її знову пізніше.
             </p>
-            <div className="flex flex-col gap-3">
-              {!hasConfirmedGm && canJoin && (
-                <Button
-                  onClick={handleJoin}
-                  isLoading={isJoining}
-                  loadingText="Приєднання..."
-                  variant="secondary"
-                >
-                  Приєднатися як гравець
-                </Button>
-              )}
-
-              {!hasConfirmedGm && canApplyAsGm && (
-                <Button
-                  onClick={handleApplyAsGm}
-                  isLoading={isApplyingGm}
-                  loadingText="Відправка заявки..."
-                  variant={canJoin ? 'outline' : 'secondary'}
-                >
-                  Податися як GM
-                </Button>
-              )}
-
-              {hasConfirmedGm && (
-                <Button
-                  onClick={handleJoin}
-                  isLoading={isJoining}
-                  loadingText="Приєднання..."
-                  variant="secondary"
-                >
-                  Підтвердити приєднання
-                </Button>
-              )}
-
-              <button
-                onClick={() => {
-                  setShowJoinModal(false);
-                  setJoinError(null);
-                }}
-                className="w-full py-2 border-2 border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors"
+            <div className="flex flex-row flex-wrap justify-center gap-3">
+              <Button
+                onClick={closeCancelModal}
+                variant="outline"
+                fullWidth={false}
+                className="min-w-[170px]"
               >
                 Скасувати
-              </button>
+              </Button>
+              <Button
+                onClick={async () => {
+                  const isSuccess = await handleCancelRequest();
+                  if (isSuccess) {
+                    closeCancelModal();
+                  }
+                }}
+                isLoading={isLeaving}
+                loadingText="Відкликання..."
+                variant="danger"
+                fullWidth={false}
+                className="min-w-[170px]"
+              >
+                Відкликати
+              </Button>
             </div>
           </div>
-        </div>
+        </BaseModal>
       )}
     </DashboardCard>
   );
 }
+
+SessionPagePreviewWidget.propTypes = {
+  session: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    title: PropTypes.string,
+    status: PropTypes.string,
+    date: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
+    duration: PropTypes.number,
+    maxPlayers: PropTypes.number,
+    system: PropTypes.string,
+    description: PropTypes.string,
+    price: PropTypes.number,
+    visibility: PropTypes.string,
+    owner: PropTypes.shape({
+      displayName: PropTypes.string,
+      username: PropTypes.string,
+    }),
+    campaign: PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+      title: PropTypes.string,
+      status: PropTypes.string,
+    }),
+    participants: PropTypes.arrayOf(
+      PropTypes.shape({
+        role: PropTypes.string,
+        status: PropTypes.string,
+        user: PropTypes.shape({
+          displayName: PropTypes.string,
+          username: PropTypes.string,
+        }),
+      })
+    ),
+    participantsSummaryCount: PropTypes.number,
+    hasConfirmedGm: PropTypes.bool,
+  }),
+  viewer: PropTypes.shape({
+    pendingJoinRequestStatus: PropTypes.string,
+  }),
+  onJoin: PropTypes.func,
+  onLeave: PropTypes.func,
+  showCampaignInfo: PropTypes.bool,
+  canNavigateToCampaignDirectly: PropTypes.bool,
+  campaignNavigationTarget: PropTypes.string,
+  canJoin: PropTypes.bool,
+  canApplyAsGm: PropTypes.bool,
+  canLeave: PropTypes.bool,
+};

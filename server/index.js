@@ -7,10 +7,13 @@
 require('./src/config/config');
 
 const { prisma } = require('./src/lib/prisma');
-const { redis } = require('./src/lib/redis');
+const { redis, waitForRedisReady } = require('./src/lib/redis');
 const { logger } = require('./src/lib/logger');
-const { port } = require('./src/config/config');
+const { port, wsChatPath } = require('./src/config/config');
 const { createApp } = require('./src/app');
+const { createWsServer } = require('./src/ws/ws-server');
+const { createRoomManager } = require('./src/ws/ws-room.manager');
+const { createChatHandler } = require('./src/ws/ws-chat.handler');
 
 // Startup modules
 const {
@@ -19,28 +22,9 @@ const {
   shutdownCleanupJobs,
 } = require('./src/startup');
 
-// ========== ІНІЦІАЛІЗАЦІЯ ПРИ СТАРТІ ==========
-
-// Виконуємо міграції при старті
-initMigrations();
-
-// Підключаємось до Redis (lazyConnect=true — потрібне явне підключення)
-redis.connect().catch((err) => {
-  // Некритична помилка: сервер запуститься без Redis,
-  // але blacklist і rate-limit будуть тимчасово недоступні
-  logger.error({ err }, 'Redis недоступний при старті');
-});
-
-// Ініціалізуємо cleanup jobs (токени та rate limits)
-initAllCleanupJobs();
-
-// ========== CREATE APP ==========
-const app = createApp();
-
-// ========== START SERVER ==========
-const server = app.listen(port, () => {
-  logger.info({ port }, 'Сервер запущено');
-});
+let server = null;
+let wsServer = null;
+let roomManager = null;
 
 // ========== GRACEFUL SHUTDOWN ==========
 let isShuttingDown = false;
@@ -55,8 +39,19 @@ async function gracefulShutdown(signal) {
   logger.warn({ signal }, 'Отримано сигнал завершення. Завершуємо роботу');
   
   // Зупиняємо прийом нових з'єднань
+  if (!server) {
+    await shutdownCleanupJobs();
+    await prisma.$disconnect();
+    process.exit(1);
+    return;
+  }
+
   server.close(async () => {
     logger.info('HTTP сервер закрито');
+
+    if (wsServer) {
+      await wsServer.close();
+    }
     
     // Очищаємо ресурси
     await shutdownCleanupJobs();
@@ -89,4 +84,39 @@ process.on('unhandledRejection', (reason) => {
 process.on('uncaughtException', (err) => {
   logger.fatal({ err }, 'UNCAUGHT_EXCEPTION');
   gracefulShutdown('UNCAUGHT_EXCEPTION');
+});
+
+async function startServer() {
+  // Спочатку чекаємо БД та завершуємо міграції.
+  await initMigrations();
+
+  // Потім чекаємо готовність Redis, щоб auth/rate-limit не стартували у деградації.
+  await waitForRedisReady();
+
+  // Ініціалізуємо cleanup jobs (токени та rate limits)
+  initAllCleanupJobs();
+
+  // ========== CREATE APP ==========
+  const app = createApp();
+
+  // ========== START SERVER ==========
+  server = app.listen(port, () => {
+    logger.info({ port }, 'Сервер запущено');
+  });
+
+  roomManager = createRoomManager();
+  const chatHandler = createChatHandler({ roomManager, logger });
+
+  wsServer = createWsServer({
+    server,
+    path: wsChatPath,
+    logger,
+    onConnection: chatHandler,
+  });
+  logger.info({ path: wsChatPath }, 'WS сервер запущено');
+}
+
+startServer().catch((err) => {
+  logger.fatal({ err }, 'Критична помилка старту сервера');
+  process.exit(1);
 });

@@ -37,10 +37,16 @@ const logger = pino(
 
 const httpLogger = pinoHttp({
   logger,
+  customProps: (req) => ({
+    correlationId: req.correlationId,
+    sessionId: req.sessionId,
+  }),
   serializers: {
     req(req) {
       return {
         id: req.id,
+        correlationId: req.correlationId,
+        sessionId: req.sessionId,
         method: req.method,
         url: req.url,
         query: Object.keys(req.query || {}).length ? req.query : undefined,

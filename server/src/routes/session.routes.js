@@ -41,6 +41,12 @@ router.get(
 );
 
 router.get(
+  '/next-relevant',
+  [authenticateToken],
+  (req, res, next) => sessionCrudController.getNextRelevantSession(req, res, next)
+);
+
+router.get(
   '/calendar',
   [optionalAuthenticateToken, ...validateGetCalendar],
   (req, res, next) => sessionCalendarController.getCalendar(req, res, next)
@@ -48,7 +54,7 @@ router.get(
 
 router.get(
   '/calendar-stats',
-  [optionalAuthenticateToken, ...validateGetCalendarStats],
+  [authenticateToken, ...validateGetCalendarStats],
   (req, res, next) => sessionCalendarController.getCalendarStats(req, res, next)
 );
 
@@ -60,7 +66,7 @@ router.get(
 
 router.get(
   '/day-filtered/:date',
-  [optionalAuthenticateToken, ...validateGetSessionsByDayFiltered],
+  [authenticateToken, ...validateGetSessionsByDayFiltered],
   (req, res, next) => sessionCalendarController.getSessionsByDayFiltered(req, res, next)
 );
 
@@ -71,9 +77,21 @@ router.get(
 );
 
 router.get(
+  '/share/:shareToken/page',
+  [optionalAuthenticateToken, ...validateSessionShareToken],
+  (req, res, next) => sessionCrudController.getSessionPageByShareToken(req, res, next)
+);
+
+router.get(
   '/:id',
   [authenticateToken, ...validateSessionId],
   (req, res, next) => sessionCrudController.getSessionById(req, res, next)
+);
+
+router.get(
+  '/:id/page',
+  [authenticateToken, ...validateSessionId],
+  (req, res, next) => sessionCrudController.getSessionPageById(req, res, next)
 );
 
 router.post(

@@ -11,6 +11,8 @@ const { getCampaignViewerCapabilities } = require('../domain/campaign/campaign.p
 
 const permissionHelpers = require('./campaign/campaign-permission.helpers');
 const createCampaignMembersService = require('./campaign/campaign-members.service');
+const createCampaignPageService = require('./campaign/campaign-page.service');
+const notificationService = require('./notification.service');
 
 class CampaignService {
   constructor() {
@@ -20,6 +22,12 @@ class CampaignService {
       ERROR_CODES,
       getCampaignById: this.getCampaignById.bind(this),
       permissionHelpers,
+      notificationService,
+    });
+    this.pageService = createCampaignPageService({
+      getCampaignById: this.getCampaignById.bind(this),
+      getCampaignByShareToken: this.getCampaignByShareToken.bind(this),
+      getJoinRequests: this.membersService.getJoinRequests.bind(this.membersService),
     });
   }
 
@@ -51,15 +59,37 @@ class CampaignService {
     );
   }
 
-  _buildCampaignUpdateData(existingCampaign, updateData, nextStatus) {
-    return {
-      title: updateData.title !== undefined ? updateData.title : undefined,
-      description: updateData.description !== undefined ? updateData.description : undefined,
-      imageUrl: updateData.imageUrl !== undefined ? updateData.imageUrl : undefined,
-      system: updateData.system !== undefined ? updateData.system : undefined,
-      visibility: updateData.visibility !== undefined ? updateData.visibility : undefined,
-      status: nextStatus !== undefined ? nextStatus : undefined,
-    };
+  _normalizeNullableString(value) {
+    if (typeof value !== 'string') {
+      return value;
+    }
+
+    const normalizedValue = value.trim();
+    return normalizedValue === '' ? null : normalizedValue;
+  }
+
+  _assignIfOwn(target, source, field, normalize = (value) => value) {
+    if (!Object.hasOwn(source, field)) {
+      return;
+    }
+
+    target[field] = normalize(source[field]);
+  }
+
+  _buildCampaignUpdateData(updateData, nextStatus) {
+    const campaignUpdateData = {};
+
+    this._assignIfOwn(campaignUpdateData, updateData, 'title');
+    this._assignIfOwn(campaignUpdateData, updateData, 'description', this._normalizeNullableString);
+    this._assignIfOwn(campaignUpdateData, updateData, 'imageUrl', this._normalizeNullableString);
+    this._assignIfOwn(campaignUpdateData, updateData, 'system', this._normalizeNullableString);
+    this._assignIfOwn(campaignUpdateData, updateData, 'visibility');
+
+    if (nextStatus !== undefined) {
+      campaignUpdateData.status = nextStatus;
+    }
+
+    return campaignUpdateData;
   }
 
   _hasValidCampaignAccessToken(campaign, rawToken = null) {
@@ -127,6 +157,9 @@ class CampaignService {
             role: 'OWNER',
           },
         },
+        chat: {
+          create: {},
+        },
       },
       include: {
         owner: {
@@ -159,16 +192,40 @@ class CampaignService {
     if (role === 'owner') {
       whereCondition.ownerId = userId;
     } else if (role === 'member') {
-      whereCondition.members = {
-        some: {
-          userId,
-          role: { not: 'OWNER' },
+      whereCondition.OR = [
+        {
+          members: {
+            some: {
+              userId,
+              role: { not: 'OWNER' },
+            },
+          },
         },
-      };
+        {
+          joinRequests: {
+            some: {
+              userId,
+              status: 'PENDING',
+            },
+          },
+        },
+      ];
     } else {
-      whereCondition.members = {
-        some: { userId },
-      };
+      whereCondition.OR = [
+        {
+          members: {
+            some: { userId },
+          },
+        },
+        {
+          joinRequests: {
+            some: {
+              userId,
+              status: 'PENDING',
+            },
+          },
+        },
+      ];
     }
 
     const campaigns = await prisma.campaign.findMany({
@@ -184,10 +241,24 @@ class CampaignService {
             },
           },
         },
+        joinRequests: {
+          where: {
+            userId,
+            status: 'PENDING',
+          },
+          select: { id: true, status: true },
+          take: 1,
+        },
         sessions: {
           select: { id: true, title: true, date: true, status: true },
           orderBy: { date: 'asc' },
           take: 5,
+        },
+        _count: {
+          select: {
+            sessions: true,
+            members: true,
+          },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -195,19 +266,34 @@ class CampaignService {
 
     return campaigns.map((campaign) => {
       let myRole = null;
+      let myStatus = null;
+
       if (campaign.ownerId === userId) {
         myRole = 'OWNER';
+        myStatus = 'CONFIRMED';
       } else {
         const myMembership = campaign.members?.find((member) => member.userId === userId);
-        myRole = myMembership?.role || null;
+        if (myMembership) {
+          myRole = myMembership.role;
+          myStatus = 'CONFIRMED';
+        } else if (campaign.joinRequests?.length > 0) {
+          myStatus = 'PENDING';
+        }
       }
-      return { ...campaign, myRole };
+
+      return {
+        ...campaign,
+        myRole,
+        myStatus,
+        sessionsCount: campaign._count?.sessions ?? campaign.sessions?.length ?? 0,
+        membersCount: campaign._count?.members ?? campaign.members?.length ?? 0,
+      };
     });
   }
 
   async getCampaignById(campaignId, userId = null, shareToken = null) {
     const campaign = await prisma.campaign.findUnique({
-      where: { id: parseInt(campaignId) },
+      where: { id: Number.parseInt(campaignId, 10) },
       include: {
         owner: {
           select: { id: true, username: true, displayName: true, avatarUrl: true },
@@ -221,7 +307,29 @@ class CampaignService {
           orderBy: { role: 'asc' },
         },
         sessions: {
-          select: { id: true, title: true, date: true, status: true, maxPlayers: true, ownerId: true },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            date: true,
+            system: true,
+            status: true,
+            visibility: true,
+            maxPlayers: true,
+            ownerId: true,
+            participants: {
+              select: {
+                role: true,
+                status: true,
+              },
+            },
+            _count: {
+              select: { participants: true },
+            },
+            owner: {
+              select: { id: true, username: true, displayName: true, avatarUrl: true },
+            },
+          },
           orderBy: { date: 'asc' },
         },
         joinRequests: {
@@ -235,23 +343,14 @@ class CampaignService {
       throw new AppError(ERROR_CODES.CAMPAIGN_NOT_FOUND, 'Кампанія не знайдена');
     }
 
-    const accessContext = buildCampaignAccessContext({
-      campaign,
-      userId,
-      hasValidShareToken: this._hasValidCampaignAccessToken(campaign, shareToken),
-    });
-    const viewerCapabilities = getCampaignViewerCapabilities(accessContext);
+    let myJoinRequest = null;
+    const isOwner = Boolean(userId && campaign.ownerId === userId);
+    const isCampaignMember = Boolean(
+      userId && campaign.members.some((member) => member.userId === userId)
+    );
 
-    if (!viewerCapabilities.canOpen) {
-      throw new AppError(
-        ERROR_CODES.SECURITY_ACCESS_DENIED,
-        'У вас немає доступу до цієї кампанії'
-      );
-    }
-
-    let pendingJoinRequestStatus = null;
-    if (userId && !accessContext.isOwner && !accessContext.isCampaignMember) {
-      const myJoinRequest = await prisma.joinRequest.findUnique({
+    if (userId && !isOwner && !isCampaignMember) {
+      myJoinRequest = await prisma.joinRequest.findUnique({
         where: {
           userId_campaignId: {
             userId,
@@ -260,10 +359,25 @@ class CampaignService {
         },
         select: { status: true },
       });
+    }
 
-      if (myJoinRequest?.status === 'PENDING') {
-        pendingJoinRequestStatus = 'PENDING';
-      }
+    const pendingJoinRequestStatus = myJoinRequest?.status === 'PENDING'
+      ? 'PENDING'
+      : null;
+
+    const accessContext = buildCampaignAccessContext({
+      campaign,
+      userId,
+      hasValidShareToken: this._hasValidCampaignAccessToken(campaign, shareToken),
+      isPendingJoinRequester: pendingJoinRequestStatus === 'PENDING',
+    });
+    const viewerCapabilities = getCampaignViewerCapabilities(accessContext);
+
+    if (!viewerCapabilities.canOpen) {
+      throw new AppError(
+        ERROR_CODES.SECURITY_ACCESS_DENIED,
+        'У вас немає доступу до цієї кампанії'
+      );
     }
 
     campaign.viewer = {
@@ -281,7 +395,6 @@ class CampaignService {
       delete campaign.joinRequests;
     }
 
-    delete campaign.inviteCode;
     delete campaign.shareTokenHash;
     delete campaign.shareTokenEncrypted;
     delete campaign.shareTokenCreatedAt;
@@ -296,11 +409,12 @@ class CampaignService {
 
     const settingsFields = ['title', 'description', 'imageUrl', 'system', 'visibility'];
     const hasSettingsUpdate = settingsFields.some((field) =>
-      Object.prototype.hasOwnProperty.call(updateData, field)
+      Object.hasOwn(updateData, field)
     );
-    const nextStatus = updateData.status !== undefined
-      ? String(updateData.status).toUpperCase()
-      : undefined;
+    let nextStatus;
+    if (updateData.status !== undefined) {
+      nextStatus = String(updateData.status).toUpperCase();
+    }
 
     if (campaign.status === 'FINISHED' && hasSettingsUpdate) {
       throw new AppError(
@@ -322,12 +436,12 @@ class CampaignService {
       }
     }
 
-    const campaignIdInt = parseInt(campaignId);
+    const campaignIdInt = Number.parseInt(campaignId, 10);
     const isFinishingCampaign = campaign.status !== 'FINISHED' && nextStatus === 'FINISHED';
     const shareTokenUpdate = this._buildCampaignShareTokenUpdate(campaign, updateData.visibility);
     const campaignUpdateData = {
-      ...this._buildCampaignUpdateData(campaign, updateData, nextStatus),
-      ...(Object.prototype.hasOwnProperty.call(shareTokenUpdate, 'shareTokenHash')
+        ...this._buildCampaignUpdateData(updateData, nextStatus),
+      ...(Object.hasOwn(shareTokenUpdate, 'shareTokenHash')
         ? {
           shareTokenHash: shareTokenUpdate.shareTokenHash,
           shareTokenEncrypted: shareTokenUpdate.shareTokenEncrypted,
@@ -435,6 +549,14 @@ class CampaignService {
     return this.getCampaignById(campaign.id, userId, normalizedToken);
   }
 
+  async getCampaignPageById(campaignId, userId = null) {
+    return this.pageService.getCampaignPageById(campaignId, userId);
+  }
+
+  async getCampaignPageByShareToken(rawToken, userId = null) {
+    return this.pageService.getCampaignPageByShareToken(rawToken, userId);
+  }
+
   async regenerateShareToken(campaignId, userId) {
     const campaign = await this.getCampaignById(campaignId, userId);
 
@@ -456,7 +578,7 @@ class CampaignService {
 
     const { rawToken, tokenHash, tokenEncrypted } = createRawEncryptedAndHashedShareToken();
     await prisma.campaign.update({
-      where: { id: parseInt(campaignId) },
+      where: { id: Number.parseInt(campaignId, 10) },
       data: {
         shareTokenHash: tokenHash,
         shareTokenEncrypted: tokenEncrypted,
@@ -466,29 +588,26 @@ class CampaignService {
 
     return {
       token: rawToken,
-      campaignId: parseInt(campaignId),
+      campaignId: Number.parseInt(campaignId, 10),
     };
   }
 
   async getCampaignShareLink(campaignId, userId) {
     const campaign = await this.getCampaignById(campaignId, userId);
 
-    this._requireCampaignOwner(campaign, userId, 'Only owner can view the campaign share link');
+    this._requireCampaignOwner(campaign, userId, 'Тільки власник може переглядати посилання доступу кампанії');
 
     if (campaign.visibility !== 'LINK_ONLY') {
-      throw new AppError(
-        ERROR_CODES.VALIDATION_FAILED,
-        'Share link is available only for LINK_ONLY campaigns'
-      );
+      throw new AppError(ERROR_CODES.CAMPAIGN_SHARE_LINK_LINK_ONLY_REQUIRED);
     }
 
     const stored = await prisma.campaign.findUnique({
-      where: { id: parseInt(campaignId) },
+      where: { id: Number.parseInt(campaignId, 10) },
       select: { shareTokenEncrypted: true },
     });
 
     if (!stored?.shareTokenEncrypted) {
-      throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Share link is not available');
+      throw new AppError(ERROR_CODES.CAMPAIGN_SHARE_LINK_UNAVAILABLE);
     }
 
     const token = decryptShareToken(stored.shareTokenEncrypted);
@@ -521,6 +640,10 @@ class CampaignService {
 
   async submitJoinRequest(campaignId, userId, message = null, shareToken = null) {
     return this.membersService.submitJoinRequest(campaignId, userId, message, shareToken);
+  }
+
+  async cancelJoinRequest(campaignId, userId) {
+    return this.membersService.cancelJoinRequest(campaignId, userId);
   }
 
   async getJoinRequests(campaignId, userId) {

@@ -1,10 +1,24 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createSession } from '@/features/sessions/api/sessionApi';
 import { GAME_SYSTEMS } from '@/constants/gameSystems';
 import Dropdown from '@/components/ui/Dropdown';
 import Button from '@/components/ui/Button';
 import { toast } from '@/stores/useToastStore';
+import { getDateTimeLocalIssue, toIsoDateTimeLocalValue } from '@/utils/dateTimeLocal';
+import {
+  invalidateCampaignCollectionQueries,
+  invalidateSessionCollectionQueries,
+} from '@/lib/queryInvalidation';
+
+const DATE_ERROR_MESSAGES = {
+  empty: 'Дата сесії обовʼязкова',
+  invalid: 'Некоректна дата сесії',
+  nonexistent: 'Обраний час не існує у вашому часовому поясі через переведення годинника',
+  ambiguous: 'Обраний час повторюється через переведення годинника. Вкажіть іншу годину, щоб уникнути помилки',
+  past: 'Дата не може бути в минулому',
+};
 
 export default function CreateSessionForm({
   initialDate,
@@ -19,14 +33,25 @@ export default function CreateSessionForm({
 
   const createMutation = useMutation({
     mutationFn: (data) => createSession(data),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Сесію успішно створено');
-      queryClient.invalidateQueries({ queryKey: ['sessions'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'games'] });
-      queryClient.invalidateQueries({ queryKey: ['calendar'] });
+      const tasks = [
+        invalidateSessionCollectionQueries(queryClient),
+      ];
+
       if (campaignId) {
-        queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
+        tasks.push(
+          invalidateCampaignCollectionQueries(queryClient, {
+            includeGames: true,
+            includeHome: true,
+            includeSearchSessions: true,
+          }),
+          queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] }),
+          queryClient.invalidateQueries({ queryKey: ['campaign-page', campaignId] })
+        );
       }
+
+      await Promise.allSettled(tasks);
     },
     onError: (err) => {
       toast.error(err?.response?.data?.error || err?.message || 'Помилка при створенні сесії');
@@ -89,10 +114,9 @@ export default function CreateSessionForm({
       nextErrors.title = 'Назва повинна містити мінімум 3 символи';
     }
 
-    if (!formData.date) {
-      nextErrors.date = 'Дата сесії обовʼязкова';
-    } else if (new Date(formData.date) < new Date()) {
-      nextErrors.date = 'Дата не може бути в минулому';
+    const dateIssue = getDateTimeLocalIssue(formData.date);
+    if (dateIssue) {
+      nextErrors.date = DATE_ERROR_MESSAGES[dateIssue];
     }
 
     if (formData.duration < 30 || formData.duration > 480) {
@@ -123,7 +147,7 @@ export default function CreateSessionForm({
     const { name, value, type } = event.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'number' ? parseFloat(value) || 0 : value,
+      [name]: type === 'number' ? Number.parseFloat(value) || 0 : value,
     }));
 
     if (errors[name]) {
@@ -141,9 +165,17 @@ export default function CreateSessionForm({
     setIsSubmitting(true);
 
     try {
+      const sessionDateIso = toIsoDateTimeLocalValue(formData.date);
+      if (!sessionDateIso) {
+        const dateError = DATE_ERROR_MESSAGES[getDateTimeLocalIssue(formData.date) || 'invalid'];
+        setErrors((prev) => ({ ...prev, date: dateError }));
+        toast.error(dateError);
+        return;
+      }
+
       const payload = {
         title: formData.title.trim(),
-        date: new Date(formData.date).toISOString(),
+        date: sessionDateIso,
         duration: formData.duration,
         maxPlayers: formData.maxPlayers,
         price: formData.price,
@@ -175,17 +207,17 @@ export default function CreateSessionForm({
   };
 
   const inputClass = (fieldName) => `
-    w-full px-3 py-2 rounded-lg border-2
+    w-full px-4 py-3 rounded-xl border-2
     ${errors[fieldName]
-      ? 'border-red-300 focus:border-red-500'
-      : 'border-[#9DC88D]/30 focus:border-[#164A41]'}
-    focus:outline-none transition-colors
+      ? 'border-red-500 focus:border-red-600'
+      : 'border-brand-light/30 focus:border-brand-dark'}
+    transition-colors
   `;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <label htmlFor="title" className="block text-sm font-medium text-[#164A41] mb-1">
+        <label htmlFor="title" className="block text-sm font-medium text-brand-dark mb-1">
           Назва сесії *
         </label>
         <input
@@ -202,7 +234,7 @@ export default function CreateSessionForm({
       </div>
 
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-[#164A41] mb-1">
+        <label htmlFor="description" className="block text-sm font-medium text-brand-dark mb-1">
           Опис
         </label>
         <textarea
@@ -218,6 +250,10 @@ export default function CreateSessionForm({
       </div>
 
       <div>
+        <label htmlFor="system" className="block text-sm font-medium text-brand-dark mb-1">
+              Ігрова система
+          </label>
+
         <Dropdown
           label="Ігрова система"
           options={GAME_SYSTEMS}
@@ -235,42 +271,42 @@ export default function CreateSessionForm({
 
       {!requireGmRole && (
         <div>
-          <p className="block text-sm font-medium text-[#164A41] mb-2">
+          <p className="block text-sm font-medium text-brand-dark mb-2">
             Ваша роль у сесії
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
+              <button
               type="button"
               onClick={() => setFormData((prev) => ({ ...prev, isGm: true }))}
-              className={`
-                p-3 rounded-xl border-2 text-left transition-colors
+                className={`
+                  w-full p-3 rounded-xl border-2 text-left transition-all shadow-none hover:shadow-none
                 ${formData.isGm
-                  ? 'border-[#164A41] bg-[#9DC88D]/15 text-[#164A41]'
-                  : 'border-[#9DC88D]/30 text-[#4D774E] hover:border-[#164A41]/50'}
+                    ? 'border-brand-dark bg-brand-light/15 text-brand-dark'
+                    : 'border-brand-light/30 text-brand-medium hover:border-brand-dark/50 hover:bg-brand-light/10'}
               `}
             >
               <div className="font-semibold">Я буду Майстром</div>
               <div className="text-xs mt-1 opacity-80">Керуватиму сесією самостійно</div>
-            </button>
-            <button
+              </button>
+              <button
               type="button"
               onClick={() => setFormData((prev) => ({ ...prev, isGm: false }))}
-              className={`
-                p-3 rounded-xl border-2 text-left transition-colors
-                ${!formData.isGm
-                  ? 'border-[#164A41] bg-[#9DC88D]/15 text-[#164A41]'
-                  : 'border-[#9DC88D]/30 text-[#4D774E] hover:border-[#164A41]/50'}
+                className={`
+                  w-full p-3 rounded-xl border-2 text-left transition-all shadow-none hover:shadow-none
+                  ${formData.isGm
+                    ? 'border-brand-light/30 text-brand-medium hover:border-brand-dark/50 hover:bg-brand-light/10'
+                    : 'border-brand-dark bg-brand-light/15 text-brand-dark'}
               `}
             >
               <div className="font-semibold">Шукаю Майстра</div>
               <div className="text-xs mt-1 opacity-80">Я організатор, Майстром буде інший</div>
-            </button>
+              </button>
           </div>
         </div>
       )}
 
       <div>
-        <label htmlFor="date" className="block text-sm font-medium text-[#164A41] mb-1">
+        <label htmlFor="date" className="block text-sm font-medium text-brand-dark mb-1">
           Дата і час *
         </label>
         <input
@@ -279,15 +315,19 @@ export default function CreateSessionForm({
           name="date"
           value={formData.date}
           onChange={handleChange}
-          className={`${inputClass('date')} accent-[#164A41] cursor-pointer`}
+          className={`${inputClass('date')} accent-brand-dark cursor-pointer`}
         />
         {errors.date && <p className="text-red-500 text-xs mt-1">{errors.date}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
+          <label htmlFor="duration" className="block text-sm font-medium text-brand-dark mb-1">
+              Час гри
+          </label>
+
           <Dropdown
-            label="Тривалість"
+            label="duration"
             options={[
               { value: 60, label: '1 година' },
               { value: 90, label: '1.5 години' },
@@ -312,7 +352,7 @@ export default function CreateSessionForm({
         </div>
 
         <div>
-          <label htmlFor="maxPlayers" className="block text-sm font-medium text-[#164A41] mb-1">
+          <label htmlFor="maxPlayers" className="block text-sm font-medium text-brand-dark mb-1">
             Макс. гравців
           </label>
           <input
@@ -331,7 +371,7 @@ export default function CreateSessionForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label htmlFor="price" className="block text-sm font-medium text-[#164A41] mb-1">
+          <label htmlFor="price" className="block text-sm font-medium text-brand-dark mb-1">
             Ціна (грн)
           </label>
           <input
@@ -349,8 +389,11 @@ export default function CreateSessionForm({
         </div>
 
         <div>
+          <label htmlFor="visibility" className="block text-sm font-medium text-brand-dark mb-1">
+              Доступність
+          </label>
           <Dropdown
-            label={isCampaignSession ? 'Тип сесії' : 'Видимість'}
+            label="Доступність"
             options={visibilityOptions}
             value={formData.visibility}
             onChange={(option) => {
@@ -364,7 +407,7 @@ export default function CreateSessionForm({
         </div>
       </div>
 
-      <div className="text-xs text-[#4D774E] bg-[#9DC88D]/10 border border-[#9DC88D]/30 rounded-lg px-3 py-2">
+      <div className="text-xs text-brand-medium bg-brand-light/10 border border-brand-light/30 rounded-lg px-3 py-2">
         {visibilityHint}
       </div>
 
@@ -375,6 +418,7 @@ export default function CreateSessionForm({
             onClick={onCancel}
             disabled={isSubmitting}
             variant="outline"
+            fullWidth={true}
             className="flex-1"
           >
             Скасувати
@@ -386,6 +430,7 @@ export default function CreateSessionForm({
           isLoading={isSubmitting}
           loadingText="Створення..."
           variant="primary"
+          fullWidth={true}
           className={onCancel ? 'flex-1' : 'w-full'}
         >
           Створити
@@ -394,3 +439,11 @@ export default function CreateSessionForm({
     </form>
   );
 }
+
+CreateSessionForm.propTypes = {
+  initialDate: PropTypes.string,
+  campaignId: PropTypes.string,
+  requireGmRole: PropTypes.bool,
+  onSuccess: PropTypes.func,
+  onCancel: PropTypes.func,
+};

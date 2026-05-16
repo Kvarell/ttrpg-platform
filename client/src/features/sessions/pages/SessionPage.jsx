@@ -6,19 +6,21 @@ import useSessionPageController from '../hooks/useSessionPageController';
 
 // Layout & Navigation
 import SessionLayout from '../components/layout/SessionLayout';
-import SessionNavigation, { TABS } from '../components/navigation/SessionNavigation';
+import SessionNavigation from '../components/navigation/SessionNavigation';
+import SessionTabRenderer from '../components/layout/SessionTabRenderer';
 
 // Widgets
-import SessionInfoWidget from '../components/widgets/SessionInfoWidget';
-import SessionSettingsWidget from '../components/widgets/SessionSettingsWidget';
 import SessionPagePreviewWidget from '../components/widgets/SessionPreviewWidget';
-import SessionPageParticipantsWidget from '../components/widgets/SessionParticipantsWidget';
 
 // Shared
-import { UserProfilePreview } from '@/components/shared';
-import FullPageLoader from '@/components/shared/FullPageLoader';
-import ErrorScreen from '@/components/shared/ErrorScreen';
+import { 
+  UserProfilePreview, 
+  BrandLogo, 
+  FullPageLoader, 
+  ErrorScreen 
+} from '@/components/shared';
 
+import Button from '@/components/ui/Button'; 
 /**
  * SessionPage — тонкий shell-компонент для /session/:id.
  *
@@ -36,7 +38,10 @@ export default function SessionPage() {
     error,
     shouldRedirectToLogin,
     activeTab,
+    availableTabs,
     setActiveTab,
+    communicationPanelMode,
+    setCommunicationPanelMode,
     viewingUserId,
     isPreviewMode,
     myRole,
@@ -50,10 +55,14 @@ export default function SessionPage() {
     canManageGmRequests,
     canManageShareLink,
     canManageSettings,
+    canManageSession,
+    participantsSection,
     canJoin,
     canApplyAsGm,
+    canLeave,
     showCampaignInfo,
     canNavigateToCampaignDirectly,
+    campaignNavigationTarget,
     currentShareLink,
     handleJoin,
     handleLeave,
@@ -61,12 +70,12 @@ export default function SessionPage() {
     handleMarkAsFinished,
     handleSaveSettings,
     handleDelete,
-    handleParticipantStatusChange,
     handleRegenerateShareLink,
     handleCopyShareLink,
     handleViewProfile,
     handleBackFromProfile,
     navigate,
+    viewer,
   } = useSessionPageController();
 
   if (shouldRedirectToLogin) {
@@ -90,165 +99,119 @@ export default function SessionPage() {
   }
 
   // === Left panel ===
-  const renderLeftPanel = () => {
-    if (viewingUserId) {
-      return (
-        <UserProfilePreview
-          userId={viewingUserId}
-          onBack={handleBackFromProfile}
-          participants={currentSession.participants}
-        />
-      );
-    }
+  const profilePreviewNode = viewingUserId ? (
+    <UserProfilePreview
+      userId={viewingUserId}
+      onBack={handleBackFromProfile}
+      participants={Array.isArray(participantsSection?.items) ? participantsSection.items : []}
+    />
+  ) : null;
 
-    if (isPreviewMode) {
-      return (
-        <SessionPagePreviewWidget
-          session={currentSession}
-          onJoin={handleJoin}
-          canJoin={canJoin}
-          canApplyAsGm={canApplyAsGm}
-          showCampaignInfo={showCampaignInfo}
-          canNavigateToCampaignDirectly={canNavigateToCampaignDirectly}
-          isLoading={isLoading}
-        />
-      );
-    }
-
-    switch (activeTab) {
-      case TABS.SETTINGS:
-        if (canManageSettings) {
-          return (
-            <SessionSettingsWidget
-              session={currentSession}
-              onSave={handleSaveSettings}
-              onDelete={handleDelete}
-              canDelete={canDeleteSession}
-              isLoading={isLoading}
-            />
-          );
-        }
-        return (
-          <SessionInfoWidget
-            session={currentSession}
-            myRole={myRole}
-            canManage={canManageStatus}
-            canStartSession={canStartSession}
-            canFinishSession={canFinishSession}
-            canCancelSession={canCancelSession}
-            canManageShareLink={canManageShareLink}
-            currentShareLink={currentShareLink}
-            onLeave={handleLeave}
-            onStatusChange={handleStatusChange}
-            onMarkAsFinished={handleMarkAsFinished}
-            onRegenerateShareLink={handleRegenerateShareLink}
-            onCopyShareLink={handleCopyShareLink}
-            showCampaignInfo={showCampaignInfo}
-            canNavigateToCampaignDirectly={canNavigateToCampaignDirectly}
-            isLoading={isLoading}
-          />
-        );
-
-      case TABS.DETAILS:
-      default:
-        return (
-          <SessionInfoWidget
-            session={currentSession}
-            myRole={myRole}
-            canManage={canManageStatus}
-            canStartSession={canStartSession}
-            canFinishSession={canFinishSession}
-            canCancelSession={canCancelSession}
-            canManageShareLink={canManageShareLink}
-            currentShareLink={currentShareLink}
-            onLeave={handleLeave}
-            onStatusChange={handleStatusChange}
-            onMarkAsFinished={handleMarkAsFinished}
-            onRegenerateShareLink={handleRegenerateShareLink}
-            onCopyShareLink={handleCopyShareLink}
-            showCampaignInfo={showCampaignInfo}
-            canNavigateToCampaignDirectly={canNavigateToCampaignDirectly}
-            isLoading={isLoading}
-          />
-        );
-    }
+  const sessionInfoProps = {
+    session: currentSession,
+    myRole,
+    currentUserId: user?.id,
+    canManage: canManageStatus,
+    canStartSession,
+    canFinishSession,
+    canCancelSession,
+    onLeave: handleLeave,
+    canLeave,
+    onStatusChange: handleStatusChange,
+    onMarkAsFinished: handleMarkAsFinished,
+    showCampaignInfo,
+    canNavigateToCampaignDirectly,
+    campaignNavigationTarget,
+    isLoading,
   };
 
-  // === Right panel ===
-  const renderRightPanel = () => (
-    <SessionPageParticipantsWidget
-      sessionId={id}
-      session={currentSession}
-      initialParticipants={currentSession.participants || []}
-      canReadParticipants={canReadParticipants}
-      canManage={canManageParticipants}
-      canManageGmRequests={canManageGmRequests}
-      onParticipantStatusChange={handleParticipantStatusChange}
-      currentUserId={user?.id}
-      onViewProfile={handleViewProfile}
-      maxPlayers={currentSession.maxPlayers}
-    />
-  );
+  const sessionSettingsProps = {
+    session: currentSession,
+    onSave: handleSaveSettings,
+    onDelete: handleDelete,
+    canManageSettings,
+    canManageShareLink,
+    currentShareLink,
+    onRegenerateShareLink: handleRegenerateShareLink,
+    onCopyShareLink: handleCopyShareLink,
+    canDelete: canDeleteSession,
+    isLoading,
+  };
+
+  const participantsProps = {
+    sessionId: id,
+    session: currentSession,
+    participantsSection,
+    canReadParticipants,
+    canManage: canManageParticipants,
+    canManageGmRequests,
+    currentUserId: user?.id,
+    onViewProfile: handleViewProfile,
+    maxPlayers: currentSession.maxPlayers,
+  };
+
+  const tabPanels = SessionTabRenderer({
+    activeTab,
+    sessionInfoProps,
+    sessionSettingsProps,
+    participantsProps,
+    viewingUserId,
+    profilePreviewNode,
+    communicationPanelMode,
+    setCommunicationPanelMode,
+  });
+
+  const previewPanels = {
+    leftPanel: (
+      <SessionPagePreviewWidget
+        session={currentSession}
+        viewer={viewer}
+        showCampaignInfo={showCampaignInfo}
+        canNavigateToCampaignDirectly={canNavigateToCampaignDirectly}
+        campaignNavigationTarget={campaignNavigationTarget}
+        onJoin={handleJoin}
+        onLeave={handleLeave}
+        canJoin={canJoin}
+        canApplyAsGm={canApplyAsGm}
+        canLeave={canLeave}
+      />
+    ),
+    rightPanel: tabPanels.rightPanel,
+  };
+
+  const panelState = isPreviewMode ? previewPanels : tabPanels;
 
   return (
     <SessionLayout
       topBar={
-        !isPreviewMode ? (
-          <SessionNavigation
-            sessionTitle={currentSession.title}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            canManage={canManageSettings}
-            campaignTitle={currentSession.campaign?.title}
-          />
-        ) : (
+        isPreviewMode ? (
           <nav className="flex items-center gap-4 justify-between w-full">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="bg-white px-4 py-2 rounded-xl border-2 border-[#9DC88D]/30 shadow-md flex items-center gap-2">
-                <div className="w-6 h-6 bg-[#164A41] rounded-full flex items-center justify-center text-[#F1B24A] font-bold text-xs">
-                  D20
-                </div>
-                <span className="font-bold text-[#164A41] hidden md:block">
-                  TTRPG Platform
-                </span>
-              </div>
-              {currentSession.campaign && showCampaignInfo && (
-                <>
-                  <span className="text-white/40 hidden sm:inline">/</span>
-                  {canNavigateToCampaignDirectly ? (
-                    <button
-                      onClick={() =>
-                        navigate(`/campaign/${currentSession.campaign.id}`)
-                      }
-                      className="text-white/70 hover:text-[#F1B24A] transition-colors text-sm truncate max-w-[150px]"
-                    >
-                      {currentSession.campaign.title}
-                    </button>
-                  ) : (
-                    <span className="text-white/70 text-sm truncate max-w-[150px]">
-                      {currentSession.campaign.title}
-                    </span>
-                  )}
-                </>
-              )}
-              <span className="text-white/40 hidden sm:inline">/</span>
-              <span className="text-white font-bold text-sm truncate">
-                {currentSession.title}
-              </span>
+              <BrandLogo />
             </div>
             <div className="flex items-center justify-end flex-1">
-              <button
+              <Button
                 onClick={() => navigate('/')}
-                className="px-4 py-2 rounded-xl border-2 border-white/50 bg-[#164A41] text-white hover:bg-[#F1B24A] hover:text-[#164A41] hover:border-[#164A41] transition-all font-bold shadow-lg"
+                variant="topbar"
+                size="md"
+                fullWidth={false}
               >
-                На головну
-              </button>
+                Назад
+              </Button>
             </div>
           </nav>
+        ) : (
+          <SessionNavigation
+            activeTab={activeTab}
+            availableTabs={availableTabs}
+            onTabChange={setActiveTab}
+            canManage={canManageSettings}
+            canManageSession={canManageSession}
+          />
         )
       }
-      leftPanel={renderLeftPanel()}
-      rightPanel={renderRightPanel()}
+      leftPanel={panelState.leftPanel}
+      rightPanel={panelState.rightPanel}
     />
   );
 }

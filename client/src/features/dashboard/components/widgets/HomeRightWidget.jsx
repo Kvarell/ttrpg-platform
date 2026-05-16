@@ -2,7 +2,7 @@ import React from 'react';
 import DashboardCard from '@/components/ui/DashboardCard';
 import useDashboardStore from '@/stores/useDashboardStore';
 import useSearchStore from '@/stores/useSearchStore';
-import { PANEL_MODES } from '@/stores/dashboardConstants';
+import { PANEL_MODES } from '@/features/dashboard/constants';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDaySessionsQuery } from '../../hooks/useCalendarQueries';
 import CreateSessionForm from './CreateSessionForm';
@@ -12,7 +12,7 @@ import { BackButton, EmptyState, formatDate } from '@/components/shared';
 import Dice20 from '@/components/ui/icons/Dice20';
 
 /**
- * HomeRightWidget — Права панель для режиму "Головна"
+ * HomeRightWidget — Права панель для режиму "Календар"
  * 
  * Стани:
  * - LIST: Список сесій вибраного дня (з акордеоном)
@@ -35,7 +35,6 @@ export default function HomeRightWidget() {
   } = useDashboardStore();
 
   const searchFilters = useSearchStore((state) => state.searchFilters);
-  const hasSearched = useSearchStore((state) => state.hasSearched);
 
   const queryClient = useQueryClient();
   
@@ -43,7 +42,6 @@ export default function HomeRightWidget() {
     date: selectedDate,
     viewMode,
     searchFilters,
-    hasSearched,
   });
 
   // Форматування дати для відображення
@@ -94,43 +92,54 @@ export default function HomeRightWidget() {
     ? getDateTitle(selectedDate) 
     : 'Сесії на сьогодні';
 
+  let sessionsContent;
+
+  if (isLoading) {
+    sessionsContent = (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-pulse text-brand-dark font-medium">Завантаження сесій...</div>
+      </div>
+    );
+  } else if (daySessions.length === 0) {
+    sessionsContent = (
+      <EmptyState
+        icon={<Dice20 className="w-14 h-14" />}
+        title="Немає запланованих сесій"
+        description="на цей день"
+        className="h-full"
+      />
+    );
+  } else {
+    sessionsContent = (
+      <div className="flex flex-col gap-3">
+        {daySessions.map((session) => {
+          const isExpanded = expandedSessionId === session.id;
+
+          return (
+            <SessionCard
+              key={session.id}
+              session={session}
+              isExpanded={isExpanded}
+              onToggle={() => toggleSessionExpanded(session.id)}
+              showDate={false}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
   // Якщо дата не вибрана — показуємо підказку
 return (
     <DashboardCard title={title}>
       <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-y-auto min-h-0">
-          {isLoading ? ( 
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-pulse text-[#164A41] font-medium">Завантаження сесій...</div>
-            </div>
-          ) : daySessions.length === 0 ? (
-            <EmptyState
-              icon={<Dice20 className="w-14 h-14" />}
-              title="Немає запланованих сесій"
-              description="на цей день"
-              className="h-full"
-            />
-          ) : (
-            <div className="flex flex-col gap-3">
-              {daySessions.map((session) => {
-                const isExpanded = expandedSessionId === session.id;
-                
-                return (
-                  <SessionCard
-                    key={session.id}
-                    session={session}
-                    isExpanded={isExpanded}
-                    onToggle={() => toggleSessionExpanded(session.id)}
-                  />
-                );
-              })}
-            </div>
-          )}
+        <div className="flex-1 overflow-y-auto min-h-0">  
+          {sessionsContent}
         </div>
         
         {/* Sticky Footer */}
-        <div className="pt-4 border-t border-[#9DC88D]/20 mt-auto flex-shrink-0">
-          <Button onClick={handleCreateClick} variant="primary" className="flex items-center justify-center gap-2">
+        <div className="pt-4 border-t border-brand-light/20 mt-auto flex-shrink-0">
+          <Button onClick={handleCreateClick} variant="primary" fullWidth={true} className="flex items-center justify-center gap-2">
             Створити сесію
           </Button>
         </div>

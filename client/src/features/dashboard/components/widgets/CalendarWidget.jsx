@@ -1,11 +1,13 @@
-import React, { useMemo, memo } from 'react';
+import React, { useEffect, useMemo, useState, memo } from 'react';
+import PropTypes from 'prop-types';
 import DashboardCard from '@/components/ui/DashboardCard';
 import CalendarDayCell from '../ui/CalendarDayCell';
 import useDashboardStore from '@/stores/useDashboardStore';
 import useSearchStore from '@/stores/useSearchStore';
-import { VIEW_MODES } from '@/stores/dashboardConstants';
+import { VIEW_MODES } from '@/features/dashboard/constants';
 import Button from '@/components/ui/Button';
 import { formatDate } from '@/components/shared';
+import { getLocalDateKey, getMillisecondsUntilNextLocalDay } from '@/utils/dateTime';
 import Arrow from '@/components/ui/icons/Arrow';
 import { useCalendarStatsQuery } from '../../hooks/useCalendarQueries';
 
@@ -26,16 +28,34 @@ const CalendarWidget = memo(function CalendarWidget({ title, showTodayButton }) 
   } = useDashboardStore();
 
   const searchFilters = useSearchStore((state) => state.searchFilters);
-  const hasSearched = useSearchStore((state) => state.hasSearched);
 
-  const shouldShowTodayButton = showTodayButton ?? (viewMode === VIEW_MODES.MY_GAMES || viewMode === VIEW_MODES.HOME);
+  const shouldShowTodayButton = showTodayButton ?? (viewMode === VIEW_MODES.MY_GAMES || viewMode === VIEW_MODES.CALENDAR);
+  const [todayKey, setTodayKey] = useState(() => getLocalDateKey());
+
+  useEffect(() => {
+    let timeoutId = null;
+
+    const scheduleNextTick = () => {
+      timeoutId = globalThis.setTimeout(() => {
+        setTodayKey(getLocalDateKey());
+        scheduleNextTick();
+      }, getMillisecondsUntilNextLocalDay());
+    };
+
+    scheduleNextTick();
+
+    return () => {
+      if (timeoutId) {
+        globalThis.clearTimeout(timeoutId);
+      }
+    };
+  }, []);
 
   // Отримуємо статистику через React Query
   const { data: calendarStats = {} } = useCalendarStatsQuery({
     currentMonth,
     viewMode,
     searchFilters,
-    hasSearched,
   });
 
   // Генеруємо дні для календаря
@@ -53,14 +73,11 @@ const CalendarWidget = memo(function CalendarWidget({ title, showTodayButton }) 
     startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
     
     // Сьогоднішня дата для порівняння
-    const now = new Date();
-    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    
     const days = [];
     
     // Додаємо порожні клітинки для днів попереднього місяця
     for (let i = 0; i < startDayOfWeek; i++) {
-      days.push({ day: null, dateKey: null, isToday: false });
+      days.push({ id: `empty-before-${year}-${month}-${i}`, day: null, dateKey: null, isToday: false });
     }
     
     // Додаємо дні поточного місяця
@@ -70,7 +87,7 @@ const CalendarWidget = memo(function CalendarWidget({ title, showTodayButton }) 
     }
     
     return days;
-  }, [currentMonth]);
+  }, [currentMonth, todayKey]);
 
   // Форматуємо назву місяця
   const monthName = useMemo(() => {
@@ -84,7 +101,8 @@ const navigationActions = (
     <div className="flex gap-2 items-center">
       <button
         onClick={goToPrevMonth}
-        className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#9DC88D]/30 hover:bg-[#9DC88D]/20 transition-colors text-[#164A41]"
+        type="button"
+        className="duration-300 inline-flex items-center justify-center w-10 h-10 rounded-full text-brand-dark bg-white/0 hover:bg-brand-light/20 transition-colors"
         aria-label="Попередній місяць"
       >
         <Arrow direction="left" className="w-5 h-5" />
@@ -95,8 +113,9 @@ const navigationActions = (
           <Button
             onClick={goToToday}
             variant="primary"
+            size="md"
             fullWidth={false}
-            className="h-8 px-3 text-base !font-semibold flex items-center justify-center"
+            className="h-8 px-4"
           >
             Сьогодні
           </Button>
@@ -105,7 +124,8 @@ const navigationActions = (
       
       <button
         onClick={goToNextMonth}
-        className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#9DC88D]/30 hover:bg-[#9DC88D]/20 transition-colors text-[#164A41]"
+        type="button"
+        className="duration-300 inline-flex items-center justify-center w-10 h-10 rounded-full text-brand-dark bg-white/0 hover:bg-brand-light/20 transition-colors"
         aria-label="Наступний місяць"
       >
         <Arrow direction="right" className="w-5 h-5" />
@@ -117,6 +137,8 @@ const navigationActions = (
     switch (viewMode) {
       case VIEW_MODES.MY_GAMES:
         return 'Мої ігри';
+      case VIEW_MODES.CALENDAR:
+        return 'Календар';
       case VIEW_MODES.SEARCH:
         return 'Пошук';
       default:
@@ -137,7 +159,7 @@ const navigationActions = (
     >
       {/* {isCalendarLoading ? (
         <div className="flex items-center justify-center h-full">
-          <div className="animate-pulse text-[#164A41]">Завантаження...</div>
+          <div className="animate-pulse text-brand-dark">Завантаження...</div>
         </div>
       ) : ( */}
       {
@@ -147,7 +169,7 @@ const navigationActions = (
             {weekDays.map((day) => (
               <div 
                 key={day} 
-                className="text-center font-bold text-[#4D774E] text-xs py-0.5"
+                className="text-center font-bold text-brand-medium text-xs py-0.5"
               >
                 {day}
               </div>
@@ -156,14 +178,14 @@ const navigationActions = (
           
           {/* Сітка днів */}
           <div className="grid grid-cols-7 gap-1 flex-1 overflow-visible">
-            {calendarDays.map((item, index) => {
+            {calendarDays.map((item) => {
               const stats = item.dateKey ? calendarStats[item.dateKey] : null;
               const count = stats?.count || 0;
               const sessions = stats?.sessions || EMPTY_SESSIONS;
               
               if (!item.day) {
                 // Порожня клітинка
-                return <div key={`empty-${index}`} className="min-h-[82px]" />;
+                return <div key={item.id} className="min-h-[82px]" />;
               }
               
               return (
@@ -187,3 +209,8 @@ const navigationActions = (
 });
 
 export default CalendarWidget;
+
+CalendarWidget.propTypes = {
+  title: PropTypes.string,
+  showTodayButton: PropTypes.bool,
+};

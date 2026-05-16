@@ -1,4 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import Button from '@/components/ui/Button';
 
 /**
  * Компактна кнопка навігації для хедера
@@ -6,26 +8,30 @@ import React from 'react';
  * @param {string} props.label - Текст кнопки
  * @param {boolean} [props.isActive=false] - Чи активна кнопка
  * @param {function} props.onClick - Обробник кліку
+ * @param {string} [props.to] - URL для навігації
  * @param {string} [props.className] - Додаткові класи
  */
 export default function NavButton({ 
   label, 
   isActive = false, 
   onClick, 
+  to,
+  size = 'md',
   className = '' 
 }) {
+  const Component = to ? Link : 'button';
+
   return (
-    <button
+    <Button
+      as={Component}
+      to={to}
       onClick={onClick}
-      className={`
-        px-4 lg:px-6 py-2 rounded-xl transition-all duration-200 border-3
-        ${isActive 
-          ? 'bg-[#164A41] text-white border-[#F1B24A] shadow-lg scale-105' 
-          : 'bg-white text-[#164A41] border-[#9DC88D]/30 hover:border-[#9DC88D] hover:shadow-md'}
-        ${className}
-      `}
+      variant={isActive ? 'tabActive' : 'tabInactive'}
+      size={size}
+      fullWidth={false}
+      className={`justify-center lg:px-6 ${className}`}
     >
       <span className="font-bold">{label}</span>
-    </button>
+    </Button>
   );
 }

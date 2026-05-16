@@ -1,0 +1,49 @@
+/**
+ * Notification constants
+ * MVP-01: Centralized notification keys and statuses
+ */
+
+const NotificationSeverity = Object.freeze({
+  INFO: 'INFO',
+  SUCCESS: 'SUCCESS',
+  WARNING: 'WARNING',
+  ERROR: 'ERROR',
+  CRITICAL: 'CRITICAL',
+  SECURITY: 'SECURITY',
+});
+
+const RecipientStatus = Object.freeze({
+  ACTIVE: 'ACTIVE',
+  ARCHIVED: 'ARCHIVED',
+});
+
+const NotificationType = Object.freeze({
+  // Session notifications (MVP scope)
+  SESSION_JOIN_REQUESTS_UPDATED: 'SESSION_JOIN_REQUESTS_UPDATED',
+  SESSION_PARTICIPANT_JOINED: 'SESSION_PARTICIPANT_JOINED',
+  SESSION_PARTICIPATION_CONFIRMED: 'SESSION_PARTICIPATION_CONFIRMED',
+  SESSION_PARTICIPATION_DECLINED: 'SESSION_PARTICIPATION_DECLINED',
+  SESSION_RESCHEDULED: 'SESSION_RESCHEDULED',
+  SESSION_TIME_CONFLICT: 'SESSION_TIME_CONFLICT',
+  SESSION_CANCELLED: 'SESSION_CANCELLED',
+
+  // Campaign notifications (MVP scope)
+  CAMPAIGN_JOIN_REQUESTS_UPDATED: 'CAMPAIGN_JOIN_REQUESTS_UPDATED',
+  CAMPAIGN_PARTICIPATION_CONFIRMED: 'CAMPAIGN_PARTICIPATION_CONFIRMED',
+  CAMPAIGN_PARTICIPATION_DECLINED: 'CAMPAIGN_PARTICIPATION_DECLINED',
+  CAMPAIGN_MEMBER_REMOVED: 'CAMPAIGN_MEMBER_REMOVED',
+});
+
+const NotificationCategory = Object.freeze({
+  SESSION: 'session',
+  CAMPAIGN: 'campaign',
+  SECURITY: 'security',
+  SYSTEM: 'system',
+});
+
+module.exports = {
+  NotificationSeverity,
+  RecipientStatus,
+  NotificationType,
+  NotificationCategory,
+};

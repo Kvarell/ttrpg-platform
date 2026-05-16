@@ -1,12 +1,12 @@
 ﻿const { prisma } = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 const { jwtSecret } = require('../config/config');
 const emailService = require('./email.service');
-const { checkRefreshRateLimit } = require('./rateLimit.service');
+const { checkRefreshRateLimit } = require('./rate-limit.service');
 const { createError, AppError, ERROR_CODES } = require('../constants/errors');
-const { isUserDeleted } = require('../store/deletedUsers');
+const { isUserDeleted } = require('../store/deleted-users');
 const { redis } = require('../lib/redis');
 const { logger } = require('../lib/logger');
 const { getTokenCandidates, createRawAndHashedToken } = require('../utils/token.helper');

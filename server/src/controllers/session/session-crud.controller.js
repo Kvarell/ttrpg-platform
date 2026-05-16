@@ -44,13 +44,22 @@ const sessionCrudController = {
   async getMySessions(req, res, next) {
     try {
       const userId = req.user.id;
-      const { status, role = 'ALL', limit = 20, offset = 0 } = req.query;
+      const { status, role = 'ALL', limit, offset = 0 } = req.query;
+
+      let parsedLimit;
+      if (limit === undefined) {
+        parsedLimit = undefined;
+      } else {
+        const limitValue = Number.parseInt(limit, 10);
+        parsedLimit = Number.isNaN(limitValue) ? undefined : limitValue;
+      }
+      const parsedOffset = Number.parseInt(offset, 10);
 
       const sessions = await sessionService.getMySessions(userId, {
         status,
         role,
-        limit: parseInt(limit),
-        offset: parseInt(offset),
+        limit: parsedLimit,
+        offset: Number.isNaN(parsedOffset) ? 0 : parsedOffset,
       });
 
       res.json({
@@ -62,12 +71,32 @@ const sessionCrudController = {
     }
   },
 
+  async getNextRelevantSession(req, res, next) {
+    try {
+      const userId = req.user.id;
+
+      const session = await sessionService.getNextRelevantSessionForUser(userId);
+
+      res.json({
+        success: true,
+        data: {
+          session,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async getSessionById(req, res, next) {
     try {
       const { id: sessionId } = req.params;
       const userId = req.user?.id;
+      const campaignShareToken = String(req.query?.campaignShareToken || '').trim() || null;
 
-      const session = await sessionService.getSessionById(sessionId, userId);
+      const session = await sessionService.getSessionById(sessionId, userId, {
+        campaignShareToken,
+      });
 
       res.json({
         success: true,
@@ -88,6 +117,41 @@ const sessionCrudController = {
       res.json({
         success: true,
         data: session,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getSessionPageById(req, res, next) {
+    try {
+      const { id: sessionId } = req.params;
+      const userId = req.user?.id;
+      const campaignShareToken = String(req.query?.campaignShareToken || '').trim() || null;
+
+      const pageData = await sessionService.getSessionPageById(sessionId, userId, {
+        campaignShareToken,
+      });
+
+      res.json({
+        success: true,
+        data: pageData,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getSessionPageByShareToken(req, res, next) {
+    try {
+      const { shareToken } = req.params;
+      const userId = req.user?.id || null;
+
+      const pageData = await sessionService.getSessionPageByShareToken(shareToken, userId);
+
+      res.json({
+        success: true,
+        data: pageData,
       });
     } catch (error) {
       next(error);
@@ -165,8 +229,8 @@ const sessionCrudController = {
         campaignId,
         userId,
         {
-          limit: parseInt(limit),
-          offset: parseInt(offset),
+          limit: Number.parseInt(limit, 10),
+          offset: Number.parseInt(offset, 10),
         }
       );
 

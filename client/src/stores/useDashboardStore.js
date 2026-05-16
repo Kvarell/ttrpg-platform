@@ -1,39 +1,47 @@
 import { create } from 'zustand';
+import { getLocalDateKey } from '@/utils/dateTime';
 import useSearchStore from './useSearchStore';
 import {
-  DASHBOARD_VIEWS,
   VIEW_MODES,
   PANEL_MODES,
-} from './dashboardConstants';
+} from '@/features/dashboard/constants';
 
 // Helper to get today's date string (computed dynamically)
-const getTodayStr = () => new Date().toISOString().split('T')[0];
+const getTodayStr = () => getLocalDateKey(new Date());
+const getMonthStart = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
 
 const useDashboardStore = create((set, get) => ({
   selectedDate: getTodayStr(),
   viewMode: VIEW_MODES.HOME,
   rightPanelMode: PANEL_MODES.LIST,
-  currentMonth: new Date(),
+  currentMonth: getMonthStart(new Date()),
   expandedSessionId: null,
   error: null,
 
   setViewMode: (mode) => {
     const defaultPanelModes = {
       [VIEW_MODES.HOME]: PANEL_MODES.LIST,
+      [VIEW_MODES.CALENDAR]: PANEL_MODES.LIST,
       [VIEW_MODES.MY_GAMES]: PANEL_MODES.CAMPAIGNS,
       [VIEW_MODES.PROFILE]: PANEL_MODES.LIST,
       [VIEW_MODES.SEARCH]: PANEL_MODES.FILTER,
     };
-    const initialDate = mode === VIEW_MODES.HOME ? getTodayStr() : null;
+    const now = new Date();
+    const initialDate = mode === VIEW_MODES.CALENDAR ? getTodayStr() : null;
 
-    set({
+    const nextState = {
       viewMode: mode,
       rightPanelMode: defaultPanelModes[mode] || PANEL_MODES.LIST,
       selectedDate: initialDate,
       expandedSessionId: null,
-    });
+    };
 
-    useSearchStore.getState().setHasSearched(false);
+    if (mode === VIEW_MODES.CALENDAR) {
+      nextState.currentMonth = getMonthStart(now);
+    }
+
+    set(nextState);
+
   },
 
   setRightPanelMode: (mode) => {
@@ -48,7 +56,7 @@ const useDashboardStore = create((set, get) => ({
       expandedSessionId: null,
     });
 
-    if (viewMode === VIEW_MODES.HOME) {
+    if (viewMode === VIEW_MODES.CALENDAR) {
       set({ rightPanelMode: PANEL_MODES.LIST });
     } else if (viewMode === VIEW_MODES.MY_GAMES) {
       set({ rightPanelMode: PANEL_MODES.USER_SESSIONS });
@@ -62,6 +70,7 @@ const useDashboardStore = create((set, get) => ({
 
     const defaultPanelModes = {
       [VIEW_MODES.HOME]: PANEL_MODES.LIST,
+      [VIEW_MODES.CALENDAR]: PANEL_MODES.LIST,
       [VIEW_MODES.MY_GAMES]: PANEL_MODES.CAMPAIGNS,
       [VIEW_MODES.SEARCH]: PANEL_MODES.FILTER,
     };
@@ -74,29 +83,34 @@ const useDashboardStore = create((set, get) => ({
   },
 
   setCurrentMonth: (date) => {
-    set({ currentMonth: date });
+    set({ currentMonth: getMonthStart(date) });
   },
 
   goToNextMonth: () => {
     const { currentMonth } = get();
-    const nextMonth = new Date(currentMonth);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const nextMonth = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth() + 1,
+      1,
+    );
     set({ currentMonth: nextMonth });
   },
 
   goToPrevMonth: () => {
     const { currentMonth } = get();
-    const prevMonth = new Date(currentMonth);
-    prevMonth.setMonth(prevMonth.getMonth() - 1);
+    const prevMonth = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth() - 1,
+      1,
+    );
     set({ currentMonth: prevMonth });
   },
 
   goToToday: () => {
     const today = new Date();
-    set({ currentMonth: today });
+    set({ currentMonth: getMonthStart(today) });
 
-    const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    get().selectDate(dateStr);
+    get().selectDate(getTodayStr());
   },
 
   toggleSessionExpanded: (sessionId) => {
@@ -113,7 +127,7 @@ const useDashboardStore = create((set, get) => ({
       viewMode: VIEW_MODES.HOME,
       rightPanelMode: PANEL_MODES.LIST,
       selectedDate: getTodayStr(),
-      currentMonth: new Date(),
+      currentMonth: getMonthStart(new Date()),
       expandedSessionId: null,
       error: null,
     });
@@ -122,5 +136,5 @@ const useDashboardStore = create((set, get) => ({
   },
 }));
 
-export { DASHBOARD_VIEWS, VIEW_MODES, PANEL_MODES };
+export { DASHBOARD_VIEWS, VIEW_MODES, PANEL_MODES } from '@/features/dashboard/constants';
 export default useDashboardStore;

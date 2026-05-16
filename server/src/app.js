@@ -14,13 +14,18 @@ const securityRoutes = require('./routes/security.routes');
 const adminRoutes = require('./routes/admin.routes');
 const campaignRoutes = require('./routes/campaign.routes');
 const sessionRoutes = require('./routes/session.routes');
+const chatRoutes = require('./routes/chat.routes');
 const searchRoutes = require('./routes/search.routes');
+const clientLogsRoutes = require('./routes/client-logs.routes');
+const notificationRoutes = require('./routes/notification.routes');
 
 // Middlewares
 const { errorHandler } = require('./middlewares/error.middleware');
+const { addCorrelationId } = require('./middlewares/correlation.middleware');
 
 // Startup modules
 const { createCorsMiddleware, setupStaticFiles, httpLogger } = require('./startup');
+const { getRedisHealthState } = require('./lib/redis');
 
 function resolveTrustProxySetting() {
   const raw = process.env.TRUST_PROXY;
@@ -57,13 +62,19 @@ function createApp() {
     app.use(`${prefix}/admin`, adminRoutes);
     app.use(`${prefix}/campaigns`, campaignRoutes);
     app.use(`${prefix}/sessions`, sessionRoutes);
+    app.use(`${prefix}/chats`, chatRoutes);
     app.use(`${prefix}/search`, searchRoutes);
+    app.use(`${prefix}/client-logs`, clientLogsRoutes);
+    app.use(`${prefix}/notifications`, notificationRoutes);
   };
 
   // ========== MIDDLEWARE ==========
 
   // Налаштування CORS для роботи з cookies
   app.use(createCorsMiddleware());
+
+  // Correlation ID для зв'язку клієнтських та серверних логів
+  app.use(addCorrelationId);
 
   // Структуроване логування HTTP запитів (reqId, statusCode, responseTime)
   app.use(httpLogger);
@@ -93,14 +104,17 @@ function createApp() {
 
   // Health check endpoint для Docker/Kubernetes
   app.get('/health', (req, res) => {
-    res.status(200).json({ 
-      status: 'ok', 
-      timestamp: new Date().toISOString() 
+    const redisHealth = getRedisHealthState();
+    const isHealthy = redisHealth.isReady;
+
+    res.status(isHealthy ? 200 : 503).json({ 
+      status: isHealthy ? 'ok' : 'degraded', 
+      timestamp: new Date().toISOString(),
+      redis: redisHealth,
     });
   });
 
-  // API Routes (v1 + legacy aliases)
-  registerApiRoutes('/api/v1');
+  // API Routes
   registerApiRoutes('/api');
 
   // ========== ERROR HANDLER ==========

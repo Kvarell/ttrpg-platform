@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import { StatusBadge, RoleBadge, DateTimeDisplay } from '@/components/shared';
 import GroupPeople from '@/components/ui/icons/GroupPeople';
@@ -26,8 +27,11 @@ export default function SessionCard({
   session, 
   isExpanded, 
   onToggle,
+  showDate = false,
 }) {
   const navigate = useNavigate();
+  const campaignTitle = session?.campaign?.title || session?.campaignTitle || null;
+  const isPending = session.myStatus === 'PENDING';
   // Форматування тривалості
   const formatDuration = (minutes) => {
     const hours = Math.floor(minutes / 60);
@@ -42,8 +46,8 @@ export default function SessionCard({
       key={session.id} 
       className={`border-2 rounded-xl transition-all duration-200 ${
         isExpanded 
-          ? 'border-[#164A41] shadow-md' 
-          : 'border-[#9DC88D]/30 hover:border-[#164A41]/30'
+          ? 'border-brand-dark shadow-md' 
+          : 'border-brand-light/30 hover:border-brand-dark/30'
       }`}
     >
       {/* Кнопка-заголовок для розгортання */}
@@ -53,11 +57,16 @@ export default function SessionCard({
       >
         {/* Заголовок і статуси */}
         <div className="flex items-start justify-between mb-2">
-          <h4 className="font-bold text-[#164A41] flex-1 pr-2">
+          <h4 className="font-bold text-brand-dark flex-1 pr-2">
             {session.title}
           </h4>
           <div className="flex items-center gap-2">
-            {session.myRole && (
+            {isPending && (
+              <span className="px-1.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded border border-yellow-200">
+                Заявка
+              </span>
+            )}
+            {session.myRole && !isPending && (
               <RoleBadge role={session.myRole} />
             )}
             <StatusBadge status={session.status} size="sm" />
@@ -65,19 +74,25 @@ export default function SessionCard({
         </div>
 
         {/* Основна інформація */}
-        <div className="flex items-center gap-4 text-sm text-[#4D774E]">
-          <span className="flex items-center gap-1">
-            <Data className="w-4 h-4" /> <DateTimeDisplay value={session.date} format="time" />
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-brand-medium">
+          {showDate && (
+            <span className="flex items-center gap-1 whitespace-nowrap">
+              <Data className="w-4 h-4" /> <DateTimeDisplay value={session.startAt} format="date" />
+            </span>
+          )}
+          <span className="flex items-center gap-1 whitespace-nowrap">
+            <Data className="w-4 h-4" /> <DateTimeDisplay value={session.startAt} format="time" />
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 whitespace-nowrap">
             <Timer className="w-4 h-4" /> {formatDuration(session.duration)}
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 whitespace-nowrap">
             <GroupPeople className="w-4 h-4" /> {session.currentPlayers}/{session.maxPlayers}
           </span>
           {session.system && (
-            <span className="flex items-center gap-1">
-              <Dice20 className="w-4 h-4" /> {session.system}
+            <span className="flex items-center gap-1 max-w-full min-w-0">
+              <Dice20 className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{session.system}</span>
             </span>
           )}
         </div>
@@ -85,7 +100,7 @@ export default function SessionCard({
         {/* Стрілка розгортання */}
         <div className="flex justify-center mt-2">
           <span 
-            className={`text-[#9DC88D] transition-transform duration-200 ${
+            className={`text-brand-light transition-transform duration-200 ${
               isExpanded ? 'rotate-180' : ''
             }`}
           >
@@ -96,34 +111,29 @@ export default function SessionCard({
 
       {/* Розгорнута інформація */}
       {isExpanded && (
-        <div className="px-4 pb-4 border-t border-[#9DC88D]/20">
+        <div className="px-4 pb-4 border-t border-brand-light/20">
           {/* Опис */}
           {session.description && (
-            <p className="text-sm text-[#4D774E] mt-3 mb-4">
+            <p className="text-sm text-brand-medium mt-3 mb-4">
               {session.description}
             </p>
           )}
 
           {/* Кампанія */}
-          {session.campaign && (
-            <div className="text-sm text-[#4D774E] mb-3">
-              <span className="font-medium">Кампанія:</span> {session.campaign.title}
-              {session.campaign.system && (
-                <span className="text-xs ml-2 px-2 py-0.5 bg-[#9DC88D]/20 rounded">
-                  {session.campaign.system}
-                </span>
-              )}
+          {campaignTitle && (
+            <div className="text-sm text-brand-medium mb-3">
+              <span className="font-medium">Кампанія:</span> {campaignTitle}
             </div>
           )}
 
           {/* Майстер */}
-          <div className="text-sm text-[#4D774E] mb-4">
+          <div className="text-sm text-brand-medium mb-4">
             <span className="font-medium">Організатор:</span> {session.owner?.displayName || session.owner?.username || 'Невідомо'}
           </div>
 
           {/* Ціна */}
           {session.price > 0 && (
-            <div className="text-sm font-bold text-[#164A41] mb-4">
+            <div className="text-sm font-bold text-brand-dark mb-4">
               Вартість: {session.price} грн
             </div>
           )}
@@ -134,7 +144,7 @@ export default function SessionCard({
               e.stopPropagation();
               navigate(`/session/${session.id}`);
             }}
-            className="w-full py-2 px-4 bg-[#F1B24A] text-[#164A41] rounded-lg font-bold hover:bg-[#4D774E] hover:text-white transition-colors"
+            className="w-full py-2 px-4 bg-brand-accent text-brand-dark rounded-lg font-semibold hover:bg-brand-medium hover:text-white transition-colors"
           >
             Деталі
           </button>
@@ -143,3 +153,10 @@ export default function SessionCard({
     </div>
   );
 }
+
+SessionCard.propTypes = {
+  session: PropTypes.object.isRequired,
+  isExpanded: PropTypes.bool.isRequired,
+  onToggle: PropTypes.func.isRequired,
+  showDate: PropTypes.bool,
+};

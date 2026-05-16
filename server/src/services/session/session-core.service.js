@@ -1,7 +1,11 @@
+const { canOpenCampaign: canOpenCampaignByAccess } = require('../../domain/access/access-rules');
+
 function createSessionCoreService({
   prisma,
   AppError,
   ERROR_CODES,
+  config,
+  selectNextRelevantSession,
   datetimeHelpers,
   sessionQueryService,
   assertNoSessionTimeConflict,
@@ -148,22 +152,16 @@ function createSessionCoreService({
         });
 
         if (!campaign) {
-          throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Campaign not found');
+          throw new AppError(ERROR_CODES.CAMPAIGN_NOT_FOUND);
         }
 
         if (campaign.status === 'FINISHED') {
-          throw new AppError(
-            ERROR_CODES.CAMPAIGN_FINISHED,
-            'Cannot create a session in a finished campaign'
-          );
+          throw new AppError(ERROR_CODES.CAMPAIGN_FINISHED);
         }
 
         const memberRole = campaign.members[0]?.role;
         if (!memberRole || !['OWNER', 'GM'].includes(memberRole)) {
-          throw new AppError(
-            ERROR_CODES.SECURITY_ACCESS_DENIED,
-            'You do not have permission to create sessions in this campaign'
-          );
+          throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED);
         }
 
         if (!sessionSystem && campaign.system) {
@@ -198,6 +196,9 @@ function createSessionCoreService({
               isGuest: false,
             },
           },
+          chat: {
+            create: {},
+          },
         },
         include: {
           owner: {
@@ -220,15 +221,13 @@ function createSessionCoreService({
         session.shareToken = shareTokenData.rawToken;
       }
 
-      delete session.shareTokenHash;
-      delete session.shareTokenEncrypted;
-      delete session.shareTokenCreatedAt;
+      session.startAt = session.date;
 
       return session;
     },
 
     async getMySessions(userId, options = {}) {
-      const { status, role = 'ALL', limit = 20, offset = 0 } = options;
+      const { status, role = 'ALL', limit, offset = 0 } = options;
 
       const whereCondition = {
         participants: {
@@ -251,6 +250,18 @@ function createSessionCoreService({
         };
       }
 
+      const queryOptions = {
+        orderBy: { date: 'asc' },
+      };
+
+      if (Number.isInteger(offset) && offset > 0) {
+        queryOptions.skip = offset;
+      }
+
+      if (Number.isInteger(limit) && limit > 0) {
+        queryOptions.take = limit;
+      }
+
       const sessions = await prisma.session.findMany({
         where: whereCondition,
         include: {
@@ -268,20 +279,162 @@ function createSessionCoreService({
             },
           },
         },
-        orderBy: { date: 'asc' },
-        skip: offset,
-        take: limit,
+        ...queryOptions,
       });
 
       return sessions.map((session) => {
         const myParticipation = session.participants.find((participant) => participant.userId === userId);
         return {
           ...session,
+          startAt: session.date,
           myRole: myParticipation?.role || null,
           myStatus: myParticipation?.status || null,
           currentPlayers: session.participants.filter((participant) => participant.role === 'PLAYER').length,
         };
       });
+    },
+
+    async getNextRelevantSessionForUser(userId, options = {}) {
+      if (!userId) {
+        throw new AppError(ERROR_CODES.AUTH_TOKEN_MISSING);
+      }
+
+      const sessions = await prisma.session.findMany({
+        where: {
+          participants: {
+            some: {
+              userId,
+            },
+          },
+        },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          date: true,
+          status: true,
+          visibility: true,
+          maxPlayers: true,
+          system: true,
+          owner: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+            },
+          },
+          campaign: {
+            select: { id: true, title: true, description: true, status: true, system: true },
+          },
+          participants: {
+            select: {
+              userId: true,
+              role: true,
+              status: true,
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  displayName: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: [
+          { date: 'asc' },
+          { id: 'asc' },
+        ],
+      });
+
+      const hydratedSessions = sessions.map((session) => {
+        const myParticipation = session.participants.find((participant) => participant.userId === userId);
+
+        return {
+          ...session,
+          startAt: session.date,
+          maxPlayers: session.maxPlayers,
+          myRole: myParticipation?.role || null,
+          myStatus: myParticipation?.status || null,
+          participantsCount: session.participants.length,
+          currentPlayers: session.participants.filter((participant) => participant.role === 'PLAYER').length,
+        };
+      });
+
+      const plannedToleranceMinutes = options.plannedToleranceMinutes ?? config?.homePlannedToleranceMinutes;
+
+      const selected = selectNextRelevantSession(hydratedSessions, {
+        now: options.now,
+        activeMaxAgeHours: options.activeMaxAgeHours ?? config?.homeActiveMaxAgeHours,
+        plannedToleranceMinutes,
+      });
+
+      if (!selected) {
+        return null;
+      }
+
+      const confirmedGm = selected.participants?.find(
+        (participant) => participant.role === 'GM' && participant.status === 'CONFIRMED'
+      );
+
+      let detailedSession = null;
+      let canOpenCampaign = false;
+
+      if (selected.campaign) {
+        detailedSession = await sessionQueryService.getSessionById(selected.id, userId);
+
+        const myDetailedParticipant = Array.isArray(detailedSession?.participants)
+          ? detailedSession.participants.find((participant) => participant.userId === userId)
+          : null;
+        const isNonGuestCampaignParticipant = Boolean(
+          detailedSession?.campaignId
+          && myDetailedParticipant?.isGuest === false
+        );
+
+        canOpenCampaign = Boolean(
+          detailedSession.campaign
+          && canOpenCampaignByAccess({
+            visibility: detailedSession.campaign.visibility,
+            isOwner: Boolean(detailedSession.viewer?.isCampaignOwner),
+            isCampaignMember: Boolean(
+              detailedSession.viewer?.isCampaignMember
+              || detailedSession.viewer?.isCampaignOwner
+              || isNonGuestCampaignParticipant
+            ),
+            userId,
+            hasValidShareToken: false,
+          })
+        );
+      }
+
+      return {
+        id: selected.id,
+        title: selected.title,
+        description: selected.description ?? selected.campaign?.description ?? null,
+        startAt: selected.startAt ? new Date(selected.startAt).toISOString() : null,
+        status: selected.status,
+        visibility: selected.visibility,
+        system: selected.system ?? selected.campaign?.system ?? null,
+        myRole: selected.myRole,
+        myStatus: selected.myStatus,
+        plannedToleranceMinutes,
+        organizerName: selected.owner?.displayName || selected.owner?.username || null,
+        confirmedGmName: confirmedGm?.user?.displayName || confirmedGm?.user?.username || null,
+        campaign: selected.campaign
+          && detailedSession?.campaign
+          ? {
+            id: detailedSession.campaign.id,
+            title: detailedSession.campaign.title,
+            status: detailedSession.campaign.status,
+            system: detailedSession.campaign.system ?? null,
+            visibility: detailedSession.campaign.visibility,
+            canOpenDirectly: canOpenCampaign,
+          }
+          : null,
+        maxPlayers: selected.maxPlayers,
+        participantsCount: selected.participantsCount,
+        currentPlayers: selected.currentPlayers,
+      };
     },
 
     async getSessionsByDay(userId, dateString, type = 'MY') {
@@ -299,7 +452,7 @@ function createSessionCoreService({
 
       if (type === 'MY') {
         if (!userId) {
-          throw new AppError(ERROR_CODES.AUTH_TOKEN_MISSING, 'Authentication required');
+          throw new AppError(ERROR_CODES.AUTH_TOKEN_MISSING);
         }
         whereCondition.participants = { some: { userId } };
       } else if (type === 'PUBLIC') {
@@ -336,7 +489,7 @@ function createSessionCoreService({
         orderBy: { date: 'asc' },
       });
 
-      return sessions;
+      return sessions.map((session) => ({ ...session, startAt: session.date }));
     },
 
     async getCampaignSessions(campaignId, userId, options = {}) {
@@ -354,14 +507,11 @@ function createSessionCoreService({
       });
 
       if (!campaign) {
-        throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Campaign not found');
+        throw new AppError(ERROR_CODES.CAMPAIGN_NOT_FOUND);
       }
 
       if (!campaign.members.length && campaign.ownerId !== userId) {
-        throw new AppError(
-          ERROR_CODES.SECURITY_ACCESS_DENIED,
-          'You do not have access to this campaign'
-        );
+        throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED);
       }
 
       const sessions = await prisma.session.findMany({
@@ -383,7 +533,16 @@ function createSessionCoreService({
         take: limit,
       });
 
-      return sessions;
+      return sessions.map((session) => {
+        const myParticipation = session.participants.find((participant) => participant.userId === userId);
+        return {
+          ...session,
+          startAt: session.date,
+          myRole: myParticipation?.role || null,
+          myStatus: myParticipation?.status || null,
+          currentPlayers: session.participants.filter((participant) => participant.role === 'PLAYER').length,
+        };
+      });
     },
   };
 }

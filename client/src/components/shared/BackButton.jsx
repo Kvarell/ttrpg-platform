@@ -1,4 +1,6 @@
+import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
+import Button from '@/components/ui/Button';
 import Arrow from '@/components/ui/icons/Arrow';
 
 /**
@@ -33,7 +35,7 @@ export default function BackButton({
     if (fallbackTo) {
       const fromSameSite =
         document.referrer &&
-        new URL(document.referrer).origin === window.location.origin;
+        new URL(document.referrer).origin === globalThis.location.origin;
       return fromSameSite ? navigate(-1) : navigate(fallbackTo);
     }
 
@@ -41,18 +43,31 @@ export default function BackButton({
   };
 
   const variants = {
-    light: 'text-white hover:text-[#F1B24A]',
-    dark: 'text-[#164A41] border-2 border-[#9DC88D]/30 hover:bg-[#9DC88D]/20 px-3 py-1 rounded-lg',
+    light:
+      'text-white hover:text-brand-accent bg-transparent hover:bg-transparent border-0 shadow-none hover:shadow-none px-0 py-0',
+    dark:
+      'text-brand-dark border-2 border-brand-light/30 hover:bg-brand-light/20 rounded-lg shadow-none hover:shadow-none',
   };
 
   return (
-    <button
+    <Button
       type="button"
       onClick={handleClick}
-      className={`text-sm transition-colors flex items-center gap-1 ${variants[variant] || variants.dark} ${className}`}
+      variant="light"
+      fullWidth={false}
+      className={`text-sm transition-colors ${variant === 'dark' ? 'px-3 py-1' : 'px-0 py-0'} ${variants[variant] || variants.dark} ${className}`}
     >
       <Arrow className="w-4 h-4" direction="left" />
       {label}
-    </button>
+    </Button>
   );
 }
+
+BackButton.propTypes = {
+  to: PropTypes.string,
+  fallbackTo: PropTypes.string,
+  label: PropTypes.string,
+  variant: PropTypes.oneOf(['light', 'dark']),
+  onClick: PropTypes.func,
+  className: PropTypes.string,
+};

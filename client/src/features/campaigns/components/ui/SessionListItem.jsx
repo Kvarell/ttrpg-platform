@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import { StatusBadge, DateTimeDisplay } from '@/components/shared';
 import Data from '@/components/ui/icons/Data';
@@ -19,11 +20,30 @@ import GroupPeople from '@/components/ui/icons/GroupPeople';
 export default function SessionListItem({
   session,
   index,
-  showOwnerOverrideActions = false,
-  onCancelOwnerAction,
-  onDeleteOwnerAction,
+  campaignShareToken = null,
+  onCancelAction,
+  onDeleteAction,
 }) {
   const navigate = useNavigate();
+
+  const resolveParticipantCount = (sessionData) => {
+    const numericCount = Number(
+      sessionData?.participantsSummaryCount
+      ?? sessionData?._count?.participants
+      ?? sessionData?.participantsCount
+      ?? sessionData?.currentPlayers
+    );
+
+    if (Number.isFinite(numericCount)) {
+      return numericCount;
+    }
+
+    if (Array.isArray(sessionData?.participants)) {
+      return sessionData.participants.length;
+    }
+
+    return 0;
+  };
 
   const formatDuration = (minutes) => {
     if (!minutes) return '';
@@ -34,48 +54,46 @@ export default function SessionListItem({
     return `${hours} год ${mins} хв`;
   };
 
-  const participantCount = session.participants?.length || session._count?.participants || 0;
+  const participantCount = resolveParticipantCount(session);
 
-  const canCancelSession = session.status === 'PLANNED' || session.status === 'ACTIVE';
-  const canDeleteSession = session.status === 'PLANNED';
+  const canCancelSession = Boolean(session?.actions?.canCancel);
+  const canDeleteSession = Boolean(session?.actions?.canDelete);
+  const hasModerationActions = Boolean(canCancelSession || canDeleteSession);
+  const sessionTarget = campaignShareToken
+    ? `/session/${session.id}?campaignShareToken=${encodeURIComponent(campaignShareToken)}`
+    : `/session/${session.id}`;
 
   const handleOpenSession = () => {
-    navigate(`/session/${session.id}`);
-  };
-
-  const handleKeyDown = (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      handleOpenSession();
-    }
+    navigate(sessionTarget);
   };
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={handleOpenSession}
-      onKeyDown={handleKeyDown}
-      className="w-full text-left p-4 border-2 border-[#9DC88D]/30 rounded-xl hover:border-[#164A41]/30 hover:bg-[#9DC88D]/5 transition-all group"
+      className="w-full p-4 border-2 border-brand-light/30 rounded-xl hover:border-brand-dark/30 hover:bg-brand-light/5 transition-all group block"
     >
       <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <h4 className="font-bold text-[#164A41] truncate group-hover:text-[#1f5c52]">
-            {index !== undefined ? `Сесія #${index + 1} — ` : ''}
+        <button
+          type="button"
+          onClick={handleOpenSession}
+          aria-label={`Відкрити сесію ${session.title}`}
+          className="flex items-center gap-2 flex-1 min-w-0 text-left"
+        >
+          <h4 className="font-bold text-brand-dark truncate group-hover:text-brand-medium">
+            {typeof index === 'number' ? `Сесія #${index + 1} — ` : ''}
             {session.title}
           </h4>
-        </div>
+        </button>
         <div className="flex items-center gap-2">
-          {showOwnerOverrideActions && (
+          {hasModerationActions && (
             <>
               <button
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  onCancelOwnerAction?.();
+                  onCancelAction?.();
                 }}
                 disabled={!canCancelSession}
-                className="px-2 py-1 text-xs rounded border border-[#F1B24A]/60 text-[#164A41] hover:bg-[#F1B24A]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2 py-1 text-xs rounded border border-brand-accent/60 text-brand-dark hover:bg-brand-accent/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Скасувати сесію"
               >
                 Скасувати
@@ -84,7 +102,7 @@ export default function SessionListItem({
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  onDeleteOwnerAction?.();
+                  onDeleteAction?.();
                 }}
                 disabled={!canDeleteSession}
                 className="px-2 py-1 text-xs rounded border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -98,35 +116,66 @@ export default function SessionListItem({
         </div>
       </div>
 
-      <div className="flex items-center gap-4 text-sm text-[#4D774E] flex-wrap">
-        <div className="flex items-center gap-1">
-          <Data className="w-4 h-4" />
-          <DateTimeDisplay value={session.date} format="long" />
-        </div>
-        <div className="flex items-center gap-1">
-          <Timer className="w-4 h-4" />
-          <DateTimeDisplay value={session.date} format="time" />
-        </div>
-        {session.duration && (
+      <button
+        type="button"
+        onClick={handleOpenSession}
+        aria-label={`Відкрити сесію ${session.title}`}
+        className="w-full text-left"
+      >
+        <div className="flex items-center gap-4 text-sm text-brand-medium flex-wrap">
+          <div className="flex items-center gap-1">
+            <Data className="w-4 h-4" />
+            <DateTimeDisplay value={session.startAt} format="long" />
+          </div>
           <div className="flex items-center gap-1">
             <Timer className="w-4 h-4" />
-            <span>{formatDuration(session.duration)}</span>
+            <DateTimeDisplay value={session.startAt} format="time" />
           </div>
-        )}
-        <div className="flex items-center gap-1">
-          <GroupPeople className="w-4 h-4" />
-          <span>
-            {participantCount}
-            {session.maxPlayers ? `/${session.maxPlayers}` : ''} гравців
-          </span>
+          {session.duration && (
+            <div className="flex items-center gap-1">
+              <Timer className="w-4 h-4" />
+              <span>{formatDuration(session.duration)}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1">
+            <GroupPeople className="w-4 h-4" />
+            <span>
+              {participantCount}
+              {session.maxPlayers ? `/${session.maxPlayers}` : ''} гравців
+            </span>
+          </div>
         </div>
-      </div>
 
-      {session.description && (
-        <p className="text-xs text-[#4D774E]/70 mt-2 line-clamp-2">
-          {session.description}
-        </p>
-      )}
+        {session.description && (
+          <p className="text-xs text-brand-medium/70 mt-2 line-clamp-2">
+            {session.description}
+          </p>
+        )}
+      </button>
     </div>
   );
 }
+
+SessionListItem.propTypes = {
+  session: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    title: PropTypes.string.isRequired,
+    status: PropTypes.string,
+    date: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
+    duration: PropTypes.number,
+    maxPlayers: PropTypes.number,
+    description: PropTypes.string,
+    participantsSummaryCount: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    participantsCount: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    currentPlayers: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    participants: PropTypes.array,
+    actions: PropTypes.shape({
+      canCancel: PropTypes.bool,
+      canDelete: PropTypes.bool,
+    }),
+  }).isRequired,
+  index: PropTypes.number,
+  campaignShareToken: PropTypes.string,
+  onCancelAction: PropTypes.func,
+  onDeleteAction: PropTypes.func,
+};

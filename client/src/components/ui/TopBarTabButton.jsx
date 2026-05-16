@@ -1,4 +1,5 @@
 import React from 'react';
+import Button from '@/components/ui/Button';
 
 /**
  * Уніфікована кнопка табів для верхніх панелей (Campaign / Session).
@@ -11,17 +12,14 @@ export default function TopBarTabButton({
   className = '',
 }) {
   return (
-    <button
+    <Button
       onClick={onClick}
-      className={`
-        px-4 lg:px-6 py-2 rounded-xl transition-all duration-200 border-2
-        ${isActive
-          ? 'bg-[#164A41] text-white border-[#F1B24A] shadow-lg scale-105'
-          : 'bg-white text-[#164A41] border-[#9DC88D]/30 hover:border-[#9DC88D] hover:shadow-md'}
-        ${className}
-      `}
+      variant={isActive ? 'tabActive' : 'tabInactive'}
+      size="md"
+      fullWidth={false}
+      className={`justify-center px-3 py-1.5 text-sm lg:py-2 lg:px-6 lg:text-base ${className}`}
     >
-      <span className="font-bold text-base">{label}</span>
-    </button>
+      <span className="font-bold whitespace-nowrap">{label}</span>
+    </Button>
   );
 }

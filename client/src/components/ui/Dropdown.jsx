@@ -5,7 +5,6 @@ const Dropdown = ({
   value, 
   onChange, 
   placeholder = "Оберіть...", 
-  label,
   error,
   disabled 
 }) => {
@@ -30,30 +29,20 @@ const Dropdown = ({
     setIsOpen(false);
   };
 
-  // Логіка стилів бордюру (ідентична до твого inputClass у формі)
-  // Базовий: border-[#9DC88D]/30
-  // Активний/Відкритий: border-[#164A41]
-  // Помилка: border-red-300
-  let borderClass = "border-[#9DC88D]/30";
+  // Логіка стилів бордюру (ідентична до формових інпутів)
+  // Базовий: border-brand-light/30
+  // Активний/Відкритий: border-brand-dark
+  // Помилка: border-red-500
+  let borderClass = "border-brand-light/30";
   
   if (error) {
-    borderClass = "border-red-300";
+    borderClass = "border-red-500";
   } else if (isOpen) {
-    borderClass = "border-[#164A41]"; // Колір фокусу як у твоїх інпутів
+    borderClass = "border-brand-dark"; // Колір фокусу як у твоїх інпутів
   }
 
   return (
     <div className="w-full relative" ref={dropdownRef}>
-      {/* Лейбл як у твоїй формі */}
-      {label && (
-        <label
-          htmlFor={buttonId}
-          className="block text-sm font-medium text-[#164A41] mb-1 cursor-pointer"
-        >
-          {label}
-        </label>
-      )}
-      
       <div className="relative">
         <button
           id={buttonId}
@@ -64,14 +53,15 @@ const Dropdown = ({
           aria-controls={listboxId}
           onClick={() => !disabled && setIsOpen(!isOpen)}
           className={`
-            w-full px-3 py-2 text-left bg-white border-2 rounded-lg 
+            w-full px-4 py-3 text-brand-dark text-left bg-white border-2 rounded-xl 
             flex items-center justify-between
-            transition-colors duration-200 outline-none
+            placeholder:text-brand-medium/70 transition-colors
+            disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed
             ${borderClass}
-            ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:border-[#9DC88D]'}
+            ${disabled ? 'opacity-50' : 'cursor-pointer hover:border-brand-light'}
           `}
         >
-          <span className={`block truncate ${!value ? "text-gray-400" : "text-gray-900"}`}>
+          <span className={`block truncate ${value ? "text-gray-900" : "text-gray-400"}`}>
             {value ? options.find(opt => opt.value === value)?.label : placeholder}
           </span>
           
@@ -86,7 +76,7 @@ const Dropdown = ({
             strokeWidth="2" 
             strokeLinecap="round" 
             strokeLinejoin="round"
-            className={`text-[#164A41] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+            className={`text-brand-dark transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
           >
             <path d="m6 9 6 6 6-6"/>
           </svg>
@@ -95,24 +85,20 @@ const Dropdown = ({
         {isOpen && (
           <ul
             id={listboxId}
-            role="listbox"
-            aria-label={label}
-            className="absolute z-50 w-full mt-1 bg-white border border-[#9DC88D] rounded-lg shadow-lg max-h-60 overflow-auto py-1"
+            className="absolute z-50 w-full mt-1 bg-white border border-brand-light rounded-lg shadow-lg max-h-60 overflow-auto py-1"
           >
             {options.map((option) => {
               const isSelected = value === option.value;
               return (
-                <li key={option.value} role="presentation">
+                <li key={option.value}>
                   <button
                     type="button"
-                    role="option"
-                    aria-selected={isSelected}
                     onClick={() => handleSelect(option)}
                     className={`
                       w-full px-3 py-2 text-sm text-left cursor-pointer transition-colors
                       ${isSelected
-                        ? 'bg-[#164A41]/10 text-[#164A41] font-medium'
-                        : 'text-gray-700 hover:bg-[#9DC88D]/20'
+                        ? 'bg-brand-dark/10 text-brand-dark font-medium'
+                        : 'text-gray-700 hover:bg-brand-light/20'
                       }
                     `}
                   >
@@ -122,7 +108,7 @@ const Dropdown = ({
               );
             })}
             {options.length === 0 && (
-              <li role="presentation" className="px-3 py-2 text-sm text-gray-400 text-center">
+              <li className="px-3 py-2 text-sm text-gray-400 text-center">
                 Список порожній
               </li>
             )}

@@ -4,7 +4,8 @@ const {
   createRawEncryptedAndHashedShareToken,
   decryptShareToken,
 } = require('../utils/token.helper');
-const { frontendUrl } = require('../config/config');
+const config = require('../config/config');
+const { selectNextRelevantSession } = require('./session/session-next-relevant.selector');
 
 const datetimeHelpers = require('./session/session-datetime.helpers');
 const permissionHelpers = require('./session/session-permission.helpers');
@@ -13,11 +14,14 @@ const createSessionQueryService = require('./session/session-query.service');
 const createSessionCalendarService = require('./session/session-calendar.service');
 const createSessionLifecycleService = require('./session/session-lifecycle.service');
 const createSessionParticipantsService = require('./session/session-participants.service');
+const createSessionPageService = require('./session/session-page.service');
+const notificationService = require('./notification.service');
 
 class SessionService {
-  constructor() {
+  constructor(customPrisma = null) {
+    const prismaInstance = customPrisma || prisma;
     this.sessionDeps = {
-      prisma,
+      prisma: prismaInstance,
       AppError,
       ERROR_CODES,
       datetimeHelpers,
@@ -28,6 +32,8 @@ class SessionService {
     this.coreService = createSessionCoreService({
       ...this.sessionDeps,
       sessionQueryService: this.queryService,
+      config,
+      selectNextRelevantSession,
       createRawEncryptedAndHashedShareToken,
       assertNoSessionTimeConflict: (userId, targetStart, targetDuration, options = {}) => {
         return this._assertNoSessionTimeConflict(userId, targetStart, targetDuration, options);
@@ -38,13 +44,18 @@ class SessionService {
       ...this.sessionDeps,
       sessionQueryService: this.queryService,
       createRawEncryptedAndHashedShareToken,
+      notificationService,
     });
     this.participantsService = createSessionParticipantsService({
       ...this.sessionDeps,
       sessionQueryService: this.queryService,
+      notificationService,
       assertNoSessionTimeConflict: (userId, targetStart, targetDuration, options = {}) => {
         return this._assertNoSessionTimeConflict(userId, targetStart, targetDuration, options);
       },
+    });
+    this.pageService = createSessionPageService({
+      sessionQueryService: this.queryService,
     });
   }
 
@@ -89,6 +100,50 @@ class SessionService {
     return permissionHelpers._canEditSessionSettings(session, userId);
   }
 
+  _canManageLinkOnlyShare(session, userId) {
+    if (!session) {
+      return false;
+    }
+
+    if (['FINISHED', 'CANCELED'].includes(session.status)) {
+      return false;
+    }
+
+    if (session.visibility !== 'LINK_ONLY') {
+      return false;
+    }
+
+    if (session?.campaign?.status === 'FINISHED') {
+      return false;
+    }
+
+    if (this._isSessionOwner(session, userId)) {
+      return true;
+    }
+
+    if (session.campaignId) {
+      return false;
+    }
+
+    const hasConfirmedGm = Boolean(
+      session.participants?.some(
+        (participant) => participant.role === 'GM' && participant.status === 'CONFIRMED'
+      )
+    );
+
+    if (hasConfirmedGm) {
+      return false;
+    }
+
+    return Boolean(
+      session.participants?.some(
+        (participant) => participant.userId === userId
+          && participant.role === 'PLAYER'
+          && participant.status === 'CONFIRMED'
+      )
+    );
+  }
+
   _getDateKeyInTimeZone(dateValue, timeZone) {
     return datetimeHelpers._getDateKeyInTimeZone(dateValue, timeZone);
   }
@@ -111,7 +166,7 @@ class SessionService {
 
   async _assertNoSessionTimeConflict(userId, targetStart, targetDuration, options = {}) {
     return datetimeHelpers._assertNoSessionTimeConflict(
-      { prisma, AppError, ERROR_CODES },
+      { prisma: this.sessionDeps.prisma, AppError, ERROR_CODES },
       userId,
       targetStart,
       targetDuration,
@@ -194,6 +249,10 @@ class SessionService {
     return this.coreService.getMySessions(userId, options);
   }
 
+  async getNextRelevantSessionForUser(userId, options = {}) {
+    return this.coreService.getNextRelevantSessionForUser(userId, options);
+  }
+
   async getCalendar(userId, options = {}) {
     return this.calendarService.getCalendar(userId, options);
   }
@@ -202,8 +261,8 @@ class SessionService {
     return this.calendarService.getCalendarStats(userId, options);
   }
 
-  async getSessionsByDayFiltered(userId, dateString, scope = 'global', filters = {}) {
-    return this.calendarService.getSessionsByDayFiltered(userId, dateString, scope, filters);
+  async getSessionsByDayFiltered(userId, dateString, scope = 'global', filters = {}, timeZone = null) {
+    return this.calendarService.getSessionsByDayFiltered(userId, dateString, scope, filters, timeZone);
   }
 
   async getSessionById(sessionId, userId = null, options = {}) {
@@ -212,6 +271,14 @@ class SessionService {
 
   async getSessionByShareToken(rawToken, userId = null) {
     return this.queryService.getSessionByShareToken(rawToken, userId);
+  }
+
+  async getSessionPageById(sessionId, userId = null, options = {}) {
+    return this.pageService.getSessionPageById(sessionId, userId, options);
+  }
+
+  async getSessionPageByShareToken(rawToken, userId = null) {
+    return this.pageService.getSessionPageByShareToken(rawToken, userId);
   }
 
   async updateSession(sessionId, requesterId, updateData, options = {}) {
@@ -278,14 +345,14 @@ class SessionService {
       );
     }
 
-    if (!this._isSessionOwner(session, userId)) {
-      throw new AppError(ERROR_CODES.SESSION_OWNER_ONLY);
+    if (!this._canManageLinkOnlyShare(session, userId)) {
+      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED);
     }
 
     const { rawToken, tokenHash, tokenEncrypted } = createRawEncryptedAndHashedShareToken();
     const sessionIdInt = this._parsePositiveInt(sessionId, 'ID сесії');
 
-    await prisma.session.update({
+    await this.sessionDeps.prisma.session.update({
       where: { id: sessionIdInt },
       data: {
         shareTokenHash: tokenHash,
@@ -310,12 +377,12 @@ class SessionService {
       );
     }
 
-    if (!this._isSessionOwner(session, userId)) {
-      throw new AppError(ERROR_CODES.SESSION_OWNER_ONLY);
+    if (!this._canManageLinkOnlyShare(session, userId)) {
+      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED);
     }
 
-    const stored = await prisma.session.findUnique({
-      where: { id: this._parsePositiveInt(sessionId, 'ID СЃРµСЃС–С—') },
+    const stored = await this.sessionDeps.prisma.session.findUnique({
+      where: { id: this._parsePositiveInt(sessionId, 'ID сесії') },
       select: { shareTokenEncrypted: true },
     });
 
@@ -330,9 +397,10 @@ class SessionService {
 
     return {
       token,
-      shareUrl: `${frontendUrl}/session/share/${token}`,
+      shareUrl: `${config.frontendUrl}/session/share/${token}`,
     };
   }
 }
 
 module.exports = new SessionService();
+module.exports.SessionService = SessionService;

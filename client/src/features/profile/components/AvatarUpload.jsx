@@ -1,15 +1,34 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
+import PropTypes from 'prop-types';
 import { useProfileMutations } from '../hooks/useProfileQueries';
 import Button from '@/components/ui/Button';
 import { UserAvatar } from '@/components/shared';
 import { toast } from '@/stores/useToastStore';
+import AvatarCropModal from './AvatarCropModal';
+import { getCroppedImageFile } from '../utils/cropImage';
 
 export default function AvatarUpload({ currentAvatarUrl, username, onUpdate }) {
   const fileInputRef = useRef(null);
   const { uploadAvatar, deleteAvatar, uploadAvatarStatus, deleteAvatarStatus } = useProfileMutations();
-  const uploading = uploadAvatarStatus || deleteAvatarStatus;
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [sourceImageUrl, setSourceImageUrl] = useState('');
+  const [sourceFileName, setSourceFileName] = useState('avatar');
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [isCropping, setIsCropping] = useState(false);
+  const uploading = uploadAvatarStatus || deleteAvatarStatus || isCropping;
 
-  const handleFileSelect = async (e) => {
+  const resetCropState = () => {
+    if (sourceImageUrl) {
+      URL.revokeObjectURL(sourceImageUrl);
+    }
+
+    setCropModalOpen(false);
+    setSourceImageUrl('');
+    setSourceFileName('avatar');
+    setCroppedAreaPixels(null);
+  };
+
+  const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -23,17 +42,36 @@ export default function AvatarUpload({ currentAvatarUrl, username, onUpdate }) {
       return;
     }
 
+    const objectUrl = URL.createObjectURL(file);
+    setSourceImageUrl(objectUrl);
+    setSourceFileName(file.name || 'avatar');
+    setCropModalOpen(true);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCropConfirm = async () => {
+    if (!sourceImageUrl || !croppedAreaPixels) {
+      toast.error('Оберіть область для аватара');
+      return;
+    }
+
     try {
-      const result = await uploadAvatar(file);
+      setIsCropping(true);
+      const croppedFile = await getCroppedImageFile(sourceImageUrl, croppedAreaPixels, sourceFileName);
+      const result = await uploadAvatar(croppedFile);
+
       if (onUpdate && result?.profile) {
         onUpdate(result.profile);
       }
+
+      resetCropState();
     } catch (error) {
       toast.error(error?.response?.data?.error || error?.message || 'Не вдалося оновити аватар');
     } finally {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      setIsCropping(false);
     }
   };
 
@@ -64,7 +102,7 @@ export default function AvatarUpload({ currentAvatarUrl, username, onUpdate }) {
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="absolute bottom-0 right-0 px-2 py-1 bg-[#F1B24A] rounded-lg flex items-center justify-center text-[#164A41] text-xs font-bold shadow-md hover:bg-[#e0a33f] transition-colors"
+          className="absolute bottom-0 right-0 px-2 py-1 bg-brand-accent rounded-lg flex items-center justify-center text-brand-dark text-xs font-bold shadow-md hover:bg-amber-500 transition-colors"
         >
           {uploading ? '...' : 'Змінити'}
         </button>
@@ -92,9 +130,25 @@ export default function AvatarUpload({ currentAvatarUrl, username, onUpdate }) {
         </Button>
       )}
 
-      <p className="text-xs text-[#4D774E] text-center">
-        JPG, PNG або GIF. Макс. 5MB
+      <p className="text-xs text-brand-medium text-center">
+        JPG, PNG, GIF або WebP. Макс. 5MB
       </p>
+
+      <AvatarCropModal
+        key={sourceImageUrl || 'avatar-crop'}
+        isOpen={cropModalOpen}
+        imageSrc={sourceImageUrl}
+        isLoading={uploading}
+        onCropAreaChange={setCroppedAreaPixels}
+        onCancel={resetCropState}
+        onConfirm={handleCropConfirm}
+      />
     </div>
   );
 }
+
+AvatarUpload.propTypes = {
+  currentAvatarUrl: PropTypes.string,
+  username: PropTypes.string,
+  onUpdate: PropTypes.func,
+};
