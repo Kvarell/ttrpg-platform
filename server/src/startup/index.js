@@ -14,6 +14,8 @@ const {
 } = require('./cleanup');
 const { setupStaticFiles } = require('./static');
 const { httpLogger } = require('../lib/logger');
+const { initTelegramBot, stopTelegramBot } = require('./telegram');
+const setupSwagger = require('./swagger');
 
 module.exports = {
   // Migrations
@@ -33,4 +35,11 @@ module.exports = {
   
   // Static files
   setupStaticFiles,
+  
+  // Telegram
+  initTelegramBot,
+  stopTelegramBot,
+
+  // Documentation
+  setupSwagger
 };

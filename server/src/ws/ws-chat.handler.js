@@ -1,46 +1,7 @@
 const { AppError, ERROR_CODES } = require('../constants/errors');
 const chatService = require('../services/chat.service');
-
-function parseIncomingMessage(raw) {
-  let data = raw;
-
-  if (Buffer.isBuffer(raw)) {
-    data = raw.toString('utf8');
-  }
-
-  if (typeof data === 'string') {
-    data = JSON.parse(data);
-  }
-
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Невірний формат повідомлення');
-  }
-
-  const type = data.type;
-  if (!type || typeof type !== 'string') {
-    throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'Не вказано тип повідомлення');
-  }
-
-  let payload = {};
-  if (data.payload && typeof data.payload === 'object' && !Array.isArray(data.payload)) {
-    payload = { ...data.payload };
-  } else {
-    payload = { ...data };
-    delete payload.type;
-    delete payload.payload;
-  }
-
-  return { type, payload };
-}
-
-function sendEvent(socket, type, payload = {}) {
-  const message = {
-    type,
-    ...payload,
-  };
-
-  socket.send(JSON.stringify(message));
-}
+const { checkRateLimit } = require('../services/rate-limit.service');
+const { parseIncomingMessage, sendEvent, resolveErrorCode, resolveErrorMessage } = require('./ws-utils');
 
 function parseChatId(value) {
   const parsed = Number.parseInt(value, 10);
@@ -48,22 +9,6 @@ function parseChatId(value) {
     throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'chatId повинен бути позитивним числом');
   }
   return parsed;
-}
-
-function resolveErrorCode(error) {
-  if (error instanceof AppError) {
-    return error.code;
-  }
-
-  return ERROR_CODES.SERVER_ERROR;
-}
-
-function resolveErrorMessage(error) {
-  if (error instanceof AppError) {
-    return error.message;
-  }
-
-  return 'Помилка сервера';
 }
 
 function createChatHandler({ roomManager, logger } = {}) {
@@ -108,6 +53,14 @@ function createChatHandler({ roomManager, logger } = {}) {
 
         if (type === 'chat:message:send') {
           const chatId = parseChatId(payload.chatId);
+
+          const rateLimitKey = String(socket.user?.id || 'unknown_ws_client');
+          await checkRateLimit('chat_send_message', rateLimitKey, {
+            maxRequests: 20,
+            windowMs: 10 * 1000,
+            blockDurationMs: 10 * 1000,
+          });
+
           const { clientMessageId, content } = payload;
           const message = await chatService.createUserMessage(chatId, socket.user?.id, content);
 

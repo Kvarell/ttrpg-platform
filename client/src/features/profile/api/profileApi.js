@@ -55,7 +55,7 @@ export const deleteAvatar = async () => {
 };
 
 /**
- * Завантажити аватар (буде реалізовано пізніше з S3/Cloudinary)
+ * Завантажити аватар
  * @param {File} file - файл зображення
  */
 export const uploadAvatar = async (file) => {
@@ -67,5 +67,21 @@ export const uploadAvatar = async (file) => {
       'Content-Type': 'multipart/form-data',
     },
   });
+  return response.data;
+};
+
+/**
+ * Отримати токен для прив'язки Telegram
+ */
+export const getTelegramLinkToken = async () => {
+  const response = await api.post('/profile/telegram/link');
+  return response.data;
+};
+
+/**
+ * Відв'язати Telegram
+ */
+export const unlinkTelegram = async () => {
+  const response = await api.delete('/profile/telegram/link');
   return response.data;
 };

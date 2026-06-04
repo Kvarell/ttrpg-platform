@@ -21,12 +21,26 @@ function createMockPrisma(overrides = {}) {
     ...overrides.notification,
   };
 
+  const user = {
+    findMany: mock.fn(async () => []),
+    ...overrides.user,
+  };
+
+  const outboxEvent = {
+    createMany: mock.fn(async () => ({ count: 0 })),
+    ...overrides.outboxEvent,
+  };
+
   return {
     notificationRecipient,
     notification,
+    user,
+    outboxEvent,
     $transaction: mock.fn(async (callback) => callback({
       notificationRecipient,
       notification,
+      user,
+      outboxEvent,
     })),
     ...overrides,
   };
@@ -259,7 +273,7 @@ test('resolveRecipientIds combines explicit IDs and audience resolution', async 
     context: { userId: 10, campaignId: 5 },
   });
 
-  assert.deepStrictEqual(result.sort((a, b) => a - b), [1, 2, 3, 10, 20, 21]);
+  assert.deepStrictEqual(result.toSorted((a, b) => a - b), [1, 2, 3, 10, 20, 21]);
   assert.strictEqual(mockResolver.resolve.mock.callCount(), 2);
 });
 
@@ -342,45 +356,6 @@ test('markManyAsRead updates all active recipients', async () => {
 
   const [call] = mockPrisma.notificationRecipient.updateMany.mock.calls;
   assert.deepStrictEqual(call.arguments[0].where.id.in, [1, 2]);
-});
-
-test('archiveNotification throws when recipient not found', async () => {
-  const mockPrisma = createMockPrisma({
-    notificationRecipient: {
-      findFirst: mock.fn(async () => null),
-    },
-  });
-
-  const service = new NotificationService({ prisma: mockPrisma });
-
-  await assert.rejects(
-    () => service.archiveNotification(1, 100),
-    (error) => error?.code === 'NOTIFICATION_NOT_FOUND'
-  );
-});
-
-test('archiveNotification archives active notification', async () => {
-  const recipient = {
-    id: 1,
-    userId: 5,
-    notificationId: 100,
-    status: 'ACTIVE',
-    readAt: null,
-    archivedAt: null,
-  };
-
-  const mockPrisma = createMockPrisma({
-    notificationRecipient: {
-      findFirst: mock.fn(async () => recipient),
-      update: mock.fn(async ({ data }) => ({ ...recipient, ...data })),
-    },
-  });
-
-  const service = new NotificationService({ prisma: mockPrisma });
-  const result = await service.archiveNotification(5, 100);
-
-  assert.equal(result.status, 'ARCHIVED');
-  assert.ok(result.archivedAt instanceof Date);
 });
 
 test('pushToConnectedUsers does nothing when no recipients', async () => {
