@@ -13,6 +13,9 @@ const permissionHelpers = require('./campaign/campaign-permission.helpers');
 const createCampaignMembersService = require('./campaign/campaign-members.service');
 const createCampaignPageService = require('./campaign/campaign-page.service');
 const notificationService = require('./notification.service');
+const { vttStateManager } = require('../vtt/vtt-state.manager');
+const { callService } = require('../call/call.service');
+const { logger } = require('../lib/logger');
 
 class CampaignService {
   constructor() {
@@ -315,6 +318,7 @@ class CampaignService {
             system: true,
             status: true,
             visibility: true,
+            price: true,
             maxPlayers: true,
             ownerId: true,
             participants: {
@@ -439,7 +443,7 @@ class CampaignService {
     const campaignIdInt = Number.parseInt(campaignId, 10);
     const isFinishingCampaign = campaign.status !== 'FINISHED' && nextStatus === 'FINISHED';
     
-    const updatedCampaign = await prisma.$transaction(async (tx) => {
+    const { result: updatedCampaign, sessionsToCleanup } = await prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw`
         SELECT visibility, "shareTokenHash" 
         FROM "Campaign" 
@@ -466,23 +470,52 @@ class CampaignService {
       };
 
       let result;
+      let sessionsToCleanupList = [];
 
       if (isFinishingCampaign) {
-        await tx.session.updateMany({
+        const activeOrPlannedSessions = await tx.session.findMany({
           where: {
             campaignId: campaignIdInt,
-            status: 'ACTIVE',
+            status: { in: ['ACTIVE', 'PLANNED'] },
           },
-          data: { status: 'FINISHED' },
+          include: {
+            campaign: {
+              select: {
+                id: true,
+                ownerId: true,
+                status: true,
+              },
+            },
+            participants: {
+              select: {
+                id: true,
+                userId: true,
+                role: true,
+                status: true,
+              },
+            },
+          },
         });
+        sessionsToCleanupList = activeOrPlannedSessions.map(s => s.id);
 
-        await tx.session.updateMany({
-          where: {
-            campaignId: campaignIdInt,
-            status: 'PLANNED',
-          },
-          data: { status: 'CANCELED' },
-        });
+        const sessionService = require('./session.service');
+
+        for (const session of activeOrPlannedSessions) {
+          if (session.status === 'ACTIVE') {
+            await sessionService.lifecycleService.updateSession(
+              session.id,
+              userId,
+              { status: 'FINISHED' },
+              { preloadedSession: session, bypassPermissions: true, tx }
+            );
+          } else if (session.status === 'PLANNED') {
+            await sessionService.lifecycleService.cancelSession(
+              session.id,
+              userId,
+              { preloadedSession: session, bypassPermissions: true, tx }
+            );
+          }
+        }
 
         result = await tx.campaign.update({
           where: { id: campaignIdInt },
@@ -507,8 +540,43 @@ class CampaignService {
         result.shareToken = shareTokenUpdate.rawToken;
       }
 
-      return result;
+      return { result, sessionsToCleanup: sessionsToCleanupList };
     });
+
+    for (const sessionId of sessionsToCleanup) {
+      try {
+        vttStateManager.closeVtt(sessionId);
+        callService.endCallIfActive(sessionId);
+      } catch (err) {
+        logger.error({ err, sessionId }, '[CampaignService] Помилка очищення VTT/дзвінка при завершенні кампанії');
+      }
+    }
+
+    if (isFinishingCampaign) {
+      prisma.campaignMember.findMany({
+        where: { campaignId: campaignIdInt, userId: { not: userId } },
+        select: { userId: true },
+      }).then((members) => {
+        const recipientIds = members.map((m) => m.userId);
+        if (recipientIds.length > 0) {
+          notificationService.createNotification({
+            eventKey: `campaign_finished:${campaignIdInt}`,
+            type: 'CAMPAIGN_FINISHED',
+            severity: 'INFO',
+            category: 'campaign',
+            title: 'Кампанію завершено',
+            body: `Кампанію "${updatedCampaign.title}" було завершено.`,
+            link: `/campaign/${campaignIdInt}`,
+            recipientIds,
+            metadata: {
+              campaignId: campaignIdInt,
+              campaignTitle: updatedCampaign.title,
+              status: 'FINISHED',
+            },
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
 
     delete updatedCampaign.shareTokenHash;
     delete updatedCampaign.shareTokenEncrypted;

@@ -9,27 +9,12 @@ import {
   getLatestCursorFromMessages,
   buildChatCursor,
 } from './useChatMessages';
-import api from '@/lib/axios';
-
-const MAX_RECONNECT_ATTEMPTS = 8;
-const INITIAL_RECONNECT_DELAY = 1000;
-const MAX_RECONNECT_DELAY = 20000;
+import { sharedWsManager } from '@/lib/shared-ws';
 
 const isValidId = (value) => Number.isInteger(value) && value > 0;
 
 const createClientMessageId = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return `tmp-${crypto.randomUUID()}`;
-  }
-
-  return `tmp-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
-};
-
-export const resolveWsUrl = () => {
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-  const baseUrl = apiBaseUrl.replace(/\/api\/?$/, '');
-  const wsBase = baseUrl.replace(/^http/, 'ws');
-  return `${wsBase.replace(/\/$/, '')}/ws/chat`;
+  return `tmp-${crypto.randomUUID()}`;
 };
 
 export const normalizeAuthor = (user) => {
@@ -62,7 +47,7 @@ export const upsertMessageIntoList = (messages, incoming) => {
     return [incoming];
   }
 
-const idx = messages.findIndex((m) => {
+  const idx = messages.findIndex((m) => {
     if (incoming.clientMessageId && m.clientMessageId === incoming.clientMessageId) {
       return true;
     }
@@ -114,23 +99,14 @@ export default function useChatConnection(chatId, options = {}) {
   } = options;
 
   const queryClient = useQueryClient();
-  const socketRef = useRef(null);
-  const reconnectTimeoutRef = useRef(null);
-  const reconnectAttemptsRef = useRef(0);
-  const manualCloseRef = useRef(false);
-  const fatalCloseRef = useRef(false);
-  const lastFatalErrorRef = useRef(null);
   const lastCursorRef = useRef(null);
   const catchUpInProgressRef = useRef(false);
-  const connectRef = useRef(null);
 
   const user = useAuthStore(selectUser);
-  const {
-    connectionState,
-    setConnectionState,
-    setReadonly,
-    reset: resetChatStore,
-  } = useChatStore();
+  const connectionState = useChatStore((s) => s.connectionState);
+  const setConnectionState = useChatStore((s) => s.setConnectionState);
+  const setReadonly = useChatStore((s) => s.setReadonly);
+  const resetChatStore = useChatStore((s) => s.reset);
   const [capabilities, setCapabilities] = useState(null);
 
   const queryKey = useMemo(() => chatMessagesQueryKeys.byChat(chatId, limit), [chatId, limit]);
@@ -233,12 +209,9 @@ export default function useChatConnection(chatId, options = {}) {
   }, [chatId, limit, queryClient, queryKey, updateMessages]);
 
   const handleChatJoined = useCallback((data) => {
+    if (data.chatId !== chatId) return;
     setReadonly(Boolean(data.readonly));
     setCapabilities(data.capabilities || null);
-    setConnectionState('connected');
-    reconnectAttemptsRef.current = 0;
-    fatalCloseRef.current = false;
-    lastFatalErrorRef.current = null;
 
     const localCursor = lastCursorRef.current;
     const snapshotCursor = data.snapshotCursor || null;
@@ -248,18 +221,20 @@ export default function useChatConnection(chatId, options = {}) {
       queryClient.invalidateQueries({ queryKey });
       lastCursorRef.current = snapshotCursor;
     }
-  }, [catchUpMessages, setConnectionState, setReadonly, queryClient, queryKey]);
+  }, [catchUpMessages, setReadonly, queryClient, queryKey, chatId]);
 
   const handleChatMessage = useCallback((data) => {
-    if (!data.message) return;
+    if (!data.message || data.message.chatId !== chatId) return;
 
     upsertMessage({
       ...data.message,
       ...(data.clientMessageId ? { clientMessageId: data.clientMessageId } : {}),
     });
-  }, [upsertMessage]);
+  }, [upsertMessage, chatId]);
 
   const handleChatError = useCallback((data) => {
+    if (data.chatId !== chatId && data.chatId !== null) return;
+    
     if (data.clientMessageId) {
       markOptimisticFailed(data.clientMessageId);
     }
@@ -268,28 +243,10 @@ export default function useChatConnection(chatId, options = {}) {
       return;
     }
 
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
+    sharedWsManager.disconnect(true, data.message || 'Access denied to chat');
+  }, [markOptimisticFailed, chatId]);
 
-    fatalCloseRef.current = true;
-    lastFatalErrorRef.current = data.message || 'Access denied to chat';
-    manualCloseRef.current = true;
-    setConnectionState('error', lastFatalErrorRef.current);
-    socketRef.current?.close();
-  }, [markOptimisticFailed, setConnectionState]);
-
-  const handleIncomingMessage = useCallback((event) => {
-    let data;
-
-    try {
-      data = JSON.parse(event.data);
-    } catch (error) {
-      console.error('[Chat] Failed to parse WS message:', error);
-      return;
-    }
-
+  const handleIncomingMessage = useCallback((data) => {
     if (!data || typeof data !== 'object') {
       return;
     }
@@ -310,13 +267,7 @@ export default function useChatConnection(chatId, options = {}) {
   }, [handleChatError, handleChatJoined, handleChatMessage]);
 
   const sendEvent = useCallback((type, payload) => {
-    if (socketRef.current?.readyState !== WebSocket.OPEN) {
-      return false;
-    }
-
-    const message = JSON.stringify({ type, ...payload });
-    socketRef.current.send(message);
-    return true;
+    return sharedWsManager.send(type, payload);
   }, []);
 
   const sendMessage = useCallback((content) => {
@@ -326,7 +277,7 @@ export default function useChatConnection(chatId, options = {}) {
       return null;
     }
 
-    if (connectionState !== 'connected') {
+    if (!sharedWsManager.isConnected) {
       return null;
     }
 
@@ -340,7 +291,7 @@ export default function useChatConnection(chatId, options = {}) {
     });
 
     return clientMessageId;
-  }, [appendOptimisticMessage, chatId, connectionState, sendEvent]);
+  }, [appendOptimisticMessage, chatId, sendEvent]);
 
   const joinChat = useCallback(() => {
     if (!isValidId(chatId)) {
@@ -361,125 +312,57 @@ export default function useChatConnection(chatId, options = {}) {
     sendEvent('chat:leave', { chatId });
   }, [chatId, sendEvent]);
 
-  const disconnect = useCallback(() => {
-    manualCloseRef.current = true;
-    leaveChat();
-
-    if (socketRef.current) {
-      socketRef.current.close();
-      socketRef.current = null;
-    }
-
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-
-    fatalCloseRef.current = false;
-    lastFatalErrorRef.current = null;
-
-    setConnectionState('disconnected');
-  }, [leaveChat, setConnectionState]);
-
-  const connect = useCallback((isReconnect = false) => {
-    if (!enabled || socketRef.current || !isValidId(chatId)) {
-      return;
-    }
-
-    manualCloseRef.current = false;
-    fatalCloseRef.current = false;
-    lastFatalErrorRef.current = null;
-    if (isReconnect) {
-      setConnectionState('reconnecting');
-    } else {
-      setConnectionState('connecting');
-    }
-
-    const ws = new WebSocket(resolveWsUrl());
-    socketRef.current = ws;
-
-    ws.onopen = () => {
-      joinChat();
-    };
-
-    ws.onmessage = handleIncomingMessage;
-
-    ws.onerror = (event) => {
-      console.warn('[Chat] WS error event', event);
-    };
-
-    ws.onclose = () => {
-      socketRef.current = null;
-
-      if (fatalCloseRef.current) {
-        setConnectionState('error', lastFatalErrorRef.current || 'Access denied to chat');
-        return;
-      }
-
-      if (manualCloseRef.current) {
-        setConnectionState('disconnected');
-        return;
-      }
-
-      api.get('/profile/me').catch(() => {});
-      if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
-        const attempt = reconnectAttemptsRef.current + 1;
-        reconnectAttemptsRef.current = attempt;
-        const delay = Math.min(
-          INITIAL_RECONNECT_DELAY * Math.pow(2, attempt - 1),
-          MAX_RECONNECT_DELAY
-        );
-
-        setConnectionState('reconnecting');
-        reconnectTimeoutRef.current = setTimeout(() => {
-          connectRef.current?.(true);
-        }, delay);
-        return;
-      }
-
-      setConnectionState('error', 'Failed to reconnect');
-    };
-  }, [chatId, enabled, handleIncomingMessage, joinChat, setConnectionState]);
-
-  useEffect(() => {
-    connectRef.current = connect;
-  }, [connect]);
-
   useEffect(() => {
     if (lastKnownCursor) {
       lastCursorRef.current = lastKnownCursor;
     }
   }, [lastKnownCursor]);
 
-  // Reset store state when chatId changes or on unmount to prevent
-  // stale readonly / connectionState from leaking into the next chat.
   useEffect(() => {
     return () => {
       resetChatStore();
     };
   }, [chatId, resetChatStore]);
 
+  const handlersRef = useRef({ handleIncomingMessage, joinChat, leaveChat, setConnectionState });
   useEffect(() => {
-    if (enabled && isValidId(chatId)) {
-      connect();
-    }
+    handlersRef.current = { handleIncomingMessage, joinChat, leaveChat, setConnectionState };
+  });
+
+  useEffect(() => {
+    if (!enabled || !isValidId(chatId)) return undefined;
+
+    const unsubMsg = sharedWsManager.subscribeMessage((data) => {
+      handlersRef.current.handleIncomingMessage(data);
+    });
+    
+    const unsubConn = sharedWsManager.subscribeConnection((state, error) => {
+      handlersRef.current.setConnectionState(state, error);
+      if (state === 'connected') {
+        handlersRef.current.joinChat();
+      }
+    });
+
+    sharedWsManager.addRef();
 
     return () => {
-      disconnect();
+      unsubMsg();
+      unsubConn();
+      handlersRef.current.leaveChat();
+      sharedWsManager.removeRef();
     };
-  }, [chatId, connect, disconnect, enabled]);
+  }, [chatId, enabled]);
 
   useEffect(() => {
     const onFocus = () => {
-      const state = useChatStore.getState().connectionState;
-      if ((state === 'error' || state === 'disconnected') && enabled && isValidId(chatId)) {
-        connectRef.current?.(true);
+      if ((connectionState === 'error' || connectionState === 'disconnected') && enabled && isValidId(chatId)) {
+        sharedWsManager.connect(true);
       }
     };
     
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
-  }, [chatId, enabled]);
+  }, [chatId, enabled, connectionState]);
 
   return {
     connectionState,
@@ -489,7 +372,7 @@ export default function useChatConnection(chatId, options = {}) {
     hasError: connectionState === 'error',
     sendMessage,
     loadOlderMessages,
-    connect,
-    disconnect,
+    connect: () => sharedWsManager.connect(),
+    disconnect: useCallback(() => { handlersRef.current.leaveChat(); sharedWsManager.removeRef(); }, []),
   };
 }

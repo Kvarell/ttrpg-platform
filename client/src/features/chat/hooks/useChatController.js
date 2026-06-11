@@ -37,7 +37,7 @@ export default function useChatController(entityType, entityId, options = {}) {
     lastKnownCursor: messagesQuery.data?.latestCursor || null,
   });
 
-  const { readonly: storeReadonly } = useChatStore();
+  const storeReadonly = useChatStore((s) => s.readonly);
 
   const isLoading = metaQuery.isLoading || messagesQuery.isLoading;
   const hasError = metaQuery.isError || messagesQuery.isError || connectionHook.hasError;
@@ -114,6 +114,7 @@ export default function useChatController(entityType, entityId, options = {}) {
     connect: connectionHook.connect,
     disconnect: connectionHook.disconnect,
     sendMessage: connectionHook.sendMessage,
+
     connectionState: connectionHook.connectionState,
     isConnected: connectionHook.isConnected,
 

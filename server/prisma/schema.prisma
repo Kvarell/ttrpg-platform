@@ -32,6 +32,8 @@ model User {
   updatedAt               DateTime                 @updatedAt
   lastActiveAt            DateTime?
   isDeleted               Boolean                  @default(false)
+  isBanned                Boolean                  @default(false)
+  bannedAt                DateTime?
   passwordResetToken      String?                  @unique
   passwordResetExpiry     DateTime?
   telegramChatId          String?
@@ -55,7 +57,7 @@ model User {
 
 model Wallet {
   id           Int           @id @default(autoincrement())
-  balance      Float         @default(0.0)
+  balance      Decimal       @default(0.0)
   userId       Int           @unique
   user         User          @relation(fields: [userId], references: [id])
   transactions Transaction[]
@@ -130,7 +132,9 @@ model Session {
   shareTokenHash      String?           @unique
   shareTokenEncrypted String?
   shareTokenCreatedAt DateTime?
-  price               Float             @default(0.0)
+  price               Decimal             @default(0.0)
+  platformFeePercent  Decimal             @default(0.0)
+  heldAmount          Decimal             @default(0.0)
   maxPlayers          Int               @default(4)
   system              String?
   campaignId          Int?
@@ -164,6 +168,7 @@ model SessionParticipant {
   session   Session           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, sessionId])
+  @@index([sessionId])
 }
 
 enum SessionRole {
@@ -207,6 +212,8 @@ model EmailVerificationToken {
   user      User     @relation(fields: [userId], references: [id])
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model EmailChangeToken {
@@ -217,6 +224,8 @@ model EmailChangeToken {
   newEmail  String
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ─── New Chat Domain ───────────────────────────────────────────────────────────
@@ -250,12 +259,13 @@ model ChatMessage {
 }
 
 model Transaction {
-  id       Int      @id @default(autoincrement())
-  amount   Float
-  type     String
-  date     DateTime @default(now())
-  walletId Int
-  wallet   Wallet   @relation(fields: [walletId], references: [id])
+  id        Int      @id @default(autoincrement())
+  amount    Decimal
+  type      String
+  date      DateTime @default(now())
+  walletId  Int
+  wallet    Wallet   @relation(fields: [walletId], references: [id])
+  sessionId Int?
 }
 
 enum SessionStatus {
@@ -294,6 +304,8 @@ model RefreshToken {
   revoked   Boolean  @default(false)
   createdAt DateTime @default(now())
   expiresAt DateTime
+
+  @@index([userId])
 }
 
 model Notification {

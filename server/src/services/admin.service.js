@@ -1,15 +1,11 @@
-/**
- * Admin Service
- * Бізнес-логіка для адміністративних операцій
- * 
- * Відповідає за:
- * - Перегляд списків користувачів, кампаній, сесій (з пагінацією та пошуком)
- * - Видалення/модерацію кампаній та сесій
- * - Загальну статистику платформи
- */
-
 const { prisma } = require('../lib/prisma');
 const { AppError, ERROR_CODES } = require('../constants/errors');
+const { markUserAsBanned, unmarkUserAsBanned } = require('../store/banned-users');
+const notificationService = require('./notification.service');
+const { vttStateManager } = require('../vtt/vtt-state.manager');
+const { callService } = require('../call/call.service');
+const { disconnectUser } = require('../ws/ws-server');
+const { logger } = require('../lib/logger');
 
 class AdminService {
   async getStats() {
@@ -54,6 +50,8 @@ class AdminService {
           emailVerified: true,
           createdAt: true,
           lastActiveAt: true,
+          isBanned: true,
+          bannedAt: true,
           _count: {
             select: {
               campaignsOwned: true,
@@ -153,8 +151,37 @@ class AdminService {
       throw new AppError(ERROR_CODES.ADMIN_RESOURCE_NOT_FOUND, 'Кампанію не знайдено');
     }
 
-    // Видаляємо кампанію (каскадно видаляє members, joinRequests)
-    await prisma.campaign.delete({ where: { id } });
+    const walletService = require('./wallet.service');
+    const { Decimal } = require('@prisma/client').Prisma;
+
+    await prisma.$transaction(async (tx) => {
+      const campaignSessions = await tx.session.findMany({
+        where: {
+          campaignId: id,
+          heldAmount: { gt: 0 },
+        },
+        select: { id: true, price: true, heldAmount: true },
+      });
+
+      for (const session of campaignSessions) {
+        const players = await tx.sessionParticipant.findMany({
+          where: {
+            sessionId: session.id,
+            role: 'PLAYER',
+            status: { in: ['CONFIRMED', 'PENDING'] },
+          },
+        });
+
+        const decPrice = new Decimal(session.price || 0);
+        if (decPrice.gt(0)) {
+          for (const player of players) {
+            await walletService.refundFunds(player.userId, session.id, decPrice, tx);
+          }
+        }
+      }
+
+      await tx.campaign.delete({ where: { id } });
+    });
 
     return { message: `Кампанію "${campaign.title}" видалено` };
   }
@@ -233,17 +260,273 @@ class AdminService {
 
     const session = await prisma.session.findUnique({
       where: { id },
-      select: { id: true, title: true },
+      select: { id: true, title: true, price: true, heldAmount: true },
     });
 
     if (!session) {
       throw new AppError(ERROR_CODES.ADMIN_RESOURCE_NOT_FOUND, 'Сесію не знайдено');
     }
 
-    // Видаляємо сесію (каскадно видаляє participants)
-    await prisma.session.delete({ where: { id } });
+    const walletService = require('./wallet.service');
+    const { Decimal } = require('@prisma/client').Prisma;
+
+    await prisma.$transaction(async (tx) => {
+      const decHeldAmount = new Decimal(session.heldAmount || 0);
+      if (decHeldAmount.gt(0)) {
+        const players = await tx.sessionParticipant.findMany({
+          where: {
+            sessionId: id,
+            role: 'PLAYER',
+            status: { in: ['CONFIRMED', 'PENDING'] },
+          },
+        });
+
+        const decPrice = new Decimal(session.price || 0);
+        if (decPrice.gt(0)) {
+          for (const player of players) {
+            await walletService.refundFunds(player.userId, id, decPrice, tx);
+          }
+        }
+      }
+
+      await tx.session.delete({ where: { id } });
+    });
 
     return { message: `Сесію "${session.title}" видалено` };
+  }
+
+  async banUser(userId, adminId) {
+    const targetUserId = Number.parseInt(userId, 10);
+    const requestingAdminId = Number.parseInt(adminId, 10);
+
+    if (targetUserId === requestingAdminId) {
+      throw new AppError(ERROR_CODES.ADMIN_ACCESS_DENIED, 'Неможливо заблокувати самого себе');
+    }
+
+    const walletService = require('./wallet.service');
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, role: true, username: true },
+    });
+
+    if (!targetUser) {
+      throw new AppError(ERROR_CODES.USER_NOT_FOUND, 'Користувача не знайдено');
+    }
+
+    if (targetUser.role === 'ADMIN') {
+      throw new AppError(ERROR_CODES.SECURITY_ACCESS_DENIED, 'Неможливо заблокувати адміністратора');
+    }
+
+    const notificationsToSend = [];
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: targetUserId },
+        data: {
+          isBanned: true,
+          bannedAt: new Date(),
+          telegramChatId: null,
+          telegramLinkedAt: null,
+        },
+      });
+
+      const pref = await tx.notificationPreference.findUnique({
+        where: { userId: targetUserId },
+      });
+
+      if (pref?.enabledChannels) {
+        let channels = pref.enabledChannels;
+        if (!Array.isArray(channels)) {
+          channels = [];
+        }
+        const newChannels = channels.filter((c) => c !== 'TELEGRAM');
+        await tx.notificationPreference.update({
+          where: { userId: targetUserId },
+          data: { enabledChannels: newChannels },
+        });
+      }
+
+      await tx.joinRequest.updateMany({
+        where: { userId: targetUserId, status: 'PENDING' },
+        data: { status: 'REJECTED' },
+      });
+
+      const playerParticipations = await tx.sessionParticipant.findMany({
+        where: {
+          userId: targetUserId,
+          role: 'PLAYER',
+          status: { in: ['CONFIRMED', 'PENDING'] },
+          session: {
+            status: { in: ['PLANNED', 'ACTIVE'] },
+          },
+        },
+        include: {
+          session: {
+            select: {
+              id: true,
+              price: true,
+              heldAmount: true,
+            },
+          },
+        },
+      });
+
+      const { Decimal } = require('@prisma/client').Prisma;
+      for (const part of playerParticipations) {
+        await tx.sessionParticipant.delete({
+          where: { id: part.id },
+        });
+
+        const decPrice = new Decimal(part.session.price || 0);
+        if (decPrice.gt(0)) {
+          await walletService.refundFunds(targetUserId, part.session.id, decPrice, tx);
+
+          await tx.session.update({
+            where: { id: part.session.id },
+            data: {
+              heldAmount: { decrement: decPrice },
+            },
+          });
+        }
+      }
+
+      const ownedCampaigns = await tx.campaign.findMany({
+        where: { ownerId: targetUserId },
+        select: { id: true, title: true },
+      });
+
+      for (const campaign of ownedCampaigns) {
+        await tx.campaign.update({
+          where: { id: campaign.id },
+          data: { status: 'FINISHED' },
+        });
+
+        const members = await tx.campaignMember.findMany({
+          where: { campaignId: campaign.id, userId: { not: targetUserId } },
+          select: { userId: true },
+        });
+
+        const memberIds = members.map((m) => m.userId);
+        if (memberIds.length > 0) {
+          notificationsToSend.push({
+            type: 'campaign',
+            targetId: campaign.id,
+            title: campaign.title,
+            recipientIds: memberIds,
+          });
+        }
+      }
+      
+
+      const sessionsToCancel = await tx.session.findMany({
+        where: {
+          status: { in: ['PLANNED', 'ACTIVE'] },
+          OR: [
+            { ownerId: targetUserId },
+            { campaign: { ownerId: targetUserId } },
+            {
+              participants: {
+                some: {
+                  userId: targetUserId,
+                  role: 'GM',
+                  status: 'CONFIRMED',
+                },
+              },
+            },
+          ],
+        },
+        include: {
+          campaign: {
+            select: {
+              id: true,
+              ownerId: true,
+              status: true,
+            },
+          },
+          participants: {
+            select: {
+              id: true,
+              userId: true,
+              role: true,
+              status: true,
+            },
+          },
+        },
+      });
+
+      const sessionService = require('./session.service');
+
+      for (const session of sessionsToCancel) {
+        await sessionService.lifecycleService.cancelSession(
+          session.id,
+          requestingAdminId,
+          { preloadedSession: session, bypassPermissions: true, tx }
+        );
+      }
+
+      await tx.refreshToken.deleteMany({
+        where: { userId: targetUserId },
+      });
+    });
+
+    await markUserAsBanned(targetUserId);
+    disconnectUser(targetUserId);
+
+    for (const notif of notificationsToSend) {
+      try {
+        if (notif.type === 'campaign') {
+          await notificationService.createNotification({
+            eventKey: `campaign_finished:${notif.targetId}`,
+            type: 'CAMPAIGN_FINISHED',
+            severity: 'INFO',
+            category: 'campaign',
+            title: 'Кампанію завершено',
+            body: `Кампанію "${notif.title}" було завершено.`,
+            link: `/campaign/${notif.targetId}`,
+            recipientIds: notif.recipientIds,
+            metadata: {
+              campaignId: notif.targetId,
+              campaignTitle: notif.title,
+              status: 'FINISHED',
+            },
+          });
+        }
+      } catch (err) {
+        logger.error({ err, notif }, '[AdminService] Помилка відправки сповіщення');
+      }
+    }
+
+    return { message: `Користувача "${targetUser.username}" успішно заблоковано` };
+  }
+
+  async unbanUser(userId) {
+    const targetUserId = Number.parseInt(userId, 10);
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, username: true, isBanned: true },
+    });
+
+    if (!targetUser) {
+      throw new AppError(ERROR_CODES.USER_NOT_FOUND, 'Користувача не знайдено');
+    }
+
+    if (!targetUser.isBanned) {
+      return { message: `Користувач "${targetUser.username}" не є заблокованим` };
+    }
+
+    await prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        isBanned: false,
+        bannedAt: null,
+      },
+    });
+
+    await unmarkUserAsBanned(targetUserId);
+
+    return { message: `Користувача "${targetUser.username}" успішно розблоковано` };
   }
 }
 
