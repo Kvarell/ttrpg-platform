@@ -73,6 +73,7 @@ class VttStateManager {
         activeSceneId: null,
         scenes: {},
         diceLog: [],
+        initiative: [],
       });
     }
     return this.rooms.get(id);
@@ -155,7 +156,7 @@ class VttStateManager {
   getVttState(sessionId) {
     const room = this.rooms.get(String(sessionId));
     if (!room) {
-      return { isOpen: false, openedAt: null, openedBy: null, activeSceneId: null, scenes: {}, diceLog: [] };
+      return { isOpen: false, openedAt: null, openedBy: null, activeSceneId: null, scenes: {}, diceLog: [], initiative: [] };
     }
     // Повертаємо shallow copy щоб уникнути зовнішніх мутацій
     return { ...room };
@@ -195,6 +196,19 @@ class VttStateManager {
     }
   }
 
+  // ─── Initiative ──────────────────────────────────────────────────────────
+
+  /**
+   * Оновити трекер ініціативи
+   * @param {string | number} sessionId 
+   * @param {Array} initiativeList 
+   */
+  setInitiative(sessionId, initiativeList) {
+    const room = this._ensureRoom(sessionId);
+    room.initiative = Array.isArray(initiativeList) ? [...initiativeList] : [];
+    return room.initiative;
+  }
+
   // ─── Scene Management ─────────────────────────────────────────────────────
 
   /**
@@ -218,7 +232,7 @@ class VttStateManager {
     const sceneId = `scene-${this._generateId()}`;
 
     // Конвертуємо backgroundColor: рядок '#rrggbb' → число 0xrrggbb
-    let bgColor = 0x9dc88d; // default green
+    let bgColor = 0x000000; // default black
     if (backgroundColor != null) {
       if (typeof backgroundColor === 'string' && backgroundColor.startsWith('#')) {
         bgColor = Number.parseInt(backgroundColor.slice(1), 16);
@@ -228,7 +242,7 @@ class VttStateManager {
     }
 
     // Конвертуємо gridColor: рядок '#rrggbb' → число 0xrrggbb
-    let gColor = 0x9dc88d; // default light green
+    let gColor = 0x39ff14; // default neon green
     if (gridColor != null) {
       if (typeof gridColor === 'string' && gridColor.startsWith('#')) {
         gColor = Number.parseInt(gridColor.slice(1), 16);
@@ -250,6 +264,7 @@ class VttStateManager {
       gridColor: gColor,
       gridOpacity: gridOpacity ?? 0.4,
       gridScale: gridScale ?? 5,
+      tokens: {},
       layers: [
         {
           id: `layer-${this._generateId()}`,
@@ -264,12 +279,12 @@ class VttStateManager {
         },
         {
           id: `layer-${this._generateId()}`,
-          name: 'Drawings',
-          type: 'DRAWING',
+          name: 'Сітка',
+          type: 'GRID',
           isVisible: true,
           isLocked: false,
           opacity: 1,
-          items: [],
+          items: []
         },
         {
           id: `layer-${this._generateId()}`,
@@ -349,6 +364,68 @@ class VttStateManager {
     return true;
   }
 
+  // ─── Token Management ───────────────────────────────────────────────────────
+
+  /**
+   * Додає токен на сцену.
+   * @param {string | number} sessionId 
+   * @param {string} sceneId 
+   * @param {Object} tokenData 
+   * @returns {Object|null}
+   */
+  addToken(sessionId, sceneId, tokenData) {
+    const room = this._ensureRoom(sessionId);
+    const scene = room.scenes[sceneId];
+    if (!scene) return null;
+
+    if (!scene.tokens) scene.tokens = {};
+
+    const tokenId = tokenData.id || `token-${this._generateId()}`;
+    const token = {
+      ...tokenData,
+      id: tokenId,
+      x: tokenData.x ?? 0,
+      y: tokenData.y ?? 0,
+      size: tokenData.size ?? 1,
+    };
+
+    scene.tokens[tokenId] = token;
+    return token;
+  }
+
+  /**
+   * Оновлює токен.
+   * @param {string | number} sessionId 
+   * @param {string} sceneId 
+   * @param {string} tokenId 
+   * @param {Object} updates 
+   * @returns {Object|null}
+   */
+  updateToken(sessionId, sceneId, tokenId, updates) {
+    const room = this._ensureRoom(sessionId);
+    const scene = room.scenes[sceneId];
+    if (!scene?.tokens?.[tokenId]) return null;
+
+    scene.tokens[tokenId] = { ...scene.tokens[tokenId], ...updates };
+    return scene.tokens[tokenId];
+  }
+
+  /**
+   * Видаляє токен.
+   * @param {string | number} sessionId 
+   * @param {string} sceneId 
+   * @param {string} tokenId 
+   * @returns {boolean}
+   */
+  removeToken(sessionId, sceneId, tokenId) {
+    const room = this._ensureRoom(sessionId);
+    const scene = room.scenes[sceneId];
+    if (!scene?.tokens?.[tokenId]) return false;
+
+    delete scene.tokens[tokenId];
+    return true;
+  }
+
   // ─── Layer Management ─────────────────────────────────────────────────────
 
   /**
@@ -397,7 +474,11 @@ class VttStateManager {
 
     const { index } = this._getLayer(scene, layerId);
     const safeUpdates = filterUpdates(updates, ALLOWED_LAYER_UPDATE_FIELDS);
+    
+    // Create a new array to ensure reference checks detect the change
+    scene.layers = [...scene.layers];
     scene.layers[index] = { ...scene.layers[index], ...safeUpdates };
+
     return scene.layers[index];
   }
 
@@ -600,6 +681,151 @@ class VttStateManager {
         y: 0,
       }];
     }
+  }
+  // ─── Drawing Management ───────────────────────────────────────────────────
+
+  /**
+   * Додати малюнок до шару DRAWING.
+   *
+   * @param {string | number} sessionId
+   * @param {string} sceneId
+   * @param {Object} drawingData - { type, points, color, thickness, userId, ... }
+   * @returns {LayerItem | null}
+   */
+  addDrawingToScene(sessionId, sceneId, drawingData) {
+    const room = this._ensureRoom(sessionId);
+    const scene = room.scenes[sceneId];
+    if (!scene) return null;
+
+    let drawLayer = scene.layers.find((l) => l.type === 'DRAWING');
+    if (!drawLayer) {
+      drawLayer = {
+        id: `layer-${this._generateId()}`,
+        name: 'Малюнки',
+        type: 'DRAWING',
+        isVisible: true,
+        isLocked: false,
+        opacity: 1,
+        items: []
+      };
+      const gridIndex = scene.layers.findIndex(l => l.type === 'GRID');
+      if (gridIndex === -1) {
+        scene.layers.push(drawLayer);
+      } else {
+        scene.layers.splice(gridIndex + 1, 0, drawLayer);
+      }
+    }
+
+    const item = {
+      id: `draw-${this._generateId()}`,
+      ...drawingData,
+      timestamp: Date.now(),
+    };
+
+    drawLayer.items.push(item);
+    return item;
+  }
+
+  /**
+   * Відмінити останній малюнок конкретного користувача.
+   *
+   * @param {string | number} sessionId
+   * @param {string} sceneId
+   * @param {string} userId
+   * @returns {string | null} ID видаленого малюнка
+   */
+  removeLastDrawing(sessionId, sceneId, userId) {
+    const room = this._ensureRoom(sessionId);
+    const scene = room.scenes[sceneId];
+    if (!scene) return null;
+
+    const drawLayer = scene.layers.find((l) => l.type === 'DRAWING');
+    if (!drawLayer?.items?.length) return null;
+
+    // Шукаємо останній малюнок цього користувача (з кінця масиву)
+    for (let i = drawLayer.items.length - 1; i >= 0; i--) {
+      const item = drawLayer.items[i];
+      console.log('[VTT DEBUG] removeLastDrawing - item.userId:', item.userId, 'payload.userId:', userId);
+      if (String(item.userId) === String(userId)) {
+        drawLayer.items.splice(i, 1);
+        return item.id;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Оновити параметри малюнка.
+   *
+   * @param {string | number} sessionId
+   * @param {string} sceneId
+   * @param {string} drawingId
+   * @param {Record<string, unknown>} updates
+   * @returns {object | null}
+   */
+  updateDrawing(sessionId, sceneId, drawingId, updates) {
+    const room = this._ensureRoom(sessionId);
+    const scene = room.scenes[sceneId];
+    if (!scene) return null;
+
+    for (const layer of scene.layers) {
+      if (layer.items) {
+        const itemIndex = layer.items.findIndex((item) => item.id === drawingId);
+        if (itemIndex !== -1) {
+          const safeUpdates = filterUpdates(updates, new Set(['x', 'y', 'width', 'height', 'scaleX', 'scaleY', 'rotation', 'points']));
+          layer.items[itemIndex] = { ...layer.items[itemIndex], ...safeUpdates };
+          return layer.items[itemIndex];
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Видалити конкретний малюнок.
+   *
+   * @param {string | number} sessionId
+   * @param {string} sceneId
+   * @param {string} drawingId
+   * @returns {boolean}
+   */
+  removeDrawingById(sessionId, sceneId, drawingId) {
+    const room = this._ensureRoom(sessionId);
+    const scene = room.scenes[sceneId];
+    if (!scene) return false;
+
+    let removed = false;
+    for (const layer of scene.layers) {
+      if (layer.items) {
+        const itemIndex = layer.items.findIndex((item) => item.id === drawingId);
+        if (itemIndex !== -1) {
+          layer.items.splice(itemIndex, 1);
+          removed = true;
+          break;
+        }
+      }
+    }
+    return removed;
+  }
+
+
+  /**
+   * Очистити всі малюнки.
+   *
+   * @param {string | number} sessionId
+   * @param {string} sceneId
+   * @returns {boolean}
+   */
+  clearDrawings(sessionId, sceneId) {
+    const room = this._ensureRoom(sessionId);
+    const scene = room.scenes[sceneId];
+    if (!scene) return false;
+
+    const drawLayer = scene.layers.find((l) => l.type === 'DRAWING');
+    if (!drawLayer) return false;
+
+    drawLayer.items = [];
+    return true;
   }
 }
 

@@ -12,13 +12,15 @@ import { joinSession } from "@/features/sessions/api/sessionApi";
 import DashboardCard from "@/components/ui/DashboardCard";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/shared/EmptyState";
-import { VisibilityBadge } from "@/components/shared";
+import { VisibilityBadge, SkeletonSessionCard, SkeletonCampaignCard } from "@/components/shared";
 import { invalidateSessionCollectionQueries } from "@/lib/queryInvalidation";
 import SessionCard from "../ui/SessionCard";
 import Dice20 from "@/components/ui/icons/Dice20";
 import GroupPeople from "@/components/ui/icons/GroupPeople";
 import Data from "@/components/ui/icons/Data";
 import { toast } from "@/stores/useToastStore";
+import { invalidateSessionPage, sessionQueryKeys } from "@/features/sessions/hooks/useSessionQueries";
+import { campaignPageQueryKeys } from "@/features/campaigns/hooks/useCampaignQueries";
 
 const TAB_LABELS = {
   [SEARCH_TABS.SESSIONS]: "Сесії",
@@ -143,11 +145,13 @@ function SearchResultsBody({
   hasFiltersApplied,
 }) {
   if (isSearchLoading && items.length === 0) {
+    const SkeletonCard = searchActiveTab === SEARCH_TABS.CAMPAIGNS
+      ? SkeletonCampaignCard
+      : SkeletonSessionCard;
     return (
-      <EmptyState
-        title={`Завантажуємо ${TAB_LABELS[searchActiveTab].toLowerCase()}...`}
-        description="Підтягуємо доступні результати пошуку"
-      />
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
+      </div>
     );
   }
 
@@ -156,6 +160,7 @@ function SearchResultsBody({
       <EmptyState
         title="Не вдалося завантажити результати"
         description="Спробуйте змінити фільтри або оновити сторінку"
+        fullHeight
       />
     );
   }
@@ -172,6 +177,7 @@ function SearchResultsBody({
       <EmptyState
         title={emptyTitle}
         description={emptyDescription}
+        fullHeight
       />
     );
   }
@@ -204,12 +210,13 @@ function SearchResultsBody({
       {hasMore && (
         <Button
           onClick={loadMoreSearchResults}
-          disabled={isFetchingMore}
+          isLoading={isFetchingMore}
+          loadingText="Завантаження..."
           variant="outline"
           fullWidth
           className="w-full border-dashed border-brand-light/50 text-brand-medium hover:border-brand-dark hover:text-brand-dark shadow-none hover:shadow-none"
         >
-          {isFetchingMore ? "Завантаження..." : "Завантажити ще"}
+          Завантажити ще
         </Button>
       )}
     </div>
@@ -259,9 +266,9 @@ export function SearchResultsWidget() {
     onSuccess: async (_result, sessionId) => {
       await Promise.allSettled([
         invalidateSessionCollectionQueries(queryClient),
-        queryClient.invalidateQueries({ queryKey: ["session-page", sessionId] }),
-        queryClient.invalidateQueries({ queryKey: ["session", sessionId] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign-page"] }),
+        invalidateSessionPage(queryClient, { sessionId }),
+        queryClient.invalidateQueries({ queryKey: sessionQueryKeys.detail(sessionId) }),
+        queryClient.invalidateQueries({ queryKey: campaignPageQueryKeys.all }),
       ]);
     },
   });
@@ -321,7 +328,7 @@ export function SearchResultsWidget() {
       const result = await joinMutation.mutateAsync(sessionId);
 
       if (result?.success) {
-        toast.success("Ви успішно приєдналися. Вашу заявку обробляють.");
+        toast.success(result?.message || "Ви успішно приєдналися до сесії");
       } else {
         setJoinErrors((prev) => ({ ...prev, [sessionId]: result?.error || null }));
         toast.error(result?.error || "Не вдалося приєднатися до сесії");

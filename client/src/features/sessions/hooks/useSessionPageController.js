@@ -2,12 +2,12 @@ import { useEffect, useCallback, useMemo, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from '@/stores/useToastStore';
 import { useSessionPageQuery, useSessionMutations, useSessionShareLinkQuery } from './useSessionQueries';
+import { useQueryClient } from '@tanstack/react-query';
 import useAuthStore from '@/stores/useAuthStore';
+import { sharedWsManager } from '@/lib/shared-ws';
 import {
   SESSION_TABS,
   SESSION_TAB_VALUES,
-  COMMUNICATION_MODES,
-  COMMUNICATION_MODE_VALUES,
 } from '../constants/sessionTabs';
 import {
   parseEnumSearchParam,
@@ -26,23 +26,19 @@ function normalizeSessionUrlState({
   searchParams,
   activeTab,
   viewingUserId,
-  communicationPanelMode,
   setSearchParams,
 }) {
   const rawTab = searchParams.get('tab');
   const rawViewing = searchParams.get('viewing');
-  const rawComm = searchParams.get('comm');
   const hasInvalidTab = rawTab && rawTab !== activeTab;
   const hasInvalidViewing = rawViewing && !viewingUserId;
-  const hasInvalidComm = rawComm && rawComm !== communicationPanelMode;
 
-  if (!hasInvalidTab && !hasInvalidViewing && !hasInvalidComm) {
+  if (!hasInvalidTab && !hasInvalidViewing) {
     return;
   }
 
   updateSearchParams(setSearchParams, (next) => {
     setOrDeleteParam(next, 'tab', activeTab, SESSION_TABS.DETAILS);
-    setOrDeleteParam(next, 'comm', communicationPanelMode, COMMUNICATION_MODES.CHAT);
     if (hasInvalidViewing) {
       next.delete('viewing');
     }
@@ -201,6 +197,24 @@ export default function useSessionPageController() {
     value: '',
   });
 
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!sessionIdNumber) return;
+
+    const unsubMsg = sharedWsManager.subscribeMessage((data) => {
+      if (!data || typeof data !== 'object') return;
+      if (
+        (data.type === 'vtt:opened' || data.type === 'vtt:closed') && 
+        String(data.sessionId) === String(sessionIdNumber)
+      ) {
+        queryClient.invalidateQueries({ queryKey: ['session-page', sessionIdNumber] });
+      }
+    });
+
+    return () => unsubMsg();
+  }, [sessionIdNumber, queryClient]);
+
   const hasShareToken = typeof routeShareToken === 'string' && routeShareToken.trim().length > 0;
   const isValidId = Number.isInteger(sessionIdNumber) && sessionIdNumber > 0;
   const invalidIdError = !hasShareToken && !isValidId ? 'Сесія не знайдена' : null;
@@ -302,22 +316,14 @@ export default function useSessionPageController() {
     SESSION_TABS.DETAILS
   );
   const viewingUserId = parsePositiveIntSearchParam(searchParams, 'viewing');
-  const communicationPanelMode = parseEnumSearchParam(
-    searchParams,
-    'comm',
-    COMMUNICATION_MODE_VALUES,
-    COMMUNICATION_MODES.CHAT
-  );
-
   useEffect(() => {
     normalizeSessionUrlState({
       searchParams,
       activeTab,
       viewingUserId,
-      communicationPanelMode,
       setSearchParams,
     });
-  }, [communicationPanelMode, activeTab, searchParams, setSearchParams, viewingUserId]);
+  }, [activeTab, searchParams, setSearchParams, viewingUserId]);
 
   const setActiveTab = useCallback((tab) => {
     updateSearchParams(setSearchParams, (next) => {
@@ -330,19 +336,8 @@ export default function useSessionPageController() {
       }
 
       setOrDeleteParam(next, 'tab', targetTab, SESSION_TABS.DETAILS);
-
-      if (targetTab !== SESSION_TABS.COMMUNICATION) {
-        setOrDeleteParam(next, 'comm', COMMUNICATION_MODES.CHAT, COMMUNICATION_MODES.CHAT);
-      }
     });
   }, [availableTabs, setSearchParams]);
-
-  const setCommunicationPanelMode = useCallback((mode) => {
-    updateSearchParams(setSearchParams, (next) => {
-      const targetMode = COMMUNICATION_MODE_VALUES.includes(mode) ? mode : COMMUNICATION_MODES.CHAT;
-      setOrDeleteParam(next, 'comm', targetMode, COMMUNICATION_MODES.CHAT);
-    });
-  }, [setSearchParams]);
 
   useEffect(() => {
     if (!availableTabs.includes(activeTab)) {
@@ -452,8 +447,6 @@ export default function useSessionPageController() {
     activeTab,
     availableTabs,
     setActiveTab,
-    communicationPanelMode,
-    setCommunicationPanelMode,
     viewingUserId,
     isPreviewMode,
     myRole,

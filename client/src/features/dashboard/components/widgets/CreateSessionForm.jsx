@@ -13,6 +13,7 @@ import {
 } from '@/lib/queryInvalidation';
 import useConfirmDialog from '@/hooks/useConfirmDialog';
 import ConfirmModal from '@/components/shared/ConfirmModal';
+import { campaignQueryKeys, campaignPageQueryKeys } from '@/features/campaigns/hooks/useCampaignQueries';
 
 const DATE_ERROR_MESSAGES = {
   empty: 'Дата сесії обовʼязкова',
@@ -49,8 +50,8 @@ export default function CreateSessionForm({
             includeHome: true,
             includeSearchSessions: true,
           }),
-          queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] }),
-          queryClient.invalidateQueries({ queryKey: ['campaign-page', campaignId] })
+          queryClient.invalidateQueries({ queryKey: campaignQueryKeys.detail(campaignId) }),
+          queryClient.invalidateQueries({ queryKey: campaignPageQueryKeys.byId(campaignId) })
         );
       }
 
@@ -126,8 +127,8 @@ export default function CreateSessionForm({
       nextErrors.duration = 'Тривалість від 30 до 480 хвилин';
     }
 
-    if (formData.maxPlayers < 1 || formData.maxPlayers > 20) {
-      nextErrors.maxPlayers = 'Кількість гравців від 1 до 20';
+    if (formData.maxPlayers < 1 || formData.maxPlayers > 8) {
+      nextErrors.maxPlayers = 'Кількість гравців від 1 до 8';
     }
 
     if (formData.price < 0 || formData.price > 10000) {
@@ -383,7 +384,7 @@ export default function CreateSessionForm({
             value={formData.maxPlayers}
             onChange={handleChange}
             min={1}
-            max={20}
+            max={8}
             className={inputClass('maxPlayers')}
           />
           {errors.maxPlayers && <p className="text-red-500 text-xs mt-1">{errors.maxPlayers}</p>}
