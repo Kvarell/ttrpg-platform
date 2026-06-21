@@ -33,15 +33,36 @@ function getSessionTitle(session) {
   return session?.title || 'Нова сесія';
 }
 
-function formatSessionTime(session) {
+function isValidTimeZone(timeZone) {
+  if (!timeZone) return false;
+  try {
+    Intl.DateTimeFormat('en-US', { timeZone }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function formatSessionTime(session, timeZone = 'Europe/Kyiv') {
   if (!session?.date) return 'невідомий час';
   const date = new Date(session.date);
-  return date.toLocaleString('uk-UA', {
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const tz = timeZone && isValidTimeZone(timeZone) ? timeZone : 'Europe/Kyiv';
+  try {
+    return date.toLocaleString('uk-UA', {
+      timeZone: tz,
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return date.toLocaleString('uk-UA', {
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
 }
 
 function buildScheduleSignature(session) {
@@ -51,13 +72,13 @@ function buildScheduleSignature(session) {
   return `${dateValue}:${durationValue}`;
 }
 
-async function createNotificationSafely(notificationService, payload) {
+async function createNotificationSafely(notificationService, payload, tx) {
   if (!notificationService?.createNotification) {
     return;
   }
 
   try {
-    await notificationService.createNotification(payload);
+    await notificationService.createNotification(payload, tx);
   } catch {
   }
 }
@@ -232,6 +253,7 @@ async function notifySessionRescheduled({
   session,
   updatedSession,
   requesterId,
+  tx,
 }) {
   const scheduleSignature = buildScheduleSignature(updatedSession);
   const sessionTitle = getSessionTitle(updatedSession);
@@ -254,7 +276,7 @@ async function notifySessionRescheduled({
       date: updatedSession.date,
       duration: updatedSession.duration,
     },
-  });
+  }, tx);
 }
 
 async function notifyConflictingParticipants({
@@ -262,33 +284,44 @@ async function notifyConflictingParticipants({
   session,
   updatedSession,
   conflictingParticipants,
+  tx,
 }) {
   if (!conflictingParticipants.length) {
     return;
   }
 
   const scheduleSignature = buildScheduleSignature(updatedSession);
-  const newTime = formatSessionTime(updatedSession);
 
-  await Promise.all(conflictingParticipants.map((participant) => createNotificationSafely(notificationService, {
-    eventKey: `session_time_conflict:${session.id}:${participant.userId}:${scheduleSignature}`,
-    type: NotificationType.SESSION_TIME_CONFLICT,
-    severity: NotificationSeverity.WARNING,
-    category: NotificationCategory.SESSION,
-    title: 'Конфлікт часу',
-    body: `Перенесено на ${newTime}. У вас вже є сесія на цей час.`,
-    link: `/session/${session.id}`,
-    recipientIds: [participant.userId],
-    dedupeKey: `session:${session.id}:time_conflict:${participant.userId}:${scheduleSignature}`,
-    dedupeWindowMs: 15 * 60 * 1000,
-    metadata: {
-      sessionId: session.id,
-      sessionTitle: session.title,
-      newDate: updatedSession.date,
-      participantId: participant.id,
-      userId: participant.userId,
-    },
-  })));
+  await Promise.all(conflictingParticipants.map(async (participant) => {
+    const user = tx?.user?.findUnique
+      ? await tx.user.findUnique({
+          where: { id: participant.userId },
+          select: { timezone: true },
+        })
+      : null;
+    const userTz = user?.timezone || 'Europe/Kyiv';
+    const newTime = formatSessionTime(updatedSession, userTz);
+
+    await createNotificationSafely(notificationService, {
+      eventKey: `session_time_conflict:${session.id}:${participant.userId}:${scheduleSignature}`,
+      type: NotificationType.SESSION_TIME_CONFLICT,
+      severity: NotificationSeverity.WARNING,
+      category: NotificationCategory.SESSION,
+      title: 'Конфлікт часу',
+      body: `Перенесено на ${newTime}. У вас вже є сесія на цей час.`,
+      link: `/session/${session.id}`,
+      recipientIds: [participant.userId],
+      dedupeKey: `session:${session.id}:time_conflict:${participant.userId}:${scheduleSignature}`,
+      dedupeWindowMs: 15 * 60 * 1000,
+      metadata: {
+        sessionId: session.id,
+        sessionTitle: session.title,
+        newDate: updatedSession.date,
+        participantId: participant.id,
+        userId: participant.userId,
+      },
+    }, tx);
+  }));
 }
 
 
@@ -298,6 +331,7 @@ async function notifySessionCancelled({
   session,
   requesterId,
   reason = null,
+  tx,
 }) {
   const sessionTitle = getSessionTitle(session);
   let title = 'Сесію скасовано';
@@ -330,7 +364,7 @@ async function notifySessionCancelled({
       status: 'CANCELED',
       reason,
     },
-  });
+  }, tx);
 }
 
 function assertValidStatusTransition({
@@ -577,6 +611,12 @@ function createSessionLifecycleService({
 
       const sessionIdInt = sessionQueryService.parsePositiveInt(sessionId, 'Session ID');
 
+      const dateChanged = hasOwnField(normalizedUpdateData, 'date')
+        && new Date(normalizedUpdateData.date).getTime() !== new Date(session.date).getTime();
+      const durationChanged = hasOwnField(normalizedUpdateData, 'duration')
+        && normalizedUpdateData.duration !== session.duration;
+      const scheduleChanged = dateChanged || durationChanged;
+
       const executeUpdate = async (tx) => {
         const rows = await tx.$queryRaw`
           SELECT visibility, "shareTokenHash", status, price, "heldAmount", "platformFeePercent" 
@@ -708,6 +748,32 @@ function createSessionLifecycleService({
           }
         }
 
+        if (normalizedUpdateData.status === 'CANCELED') {
+          await notifySessionCancelled({
+            notificationService,
+            session,
+            requesterId,
+            reason: options.reason,
+            tx,
+          });
+        } else if (normalizedUpdateData.status !== 'FINISHED' && scheduleChanged) {
+          await notifySessionRescheduled({
+            notificationService,
+            session,
+            updatedSession: sessionUpdateResult,
+            requesterId,
+            tx,
+          });
+
+          await notifyConflictingParticipants({
+            notificationService,
+            session,
+            updatedSession: sessionUpdateResult,
+            conflictingParticipants,
+            tx,
+          });
+        }
+
         return { sessionUpdateResult, shareTokenState };
       };
 
@@ -716,35 +782,6 @@ function createSessionLifecycleService({
         : await prisma.$transaction(executeUpdate);
 
       const { sessionUpdateResult: updated, shareTokenState } = transactionResult;
-
-      const dateChanged = hasOwnField(normalizedUpdateData, 'date')
-        && new Date(normalizedUpdateData.date).getTime() !== new Date(session.date).getTime();
-      const durationChanged = hasOwnField(normalizedUpdateData, 'duration')
-        && normalizedUpdateData.duration !== session.duration;
-      const scheduleChanged = dateChanged || durationChanged;
-
-      if (normalizedUpdateData.status === 'CANCELED') {
-        await notifySessionCancelled({
-          notificationService,
-          session,
-          requesterId,
-          reason: options.reason,
-        });
-      } else if (normalizedUpdateData.status !== 'FINISHED' && scheduleChanged) {
-        await notifySessionRescheduled({
-          notificationService,
-          session,
-          updatedSession: updated,
-          requesterId,
-        });
-
-        await notifyConflictingParticipants({
-          notificationService,
-          session,
-          updatedSession: updated,
-          conflictingParticipants,
-        });
-      }
 
       if (['FINISHED', 'CANCELED'].includes(normalizedUpdateData.status)) {
         vttStateManager.closeVtt(sessionId);
@@ -847,7 +884,7 @@ function createSessionLifecycleService({
           }
         }
 
-        return await tx.session.update({
+        const updatedSession = await tx.session.update({
           where: { id: sessionIdInt },
           data: {
             status: 'CANCELED',
@@ -862,18 +899,21 @@ function createSessionLifecycleService({
             },
           },
         });
+
+        await notifySessionCancelled({
+          notificationService,
+          session: updatedSession,
+          requesterId: userId,
+          reason: options.reason,
+          tx,
+        });
+
+        return updatedSession;
       };
 
       const updated = externalTx
         ? await runCancelTransaction(externalTx)
         : await prisma.$transaction(runCancelTransaction);
-
-      await notifySessionCancelled({
-        notificationService,
-        session: updated,
-        requesterId: userId,
-        reason: options.reason,
-      });
 
       vttStateManager.closeVtt(sessionId);
       try {
